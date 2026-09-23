@@ -16,6 +16,9 @@ export default function AdminDashboard({ onGoToPublicStore }) {
   const [editingProduct, setEditingProduct] = useState(null);
   const [dateFilter, setDateFilter] = useState('Current Moon / Month');
 
+  // Dynamic Orders Database from MongoDB API (http://localhost:5001/api/orders)
+  const [orders, setOrders] = useState([]);
+
   // Calculate metrics dynamically from database orders
   const totalSettlementNum = orders.reduce((sum, ord) => {
     const val = typeof ord.total === 'number'
@@ -62,9 +65,6 @@ export default function AdminDashboard({ onGoToPublicStore }) {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-
-  // Dynamic Orders Database from MongoDB API (http://localhost:5001/api/orders)
-  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
     fetchOrders();
