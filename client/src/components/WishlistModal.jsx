@@ -46,8 +46,8 @@ export default function WishlistModal({ isOpen, onClose, wishlistItems, onAddToC
                     <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
                       {item.title}
                     </h4>
-                    <span className="font-price-editorial text-price-editorial text-on-surface block mb-2">
-                      ${item.price}
+                    <span className="font-price-editorial text-price-editorial text-on-surface block mb-2 font-bold">
+                      Rs. {Math.round(item.price).toLocaleString('en-LK')}
                     </span>
 
                     <button

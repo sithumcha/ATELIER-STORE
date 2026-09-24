@@ -28,16 +28,16 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
   const [orderSecured, setOrderSecured] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // Pricing math
-  const itemsSubtotal = 395.00;
+  // Pricing math in LKR (Rs.)
+  const itemsSubtotal = 39500;
   const activeSubtotal = itemsSubtotal - discountAmount;
-  const estimatedTax = 34.56;
+  const estimatedTax = 3450;
   const totalSettlement = activeSubtotal + estimatedTax + shippingCost;
 
   const handleApplyPromo = () => {
     if (promoCode.trim().length > 0) {
       setPromoApplied(true);
-      setDiscountAmount(39.50); // 10% discount
+      setDiscountAmount(3950); // 10% discount
     }
   };
 
@@ -73,9 +73,9 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
       <header className="w-full bg-surface-container-low/70 backdrop-blur-md px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop py-space-lg">
         <div className="max-w-[1360px] mx-auto flex items-center justify-between">
           <button onClick={onBackToHome} className="flex items-center gap-space-xs group cursor-pointer">
-            <span className="font-headline-md text-headline-md tracking-tight text-on-surface">KURA</span>
+            <span className="font-headline-md text-headline-md tracking-tight text-on-surface">ATELIER</span>
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-secondary -mt-1" />
-            <span className="font-label-caps text-label-caps tracking-[0.24em] text-on-surface-variant font-semibold pl-1">STUDIO</span>
+            <span className="font-label-caps text-label-caps tracking-[0.24em] text-on-surface-variant font-semibold pl-1">STORE</span>
           </button>
           <div className="flex items-center gap-space-sm bg-surface-container px-space-md py-space-xs rounded-full">
             <span className="material-symbols-outlined text-secondary text-subheading-md" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -311,17 +311,17 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                   <div className="flex items-start gap-space-md">
                     <input
                       checked={shippingCost === 0}
-                      onChange={() => setShippingCost(0.00)}
+                      onChange={() => setShippingCost(0)}
                       className="mt-1 accent-primary h-4 w-4"
                       name="shipping-speed"
                       type="radio"
                     />
                     <div className="flex flex-col">
                       <div className="flex items-center gap-space-xs">
-                        <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Complimentary Carbon-Neutral Ground</span>
+                        <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Complimentary Carbon-Neutral Courier</span>
                         <span className="bg-tertiary-fixed text-on-tertiary-fixed font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase">100% Offset</span>
                       </div>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Delivered via zero-emission fleet partners within 3–5 business days.</p>
+                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Delivered via zero-emission fleet partners within 2–3 business days.</p>
                       <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Estimated window: Friday, Oct 27 – Monday, Oct 30</p>
                     </div>
                   </div>
@@ -331,8 +331,8 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                 <label className="cursor-pointer relative p-space-lg rounded bg-surface-container-lowest hover:bg-surface-container-low transition-all flex items-start justify-between">
                   <div className="flex items-start gap-space-md">
                     <input
-                      checked={shippingCost === 24}
-                      onChange={() => setShippingCost(24.00)}
+                      checked={shippingCost === 2500}
+                      onChange={() => setShippingCost(2500)}
                       className="mt-1 accent-primary h-4 w-4"
                       name="shipping-speed"
                       type="radio"
@@ -342,11 +342,11 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                         <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Priority White Glove Courier</span>
                         <span className="bg-secondary-fixed text-on-secondary-fixed font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase">Fast Track</span>
                       </div>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Dispatched within 4 hours. Direct courier hand-off in 1–2 business days.</p>
+                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Dispatched within 4 hours. Direct courier hand-off in 1 business day.</p>
                       <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Estimated window: Tomorrow by 5:00 PM</p>
                     </div>
                   </div>
-                  <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">$24.00</span>
+                  <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">Rs. 2,500</span>
                 </label>
               </div>
             </div>
@@ -441,11 +441,11 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                       type="radio"
                     />
                     <div>
-                      <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Klarna Pay in 4</span>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">4 interest-free payments of ${(totalSettlement / 4).toFixed(2)} every 2 weeks</p>
+                      <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Koko / Mint Pay 3 Installments</span>
+                      <p className="font-body-sm text-body-sm text-on-surface-variant">3 interest-free installments of Rs. {Math.round(totalSettlement / 3).toLocaleString('en-LK')}</p>
                     </div>
                   </div>
-                  <span className="font-label-caps text-label-caps bg-surface-container px-2 py-1 rounded text-on-surface font-semibold">KLARNA</span>
+                  <span className="font-label-caps text-label-caps bg-surface-container px-2 py-1 rounded text-on-surface font-semibold">KOKO</span>
                 </label>
 
                 <label className="flex items-center justify-between p-space-md rounded bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer">
@@ -457,9 +457,9 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                       name="payment-method"
                       type="radio"
                     />
-                    <span className="font-subheading-md text-subheading-md text-on-surface font-medium">PayPal Wallet</span>
+                    <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Bank Transfer / Online Portal</span>
                   </div>
-                  <span className="font-label-caps text-label-caps text-secondary font-semibold">PayPal</span>
+                  <span className="font-label-caps text-label-caps text-secondary font-semibold">ONLINE</span>
                 </label>
               </div>
 
@@ -487,7 +487,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
                       ? 'AUTHORIZING VAULT TRANSACTION...'
                       : orderSecured
                       ? 'ORDER #KR-80291 SECURED'
-                      : `COMPLETE ORDER — $${totalSettlement.toFixed(2)} USD`}
+                      : `COMPLETE ORDER — Rs. ${Math.round(totalSettlement).toLocaleString('en-LK')}`}
                   </span>
                 </button>
               </div>
@@ -510,29 +510,29 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
               <div className="bg-surface-container p-space-md rounded flex flex-col gap-space-xs">
                 <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
                   <span>Items Subtotal</span>
-                  <span className="text-on-surface font-medium">${itemsSubtotal.toFixed(2)}</span>
+                  <span className="text-on-surface font-medium">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
                 </div>
                 {promoApplied && (
                   <div className="flex justify-between items-center text-body-sm font-body-sm text-secondary">
                     <span>Member Discount (-10%)</span>
-                    <span className="font-medium">-${discountAmount.toFixed(2)}</span>
+                    <span className="font-medium">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
                   <span>Logistics</span>
                   <span className="text-on-surface font-medium">
-                    {shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}
+                    {shippingCost === 0 ? 'Free' : `Rs. ${shippingCost.toLocaleString('en-LK')}`}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
                   <span>Estimated Tax</span>
-                  <span className="text-on-surface font-medium">${estimatedTax.toFixed(2)}</span>
+                  <span className="text-on-surface font-medium">Rs. {estimatedTax.toLocaleString('en-LK')}</span>
                 </div>
                 <div className="my-space-xs h-[1px] bg-surface-variant" />
                 <div className="flex justify-between items-baseline">
                   <span className="font-subheading-md text-subheading-md text-on-surface font-semibold">Total Settlement</span>
-                  <span className="font-headline-md text-headline-md text-on-surface font-semibold">
-                    ${totalSettlement.toFixed(2)}
+                  <span className="font-headline-md text-headline-md text-on-surface font-bold">
+                    Rs. {Math.round(totalSettlement).toLocaleString('en-LK')}
                   </span>
                 </div>
               </div>

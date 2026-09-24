@@ -16,26 +16,26 @@ export default function Footer() {
   };
 
   return (
-    <footer className="w-full bg-surface-container-low mt-space-5xl">
+    <footer className="w-full bg-surface-container-low mt-space-5xl border-t border-outline-variant/30">
       <div className="max-w-max-width-editorial mx-auto px-margin-desktop pt-space-4xl pb-space-3xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-gutter-desktop pb-space-4xl">
           {/* Column 1: Brand & Newsletter */}
           <div className="lg:col-span-4 pr-0 lg:pr-space-xl">
-            <span className="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase block mb-space-sm">
-              KURA Studio
+            <span className="font-headline-sm text-headline-sm text-on-surface tracking-tight uppercase block mb-space-sm font-serif">
+              ATELIER ÉDITIONS
             </span>
             <p className="font-body-md text-body-md text-on-surface-variant mb-space-lg max-w-sm">
-              A convergence of tactile Japanese wabi-sabi simplicity and unhurried Scandinavian warmth. Designed for deliberate living.
+              An architectural high-fashion atelier crafting minimalist, organic garments from pure silk, raw Belgian flax linen, and Japanese virgin wool.
             </p>
             <div className="flex flex-col gap-space-xs">
               <span className="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">
-                Dispatches &amp; Monograph
+                Garment Dispatches &amp; Lookbook Release
               </span>
               <form onSubmit={handleSubscribe} className="flex items-center gap-space-xs mt-space-xxs">
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 px-4 rounded bg-surface-container-lowest font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant flex-1 focus:outline-none"
+                  className="h-12 px-4 rounded bg-surface-container-lowest font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant flex-1 focus:outline-none border border-outline-variant/40 focus:border-primary"
                   placeholder="Enter your correspondence email"
                   type="email"
                   required
@@ -53,23 +53,23 @@ export default function Footer() {
           {/* Column 2: Curated Collections */}
           <div className="lg:col-span-2">
             <h4 className="font-label-caps text-label-caps uppercase text-on-surface tracking-wider mb-space-lg">
-              Curated Collections
+              Apparel Collections
             </h4>
             <ul className="space-y-space-sm font-body-sm text-body-sm">
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#vessels">Honed Ceramic Vessels</a>
+                <a href="#womens">Women's Wardrobe</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#garments">Raw Linen Garments</a>
+                <a href="#mens">Men's Tailoring</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#lighting">Architectural Lighting</a>
+                <a href="#textiles">Raw Linen &amp; Silk</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#bath">Hinoki Timber Bath</a>
+                <a href="#outerwear">Structured Outerwear</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#archive">Archive Edition Releases</a>
+                <a href="#lookbook">Edition 09 Journal</a>
               </li>
             </ul>
           </div>
@@ -77,23 +77,23 @@ export default function Footer() {
           {/* Column 3: Philosophy & Craft */}
           <div className="lg:col-span-2">
             <h4 className="font-label-caps text-label-caps uppercase text-on-surface tracking-wider mb-space-lg">
-              Philosophy &amp; Craft
+              Atelier Provenance
             </h4>
             <ul className="space-y-space-sm font-body-sm text-body-sm">
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#provenance">Material Provenance</a>
+                <a href="#textiles">Fiber Traceability</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#artisans">Atelier &amp; Artisans</a>
+                <a href="#artisans">Master Tailors</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#sustainability">Sustainability Protocol</a>
+                <a href="#sustainability">Zero-Waste Weaving</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#restoration">Circular Restoration</a>
+                <a href="#swatches">Fabric Swatch Orders</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#journal">The Annual Journal</a>
+                <a href="#journal">Architectural Lookbook</a>
               </li>
             </ul>
           </div>
@@ -105,37 +105,37 @@ export default function Footer() {
             </h4>
             <ul className="space-y-space-sm font-body-sm text-body-sm">
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#status">Order Status &amp; Tracking</a>
+                <a href="#fitting">Private Fitting Reservation</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#bespoke">Bespoke Architectural Inquiries</a>
+                <a href="#status">Track Garment Order</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#returns">Returns &amp; Fragile Exchanges</a>
+                <a href="#returns">Returns &amp; Alterations</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#care">Care Guides &amp; Preservation</a>
+                <a href="#care">Garment Care Guides</a>
               </li>
               <li className="text-on-surface-variant hover:text-on-surface transition-colors">
-                <a href="#trade">Trade &amp; Hospitality Division</a>
+                <a href="#trade">Private Atelier Clientelism</a>
               </li>
             </ul>
           </div>
 
-          {/* Column 5: Sanctuaries */}
+          {/* Column 5: Showrooms */}
           <div className="lg:col-span-2">
             <h4 className="font-label-caps text-label-caps uppercase text-on-surface tracking-wider mb-space-lg">
-              Sanctuaries
+              Private Showrooms
             </h4>
             <div className="space-y-space-sm font-body-sm text-body-sm text-on-surface-variant">
               <p className="leading-relaxed">
-                <strong className="text-on-surface font-medium block">Kyoto Gallery:</strong>
-                Minami-ku, Higashikujo<br />
+                <strong className="text-on-surface font-medium block">Kyoto Atelier:</strong>
+                Minami-ku, High Fashion District<br />
                 Wednesday – Sunday, 11 – 18
               </p>
               <p className="leading-relaxed">
-                <strong className="text-on-surface font-medium block">Stockholm Studio:</strong>
-                Södermalm, Åsögatan<br />
+                <strong className="text-on-surface font-medium block">Stockholm Parlour:</strong>
+                Södermalm, Design Quarter<br />
                 Tuesday – Saturday, 10 – 17
               </p>
             </div>
@@ -145,14 +145,14 @@ export default function Footer() {
         {/* Footer Bottom Bar */}
         <div className="pt-space-xl flex flex-col md:flex-row items-center justify-between gap-space-md font-label-caps text-label-caps text-on-surface-variant uppercase border-t border-surface-variant/60">
           <div className="flex flex-wrap items-center gap-space-lg">
-            <p>© 2026 KURA Studio Inc. All rights preserved.</p>
+            <p>© 2026 ATELIER ÉDITIONS Inc. All rights reserved.</p>
             <a className="hover:text-on-surface transition-colors" href="#privacy">Privacy Policy</a>
-            <a className="hover:text-on-surface transition-colors" href="#terms">Terms of Quiet Living</a>
+            <a className="hover:text-on-surface transition-colors" href="#terms">Terms of Service</a>
             <a className="hover:text-on-surface transition-colors" href="#accessibility">Accessibility</a>
           </div>
           <div className="flex items-center gap-space-lg">
             <a className="hover:text-on-surface transition-colors" href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
-            <a className="hover:text-on-surface transition-colors" href="#rss">Journal RSS</a>
+            <a className="hover:text-on-surface transition-colors" href="#rss">Lookbook RSS</a>
             <a className="hover:text-on-surface transition-colors" href="https://pinterest.com" target="_blank" rel="noreferrer">Pinterest</a>
           </div>
         </div>

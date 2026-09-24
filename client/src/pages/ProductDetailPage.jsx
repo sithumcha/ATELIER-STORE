@@ -1,338 +1,839 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ProductDetailPage({ selectedProductId, onAddToCart, onBackToHome }) {
+// Price helper function for Sri Lankan Rupees (Rs.)
+const formatRs = (val) => {
+  if (val === undefined || val === null) return 'Rs. 0';
+  let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (num > 0 && num < 1000) {
+    num = num * 100;
+  }
+  return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
+};
+
+export default function ProductDetailPage({ selectedProductId, onAddToCart, onToggleWishlist, wishlistIds = [], onBackToHome, onSelectProduct }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState('II');
+  const [selectedColor, setSelectedColor] = useState('Undyed Natural Ecru');
+  const [quantity, setQuantity] = useState(1);
+  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [addedNotice, setAddedNotice] = useState(false);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
 
-  // Database API (http://localhost:5001/api/products/:id) eken product details ganeema
-  useEffect(() => {
-    if (selectedProductId) {
-      fetchProductDetail(selectedProductId);
-    } else {
-      fetchAllAndPickFirst();
-    }
-  }, [selectedProductId]);
 
-  const fetchProductDetail = async (id) => {
-    try {
-      setLoading(true);
-      const res = await fetch(`http://localhost:5001/api/products/${id}`);
-      if (res.ok) {
-        const p = await res.json();
-        formatAndSetProduct(p);
-      } else {
-        fetchAllAndPickFirst();
-      }
-    } catch (err) {
-      fetchAllAndPickFirst();
-    } finally {
-      setLoading(false);
-    }
+  // Accordions State
+  const [openAccordions, setOpenAccordions] = useState({
+    provenance: true,
+    measurements: false,
+    care: false,
+    passport: false,
+  });
+
+  const toggleAccordion = (key) => {
+    setOpenAccordions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
-  const fetchAllAndPickFirst = async () => {
+  // High-Fashion Garment Fallback Profile
+  const DEFAULT_GARMENT = {
+    id: 'a1',
+    edition: 'EDITION 08 — ITEM 044',
+    shuttle: 'KYOTO WEAVE SHUTTLE NO. 4',
+    gsm: '410 GSM RAW UNBLEACHED FLAX',
+    editionName: 'EDITION 08 — THE SOLITUDE WEAVES',
+    title: 'Solitude Raw Linen Kimono Duster',
+    numericPrice: 42000,
+    price: formatRs(42000),
+    density: '410 GSM density',
+    summary: 'Spun from unbleached 100% Normandy long-staple flax and woven on vintage 1948 Toyoda shuttle looms in Kyoto. Cut with an unhurried, architectural silhouette designed to age gracefully over decades of wear.',
+    colors: [
+      { name: 'Undyed Natural Ecru', hex: '#E8E2D5', img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80' },
+      { name: 'Fermented Persimmon (Kakishibu)', hex: '#94492C', img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80' },
+      { name: 'Deep Sumi Charcoal', hex: '#1F1B18', img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1200&q=80' },
+    ],
+    sizes: [
+      { roman: 'I', label: 'Size I', fit: 'Generous 36–38', stock: 5 },
+      { roman: 'II', label: 'Size II', fit: 'Relaxed 40–42', stock: 3 },
+      { roman: 'III', label: 'Size III', fit: 'Sculptural 44–46', stock: 4 },
+      { roman: 'IV', label: 'Size IV', fit: 'Cocoon 48–50', stock: 1 },
+    ],
+    images: [
+      'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=80',
+    ],
+    provenanceText: 'The raw flax fibers are cultivated across Normandy coastal terrains, naturally retted in regional precipitation before being dispatched to our partner preservation workshop in Kyoto.',
+    loomOrigin: 'Toyoda Non-Automated (1948)',
+    weavingSpeed: '9.5 meters per work day',
+    careInstructions: [
+      'Submerge in cool water (under 25°C) with mild neutral pH vegetable detergent.',
+      'Do not wring or centrifuge aggressively; squeeze softly and lay flat in filtered shade.',
+      'Press while slightly damp using low heat steam if a smooth architectural fold is desired.',
+    ],
+    passportText: 'Each Solitude Duster carries an individual linen archival passport sewn into the internal seam. Should a tear, fray, or pocket tension point fail over your lifetime, dispatch it to our Kyoto or Stockholm studio for complimentary hand-stitched indigo sashiko reinforcement.',
+    measurementsTable: [
+      { spec: 'Total Back Length', metric: '122 cm / 48.0"' },
+      { spec: 'Chest Width (Pit to Pit)', metric: '66 cm / 26.0"' },
+      { spec: 'Drop Sleeve (From Collar)', metric: '78 cm / 30.7"' },
+      { spec: 'Hem Sweep Circumference', metric: '144 cm / 56.6"' },
+    ],
+    recommendedLooks: [
+      {
+        id: 'rec1',
+        title: 'Wabi Wide-Leg Trouser',
+        fabric: 'Japanese Ramie · Double Pleat',
+        price: formatRs(29000),
+        numericPrice: 29000,
+        badge: 'SUMI INK WASH',
+        img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'rec2',
+        title: 'Komorebi Silk Tunic',
+        fabric: 'Raw Slub Silk · French Seams',
+        price: formatRs(26000),
+        numericPrice: 26000,
+        badge: 'WILD TUSSAR SILK',
+        img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'rec3',
+        title: 'Altiplano Cocoon Wrap',
+        fabric: 'Hand-Loomed · Undyed Fawn',
+        price: formatRs(21000),
+        numericPrice: 21000,
+        badge: 'ROYAL BABY ALPACA',
+        img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=1000&q=80',
+      },
+    ]
+  };
+
+  useEffect(() => {
+    fetchGarmentDetail(selectedProductId);
+    fetchDbRecommendations(selectedProductId);
+  }, [selectedProductId]);
+
+  const fetchDbRecommendations = async (currentId) => {
     try {
-      setLoading(true);
       const res = await fetch('http://localhost:5001/api/products');
       if (res.ok) {
-        const list = await res.json();
-        if (Array.isArray(list) && list.length > 0) {
-          const match = list.find((item) => (item._id === selectedProductId || item.id === selectedProductId)) || list[0];
-          formatAndSetProduct(match);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const otherItems = data.filter((p) => String(p._id || p.id) !== String(currentId));
+          if (otherItems.length > 0) {
+            const formattedRecs = otherItems.slice(0, 3).map((p, idx) => {
+              let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 28000;
+              if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
+              let displayImg = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
+              if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
+                displayImg = p.images[0];
+              } else if (p.img) {
+                displayImg = p.img;
+              } else if (p.image) {
+                displayImg = p.image;
+              }
+              return {
+                id: p._id || p.id || `rec_db_${idx}`,
+                title: p.title || p.name || 'Harmonious Garment',
+                fabric: p.category || p.subtitle || p.gsm || 'Natural Fiber',
+                price: formatRs(numPrice),
+                numericPrice: numPrice,
+                badge: p.badge || (p.category ? p.category.toUpperCase() : 'LIMITED EDITION'),
+                img: displayImg,
+              };
+            });
+            setRecommendedProducts(formattedRecs);
+            return;
+          }
         }
       }
     } catch (err) {
-      console.log('Error fetching product detail:', err);
-    } finally {
-      setLoading(false);
+      console.log('Error fetching DB recommendations:', err);
     }
   };
 
-  const formatAndSetProduct = (p) => {
-    const numPrice = typeof p.price === 'number'
-      ? p.price
-      : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 145;
 
-    setProduct({
-      id: p._id || p.id,
-      title: p.title || p.name || 'Untitled Object',
-      category: p.category || 'Home Decor',
-      origin: p.origin || 'KYOTO KILN • SHIGARAKI CLAY',
-      subtitle: p.subtitle || '',
-      description: p.description || p.subtitle || p.title,
-      price: typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : (String(p.price).startsWith('$') ? p.price : `$${p.price}`),
-      numericPrice: numPrice,
-      taxInfo: p.taxInfo || '• Tax Included',
-      finishes: p.finishes && p.finishes.length > 0 ? p.finishes : ['RAW SANDSTONE', 'CHALK WHITE', 'CHARRED ASH'],
-      capacities: p.capacities && p.capacities.length > 0 ? p.capacities : ['350ML (SOLO)', '500ML (DUO)', '750ML (GATHERING)'],
-      craftProvenance: p.craftProvenance || 'Crafted in Kyoto using 700-year-old Shigaraki unglazed stoneware techniques.',
-      carePreservation: p.carePreservation || 'Hand wash with warm water only.',
-      badge: p.badge || 'Limited Edition',
-      badgeClass: p.badgeClass || 'bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface tracking-wider',
-      img: p.img || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCM1-YTw4n0FPZnbYGrL2ZKpWYVzkC30fp_bkGtOok8G3Yed9DHdwPj_l-B7xV7PUVVIwgo6hrSl5hw4I3K2IYJY8e6x_V7F0hCFtrsQ7y77ZT9Z3SmTtq0udO2gJd_dV6mQD2RdSk9Q_0ZXOa9poTNkg_8fcNoY_DyLm1HZ6Y9fxuzziIpZXsfTfycH8u91TbRCLN67m7LpcMTqqzVN6O0-kxx_CfxrBFT6a2X-3rf7uVi8QQIE4c',
-      images: p.images && p.images.length > 0 ? p.images : [p.img],
-    });
+  const fetchGarmentDetail = async (id) => {
+    setLoading(true);
+    try {
+      if (id) {
+        const res = await fetch(`http://localhost:5001/api/products/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            formatAndSetGarment(data);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.log('Using local high-fashion garment monograph for:', id);
+    }
+    formatAndSetGarment(DEFAULT_GARMENT);
   };
 
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedFinish, setSelectedFinish] = useState('');
-  const [selectedCapacity, setSelectedCapacity] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [activeAccordion, setActiveAccordion] = useState('craft'); // 'craft' | 'care' | ''
-  const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+  const formatAndSetGarment = (data) => {
+    let rawPrice = data.price || DEFAULT_GARMENT.numericPrice;
+    let numericPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 42000;
+    if (numericPrice > 0 && numericPrice < 1000) numericPrice = numericPrice * 100;
 
+    const formattedObj = {
+      ...DEFAULT_GARMENT,
+      ...data,
+      id: data._id || data.id || DEFAULT_GARMENT.id,
+      title: data.title || data.name || DEFAULT_GARMENT.title,
+      price: formatRs(numericPrice),
+      numericPrice: numericPrice,
+      img: data.img || DEFAULT_GARMENT.images[0],
+      images: (data.images && data.images.length > 0) ? data.images : DEFAULT_GARMENT.images,
+    };
 
+    setProduct(formattedObj);
+    setSelectedImageIndex(0);
+    setLoading(false);
+  };
 
-  const handleAdd = () => {
+  const handleAcquireClick = () => {
+    if (onAddToCart && product) {
+      onAddToCart({
+        id: `${product.id}-${selectedSize}-${selectedColor}`,
+        title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
+        price: product.numericPrice,
+        img: product.images[selectedImageIndex] || product.img,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: quantity,
+      });
+
+      setAddedNotice(true);
+      setTimeout(() => setAddedNotice(false), 2500);
+    }
+  };
+
+  const handleQuickAddRecommended = (rec) => {
     if (onAddToCart) {
       onAddToCart({
-        id: product.id,
-        title: product.title,
-        price: product.numericPrice || 145,
-        img: product.img,
-        finish: selectedFinish,
-        capacity: selectedCapacity,
-        quantity,
+        id: rec.id,
+        title: rec.title,
+        price: rec.numericPrice,
+        img: rec.img,
       });
     }
   };
 
   if (loading || !product) {
     return (
-      <div className="w-full py-24 text-center text-on-surface-variant bg-surface">
-        <span className="material-symbols-outlined text-4xl animate-spin mb-2 block">cyclone</span>
-        <p className="font-label-caps text-xs uppercase">Loading Archival Edition Details...</p>
+      <div className="w-full py-32 text-center text-on-surface-variant bg-surface">
+        <span className="material-symbols-outlined text-4xl animate-spin mb-3 block text-secondary">cyclone</span>
+        <p className="font-label-caps text-xs uppercase tracking-widest font-semibold">Loading Garment Monograph...</p>
       </div>
     );
   }
 
-  const currentPriceNum = product.numericPrice || 145;
-  const totalPriceFormatted = `$${(currentPriceNum * quantity).toFixed(2)}`;
+  const isFavorited = wishlistIds.includes(product.id);
+  const activeSizeObj = product.sizes.find((s) => s.label === selectedSize || s.roman === selectedSize || s.id === selectedSize) || product.sizes[0] || { label: selectedSize || 'M', fit: 'Standard', stock: 5 };
+
 
   return (
-    <div className="w-full bg-surface text-on-surface">
-      {/* Product Main Showcase Grid */}
-      <section className="max-w-max-width-editorial mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop py-space-xl md:py-space-3xl">
-        {/* Back Button */}
-        <button
-          onClick={onBackToHome}
-          className="inline-flex items-center gap-space-xs font-label-md text-xs uppercase tracking-wider text-on-surface-variant hover:text-on-surface transition-colors mb-space-lg cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          <span>Back to Vault Catalog</span>
-        </button>
+    <div className="w-full bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-surface-variant">
+      
+      {/* Lightbox Zoom Modal */}
+      {isZoomOpen && (
+        <div className="fixed inset-0 z-50 bg-primary/95 backdrop-blur-md flex items-center justify-center p-4">
+          <button
+            onClick={() => setIsZoomOpen(false)}
+            className="absolute top-6 right-6 text-on-primary hover:text-secondary p-2 cursor-pointer z-50"
+          >
+            <span className="material-symbols-outlined text-3xl">close</span>
+          </button>
+          <img
+            src={product.images[selectedImageIndex] || product.img}
+            alt={product.title}
+            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+          />
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-2xl lg:gap-space-3xl items-start">
-          {/* Left: Product Images Showcase */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-space-md">
-            {/* Gallery Thumbnails */}
-            {product.images && product.images.length > 1 && (
-              <div className="flex md:flex-col gap-space-sm shrink-0">
-                {product.images.map((imgUrl, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-20 rounded overflow-hidden border-2 transition-all cursor-pointer ${
-                      selectedImageIndex === idx ? 'border-primary opacity-100 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={imgUrl} alt={`${product.title} view ${idx}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* Micro Breadcrumb & Metatag Header Strip */}
+      <div className="w-full max-w-[1380px] mx-auto px-margin pt-space-md pb-space-sm flex flex-wrap items-center justify-between gap-space-sm">
+        <div className="flex items-center gap-2 font-label-caps text-xs uppercase tracking-widest text-on-surface-variant">
+          <button onClick={onBackToHome} className="hover:text-on-surface transition-colors cursor-pointer flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            <span>GARMENT ARCHIVE</span>
+          </button>
+          <span>/</span>
+          <span className="text-on-surface font-semibold">{product.edition}</span>
+        </div>
+        
+        <div className="flex items-center gap-space-md">
+          <span className="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-caps text-[10px] tracking-wider uppercase font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+            {product.shuttle}
+          </span>
+          <span className="hidden md:inline font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider font-medium">
+            {product.gsm}
+          </span>
+        </div>
+      </div>
 
-            {/* Main Image Display */}
-            <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-high shadow-sm border border-surface-variant group">
+      {/* Primary Stage: Asymmetric Split Screen Presentation */}
+      <div className="w-full max-w-[1380px] mx-auto px-margin pb-space-2xl pt-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-start">
+          
+          {/* LEFT COLUMN: Architectural Editorial Gallery (Col 7) */}
+          <div className="lg:col-span-7 flex flex-col-reverse lg:flex-row gap-space-md relative">
+            
+            {/* Thumbnail Rail */}
+            <div className="flex lg:flex-col gap-space-sm overflow-x-auto lg:overflow-visible shrink-0 pb-2 lg:pb-0 scrollbar-none" id="gallery-thumbs">
+              {product.images.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImageIndex(idx)}
+                  className={`thumb-btn relative w-20 h-28 lg:w-20 lg:h-28 rounded bg-surface-container-low overflow-hidden transition-all duration-300 cursor-pointer ${
+                    selectedImageIndex === idx
+                      ? 'ring-2 ring-primary opacity-100 shadow-md scale-102'
+                      : 'opacity-60 hover:opacity-100'
+                  }`}
+                  type="button"
+                >
+                  <img className="w-full h-full object-cover" alt={`${product.title} angle ${idx + 1}`} src={imgUrl} />
+                  <span className="absolute bottom-1 right-1 font-label-caps text-[9px] bg-surface/80 px-1 py-0.2 rounded text-on-surface font-mono">
+                    0{idx + 1}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Main Display Vessel */}
+            <div className="relative w-full aspect-[3/4] bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-surface-variant group">
               <img
-                src={product.images && product.images[selectedImageIndex] ? product.images[selectedImageIndex] : product.img}
-                alt={product.alt || product.title}
-                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 cursor-zoom-in"
+                id="main-product-img"
+                className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 cursor-zoom-in"
+                alt={product.title}
+                src={product.images[selectedImageIndex] || product.img}
+                onClick={() => setIsZoomOpen(true)}
               />
-              {product.badge && (
-                <span className={`absolute top-4 left-4 px-3 py-1 rounded-full font-label-caps text-[10px] uppercase ${product.badgeClass}`}>
-                  {product.badge}
+
+              {/* Translucent Floating Spec Chip */}
+              <div className="absolute top-space-md left-space-md bg-surface/90 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm flex items-center gap-2 border border-surface-variant/40">
+                <span className="material-symbols-outlined text-[15px] text-secondary">verified</span>
+                <span className="font-label-caps text-[10px] uppercase text-on-surface tracking-widest font-semibold">
+                  LIMITED EDITION NO. 18 / 60
                 </span>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Product Specification & Order Form */}
-          <div className="lg:col-span-5 flex flex-col space-y-space-lg">
-            {/* Header: Origin & Title */}
-            <div>
-              <span className="font-label-caps text-[11px] uppercase tracking-widest text-outline block mb-1">
-                {product.origin || 'KYOTO KILN • SHIGARAKI CLAY'}
-              </span>
-              <h1 className="font-editorial text-3xl md:text-4xl text-on-surface mb-2 font-normal leading-tight tracking-tight">
-                {product.title}
-              </h1>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="font-editorial text-3xl font-medium text-on-surface">{product.price}</span>
-                <span className="text-on-surface-variant font-body-sm text-xs">• {product.taxInfo || 'Tax Included'}</span>
-              </div>
-            </div>
-
-            {/* Main Description */}
-            <p className="font-body-md text-sm md:text-base text-on-surface-variant leading-relaxed">
-              {product.description}
-            </p>
-
-            {/* Finish & Clay Mineral Selection */}
-            <div>
-              <label className="font-label-caps text-xs uppercase tracking-wider text-on-surface font-semibold block mb-2">
-                FINISH &amp; CLAY MINERAL: <span className="font-bold text-primary">{selectedFinish || (product.finishes && product.finishes[0])}</span>
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                {product.finishes &&
-                  product.finishes.map((finish) => {
-                    const isSelected = selectedFinish === finish || (!selectedFinish && finish === product.finishes[0]);
-                    return (
-                      <button
-                        key={finish}
-                        onClick={() => setSelectedFinish(finish)}
-                        className={`px-4 py-2.5 rounded font-label-caps text-[11px] uppercase cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-primary text-on-primary font-bold shadow-xs'
-                            : 'bg-surface-container-low border border-surface-variant text-on-surface-variant hover:text-on-surface hover:border-outline'
-                        }`}
-                      >
-                        {finish}
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
-
-            {/* Capacity Selection & Volumetric Guide */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="font-label-caps text-xs uppercase tracking-wider text-on-surface font-semibold">
-                  CAPACITY: <span className="font-bold text-primary">{selectedCapacity || (product.capacities && product.capacities[1])}</span>
-                </label>
-                <button
-                  onClick={() => setIsSizeModalOpen(true)}
-                  className="font-label-caps text-[10px] uppercase text-secondary hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  <span>VOLUMETRIC GUIDE</span>
-                  <span className="text-xs">📏</span>
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {product.capacities &&
-                  product.capacities.map((cap) => {
-                    const isSelected = selectedCapacity === cap || (!selectedCapacity && cap === product.capacities[1]);
-                    return (
-                      <button
-                        key={cap}
-                        onClick={() => setSelectedCapacity(cap)}
-                        className={`px-4 py-2.5 rounded font-label-caps text-[11px] uppercase cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-surface-container-high border-2 border-primary text-primary font-bold'
-                            : 'bg-surface-container-low border border-surface-variant text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        {cap}
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
-
-            {/* Quantity Selector & Add to Bag */}
-            <div className="flex items-center gap-3 pt-space-sm">
-              <div className="flex items-center border border-surface-variant rounded-lg h-12 bg-surface-container-low px-2">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="w-8 h-full flex items-center justify-center font-bold text-on-surface hover:text-primary cursor-pointer text-lg"
-                >
-                  -
-                </button>
-                <span className="w-8 text-center font-mono text-sm font-semibold">{quantity}</span>
-                <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-8 h-full flex items-center justify-center font-bold text-on-surface hover:text-primary cursor-pointer text-lg"
-                >
-                  +
-                </button>
               </div>
 
+              {/* Zoom Prompt Indicator */}
               <button
-                onClick={handleAdd}
-                className="flex-1 h-12 rounded-lg bg-primary text-on-primary font-label-caps text-xs uppercase tracking-widest hover:bg-secondary transition-colors shadow-md cursor-pointer flex items-center justify-center gap-2"
+                onClick={() => setIsZoomOpen(true)}
+                className="absolute bottom-space-md right-space-md bg-surface/85 backdrop-blur-md px-3 py-1.5 rounded-full text-on-surface-variant flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
               >
-                <span>ADD TO BAG — {totalPriceFormatted}</span>
+                <span className="material-symbols-outlined text-[16px] text-primary">zoom_in</span>
+                <span className="font-label-caps text-[10px] tracking-widest uppercase text-on-surface font-semibold">
+                  Hover to enlarge fiber detail
+                </span>
               </button>
             </div>
 
-            {/* Detailed Accordions: Craft & Provenance, Care & Preservation */}
-            <div className="border-t border-surface-variant pt-space-md space-y-space-xs">
-              {/* Craft & Provenance */}
-              <div className="border-b border-surface-variant pb-space-xs">
+          </div>
+
+          {/* RIGHT COLUMN: Curated Specifications & Atelier Checkout (Col 5) */}
+          <div className="lg:col-span-5 flex flex-col space-y-space-lg lg:pl-space-md">
+            
+            {/* Header Info */}
+            <div className="space-y-space-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-label-caps text-[11px] uppercase tracking-[0.2em] text-secondary font-bold">
+                  {product.editionName}
+                </span>
+                <span className="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px] text-secondary">eco</span> Undyed Organic Origin
+                </span>
+              </div>
+
+              <h1 className="font-serif text-3xl md:text-4xl text-on-surface tracking-tight leading-[1.1] pt-1">
+                {product.title}
+              </h1>
+
+              <div className="flex items-baseline gap-space-md pt-2 border-b border-surface-variant pb-3">
+                <span className="font-headline-lg text-headline-lg text-primary font-bold">
+                  {product.price}
+                </span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">
+                  Tax inclusive · Insured Courier Dispatch
+                </span>
+              </div>
+            </div>
+
+            {/* Sensory Description Extract */}
+            <div className="bg-surface-container-low p-space-md rounded-lg space-y-2 border border-surface-variant/70">
+              <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                {product.summary}
+              </p>
+              <div className="flex items-center gap-space-md pt-space-xs font-body-sm text-body-sm text-on-surface">
+                <span className="flex items-center gap-1 font-semibold">
+                  <span className="material-symbols-outlined text-[15px] text-secondary">balance</span>
+                  {product.density}
+                </span>
+                <span className="text-outline-variant">•</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  <span className="material-symbols-outlined text-[15px] text-secondary">water_drop</span>
+                  Zero Chemical Finish
+                </span>
+              </div>
+            </div>
+
+            {/* Colorway Selector */}
+            <div className="space-y-space-sm pt-space-xs">
+              <div className="flex justify-between items-center">
+                <span className="font-label-caps text-xs uppercase text-on-surface tracking-wider font-semibold">
+                  HUE SELECTION
+                </span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant font-medium">
+                  {selectedColor}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-space-md">
+                {product.colors.map((col) => {
+                  const isSelected = selectedColor === col.name;
+                  return (
+                    <button
+                      key={col.name}
+                      onClick={() => {
+                        setSelectedColor(col.name);
+                        if (col.img) {
+                          const idx = product.images.indexOf(col.img);
+                          if (idx !== -1) setSelectedImageIndex(idx);
+                        }
+                      }}
+                      className={`color-swatch ring-offset-2 p-1 rounded-full transition-transform active:scale-95 cursor-pointer ${
+                        isSelected ? 'ring-2 ring-primary ring-offset-surface scale-105' : 'ring-1 ring-outline-variant hover:ring-primary opacity-80'
+                      }`}
+                      title={col.name}
+                      type="button"
+                    >
+                      <span
+                        className="block w-7 h-7 rounded-full shadow-inner border border-black/10"
+                        style={{ backgroundColor: col.hex }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sizing Architecture */}
+            <div className="space-y-space-sm pt-space-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-label-caps text-xs uppercase text-on-surface tracking-wider font-semibold">
+                  PROPORTION / SIZING
+                </span>
                 <button
-                  onClick={() => setActiveAccordion(activeAccordion === 'craft' ? '' : 'craft')}
-                  className="w-full py-3 flex items-center justify-between font-subheading-md text-sm font-medium text-on-surface cursor-pointer text-left"
+                  onClick={() => setIsSizeModalOpen(true)}
+                  className="font-body-sm text-body-sm text-secondary hover:underline transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                  type="button"
                 >
-                  <span className="font-semibold">Craft &amp; Provenance</span>
-                  <span className="material-symbols-outlined text-base">
-                    {activeAccordion === 'craft' ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                  <span className="material-symbols-outlined text-[16px]">straighten</span>
+                  Anatomical Size Guide
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2" id="size-selector">
+                {product.sizes.map((sz) => {
+                  const sizeKey = sz.label || sz.roman || sz.id;
+                  const isSelected = selectedSize === sizeKey || (selectedSize === 'II' && sz.roman === 'II');
+                  return (
+                    <button
+                      key={sizeKey}
+                      onClick={() => setSelectedSize(sizeKey)}
+                      className={`size-btn flex flex-col items-center justify-center p-3 rounded-lg transition-all text-center border cursor-pointer ${
+
+                        isSelected
+                          ? 'bg-primary text-on-primary border-primary shadow-sm active-size font-bold'
+                          : 'bg-surface-container border-surface-variant hover:bg-surface-container-high text-on-surface'
+                      }`}
+                      type="button"
+                    >
+                      <span className={`font-title-md text-title-md ${isSelected ? 'text-on-primary' : 'text-on-surface'}`}>
+                        {sz.label}
+                      </span>
+                      <span className={`font-body-sm text-[11px] ${isSelected ? 'text-surface-container-high' : 'text-on-surface-variant'}`}>
+                        {sz.fit}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Stock & Provenance Metric */}
+              <div className="flex items-center justify-between text-body-sm pt-1">
+                <div className="flex items-center gap-2 text-secondary font-medium">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+                  </span>
+                  <span>Only {activeSizeObj.stock} pieces remaining in Size {activeSizeObj.label || activeSizeObj.roman}</span>
+                </div>
+                <span className="text-on-surface-variant font-label-caps text-[10px] uppercase font-semibold">
+                  Unisex drop cut
+                </span>
+              </div>
+            </div>
+
+            {/* Add to Bag & Secondary Wishlist Actions */}
+            <div className="pt-space-sm space-y-space-sm">
+              <div className="flex items-center gap-space-sm">
+                <button
+                  onClick={handleAcquireClick}
+                  className="group flex-1 bg-primary text-on-primary py-4 px-space-lg rounded-lg hover:bg-secondary active:scale-[0.99] transition-all flex items-center justify-center gap-space-md shadow-md cursor-pointer font-bold"
+                  type="button"
+                >
+                  <span className="font-label-caps text-xs tracking-[0.16em] uppercase">
+                    {addedNotice ? 'ADDED TO CART ✓' : `ADD TO CART — ${product.price}`}
+                  </span>
+                  <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
+                    east
                   </span>
                 </button>
-                {activeAccordion === 'craft' && (
-                  <p className="font-body-sm text-xs text-on-surface-variant pb-3 leading-relaxed">
-                    {product.craftProvenance ||
-                      'Crafted in Kyoto using 700-year-old Shigaraki unglazed stoneware techniques. Wood-fired for 3 days allowing natural mineral ashes to seal the porous clay.'}
-                  </p>
+
+                <button
+                  onClick={() => onToggleWishlist && onToggleWishlist(product)}
+                  className={`w-14 h-14 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                    isFavorited ? 'bg-secondary text-on-secondary border-secondary' : 'bg-surface-container border-surface-variant hover:bg-surface-container-high text-on-surface'
+                  }`}
+                  title={isFavorited ? 'Saved in Wishlist' : 'Add to Wishlist'}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[22px]">
+                    {isFavorited ? 'favorite' : 'favorite_border'}
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center gap-space-md pt-1 font-body-sm text-body-sm text-on-surface-variant">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">lock</span> Encrypted Vault Checkout
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">autorenew</span> 14-Day Free Exchange
+                </span>
+              </div>
+            </div>
+
+            {/* Garment Integrity Accordions */}
+            <div className="pt-space-md space-y-2 border-t border-surface-variant">
+              
+              {/* Tab 1: Provenance */}
+              <div className="bg-surface-container-low rounded-lg overflow-hidden border border-surface-variant/60">
+                <button
+                  onClick={() => toggleAccordion('provenance')}
+                  className="w-full px-space-md py-space-sm flex items-center justify-between text-left group cursor-pointer"
+                  type="button"
+                >
+                  <span className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-semibold">
+                    <span className="material-symbols-outlined text-[18px] text-secondary">source_notes</span>
+                    Material Provenance &amp; Weave History
+                  </span>
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover:text-on-surface transition-transform duration-300">
+                    {openAccordions.provenance ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+
+                {openAccordions.provenance && (
+                  <div className="px-space-md pb-space-md pt-space-xs font-body-md text-body-md text-on-surface-variant space-y-2">
+                    <p>{product.provenanceText}</p>
+                    <div className="grid grid-cols-2 gap-space-sm bg-surface p-space-sm rounded mt-2 font-body-sm border border-surface-variant/40">
+                      <div>
+                        <span className="font-label-caps text-[10px] text-on-surface-variant block uppercase font-semibold">LOOM ORIGIN</span>
+                        <span className="text-on-surface font-medium">{product.loomOrigin}</span>
+                      </div>
+                      <div>
+                        <span className="font-label-caps text-[10px] text-on-surface-variant block uppercase font-semibold">WEAVING SPEED</span>
+                        <span className="text-on-surface font-medium">{product.weavingSpeed}</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Care & Preservation */}
-              <div className="border-b border-surface-variant pb-space-xs">
+              {/* Tab 2: Measurements Table */}
+              <div className="bg-surface-container-low rounded-lg overflow-hidden border border-surface-variant/60">
                 <button
-                  onClick={() => setActiveAccordion(activeAccordion === 'care' ? '' : 'care')}
-                  className="w-full py-3 flex items-center justify-between font-subheading-md text-sm font-medium text-on-surface cursor-pointer text-left"
+                  onClick={() => toggleAccordion('measurements')}
+                  className="w-full px-space-md py-space-sm flex items-center justify-between text-left group cursor-pointer"
+                  type="button"
                 >
-                  <span className="font-semibold">Care &amp; Preservation</span>
-                  <span className="material-symbols-outlined text-base">
-                    {activeAccordion === 'care' ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                  <span className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-semibold">
+                    <span className="material-symbols-outlined text-[18px] text-secondary">straighten</span>
+                    Garment Measurements (Size {selectedSize} Spec)
+                  </span>
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover:text-on-surface transition-transform duration-300">
+                    {openAccordions.measurements ? 'expand_less' : 'expand_more'}
                   </span>
                 </button>
-                {activeAccordion === 'care' && (
-                  <p className="font-body-sm text-xs text-on-surface-variant pb-3 leading-relaxed">
-                    {product.carePreservation ||
-                      'Hand wash with warm water only. Avoid synthetic abrasive pads or harsh chemical detergents.'}
-                  </p>
+
+                {openAccordions.measurements && (
+                  <div className="px-space-md pb-space-md pt-space-xs font-body-sm text-body-sm text-on-surface-variant">
+                    <table className="w-full text-left border-collapse">
+                      <tbody className="space-y-1">
+                        {product.measurementsTable.map((row, idx) => (
+                          <tr key={idx} className={idx % 2 === 0 ? 'bg-surface/50' : ''}>
+                            <td className="py-1.5 px-2 text-on-surface font-medium">{row.spec}</td>
+                            <td className="py-1.5 px-2 text-right font-mono text-on-surface font-bold">{row.metric}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="pt-2 text-[11px] text-on-surface-variant italic">Garment measured laying un-tensioned on flat cedar workshop tables.</p>
+                  </div>
                 )}
+              </div>
+
+              {/* Tab 3: Care Guide */}
+              <div className="bg-surface-container-low rounded-lg overflow-hidden border border-surface-variant/60">
+                <button
+                  onClick={() => toggleAccordion('care')}
+                  className="w-full px-space-md py-space-sm flex items-center justify-between text-left group cursor-pointer"
+                  type="button"
+                >
+                  <span className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-semibold">
+                    <span className="material-symbols-outlined text-[18px] text-secondary">spa</span>
+                    Care &amp; Living Protocol
+                  </span>
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover:text-on-surface transition-transform duration-300">
+                    {openAccordions.care ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+
+                {openAccordions.care && (
+                  <div className="px-space-md pb-space-md pt-space-xs font-body-md text-body-md text-on-surface-variant space-y-2">
+                    <p>Linen is an active organism. It holds memory and softens exponentially with water contact and natural body movement.</p>
+                    <ul className="list-disc pl-5 space-y-1 font-body-sm text-body-sm">
+                      {product.careInstructions.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Tab 4: Passport & Sashiko Guarantee */}
+              <div className="bg-surface-container-low rounded-lg overflow-hidden border border-surface-variant/60">
+                <button
+                  onClick={() => toggleAccordion('passport')}
+                  className="w-full px-space-md py-space-sm flex items-center justify-between text-left group cursor-pointer"
+                  type="button"
+                >
+                  <span className="font-title-md text-title-md text-on-surface flex items-center gap-2 font-semibold">
+                    <span className="material-symbols-outlined text-[18px] text-secondary">handyman</span>
+                    Lifetime Passport &amp; Sashiko Repair
+                  </span>
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover:text-on-surface transition-transform duration-300">
+                    {openAccordions.passport ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+
+                {openAccordions.passport && (
+                  <div className="px-space-md pb-space-md pt-space-xs font-body-md text-body-md text-on-surface-variant space-y-2">
+                    <p>{product.passportText}</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* Editorial Textile Focus & Wabi-Sabi Immersion Break */}
+      <section className="w-full bg-surface-container-low py-space-2xl my-space-lg border-y border-surface-variant/80">
+        <div className="max-w-[1380px] mx-auto px-margin">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl items-center">
+            <div className="lg:col-span-5 space-y-space-md">
+              <span className="font-label-caps text-label-caps text-secondary tracking-widest block font-bold">
+                PHILOSOPHY OF SURFACE
+              </span>
+              <h2 className="font-serif text-3xl lg:text-4xl text-on-surface leading-tight font-normal">
+                "Woven slowly, so the linen remembers how to breathe."
+              </h2>
+              <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                Conventional high-speed industrial looms subject flax thread to intense mechanical friction, strip-coating the fibers with synthetic sizing starches. Our Kyoto looms cycle at one-fourth the velocity, retaining the microscopic linen channels that insulate during cold drafts and vent during summer humidity.
+              </p>
+
+              <div className="pt-2 flex items-center gap-space-xl">
+                <div>
+                  <p className="font-serif text-3xl text-on-surface font-bold">60</p>
+                  <p className="font-label-caps text-[11px] text-on-surface-variant uppercase font-semibold">Archived Pieces Total</p>
+                </div>
+                <div>
+                  <p className="font-serif text-3xl text-on-surface font-bold">1948</p>
+                  <p className="font-label-caps text-[11px] text-on-surface-variant uppercase font-semibold">Toyoda Shuttle Loom</p>
+                </div>
+                <div>
+                  <p className="font-serif text-3xl text-on-surface font-bold">0%</p>
+                  <p className="font-label-caps text-[11px] text-on-surface-variant uppercase font-semibold">Micro-plastics or Bleach</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-7 grid grid-cols-2 gap-space-md">
+              <div className="aspect-[4/5] rounded-xl bg-surface-container overflow-hidden shadow-sm border border-surface-variant">
+                <img
+                  className="w-full h-full object-cover"
+                  alt="Kyoto shuttle loom weaving flax thread"
+                  src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80"
+                />
+              </div>
+              <div className="aspect-[4/5] rounded-xl bg-surface-container overflow-hidden shadow-sm -mt-8 border border-surface-variant">
+                <img
+                  className="w-full h-full object-cover"
+                  alt="Artisan sashiko hand stitching on linen coat seam"
+                  src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80"
+                />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Volumetric Size Guide Modal */}
+      {/* Complete The Look: Architectural Ensemble Recommendation */}
+      <section className="w-full max-w-[1380px] mx-auto px-margin py-space-xl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-space-xl gap-space-sm">
+          <div className="space-y-space-xs">
+            <span className="font-label-caps text-label-caps text-secondary tracking-widest block font-bold">
+              HARMONIOUS LAYERING
+            </span>
+            <h3 className="font-serif text-3xl text-on-surface font-normal">Complete the Look</h3>
+          </div>
+          <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
+            Designed to sit together with balanced volumes, muted mineral pigments, and shared tactile weight.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-lg">
+          {(recommendedProducts && recommendedProducts.length > 0 ? recommendedProducts : product.recommendedLooks).map((rec) => (
+            <div
+              key={rec.id}
+              onClick={() => onSelectProduct && onSelectProduct(rec.id)}
+              className="group flex flex-col bg-surface-container-lowest rounded-xl p-space-sm shadow-sm hover:shadow-md transition-all border border-surface-variant/80 cursor-pointer"
+            >
+              <div className="relative aspect-[3/4] rounded-lg bg-surface-container-low overflow-hidden mb-space-sm">
+                <img
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  alt={rec.title}
+                  src={rec.img}
+                />
+                <span className="absolute top-2 left-2 bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded-full font-label-caps text-[10px] text-on-surface tracking-wider uppercase font-semibold">
+                  {rec.badge}
+                </span>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleQuickAddRecommended(rec);
+                  }}
+                  className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center transition-all duration-300 shadow-md hover:bg-secondary hover:scale-110 cursor-pointer z-10"
+                  title="Quick Add Piece"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+                </button>
+              </div>
+
+              <div className="flex items-start justify-between p-1">
+                <div>
+                  <h4 className="font-subheading-md text-subheading-md text-on-surface group-hover:text-secondary transition-colors font-medium">
+                    {rec.title}
+                  </h4>
+                  <p className="font-body-sm text-xs text-on-surface-variant mt-0.5">{rec.fabric}</p>
+                </div>
+                <span className="font-price-editorial text-price-editorial text-primary font-bold">{rec.price}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Anatomical Size Guide Modal Dialog */}
       {isSizeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-margin-mobile bg-primary/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-surface-container-lowest rounded-xl p-space-xl shadow-2xl border border-surface-variant">
-            <div className="flex items-center justify-between pb-space-md border-b border-surface-variant mb-space-md">
-              <h3 className="font-headline-sm uppercase text-on-surface">Volumetric Size Guide</h3>
-              <button onClick={() => setIsSizeModalOpen(false)} className="p-1 text-on-surface-variant hover:text-on-surface">
-                <span className="material-symbols-outlined text-[24px]">close</span>
+        <div className="fixed inset-0 z-50 bg-primary/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface w-full max-w-2xl rounded-xl p-space-lg shadow-2xl relative max-h-[90vh] overflow-y-auto border border-surface-variant">
+            <button
+              className="absolute top-space-md right-space-md p-1 text-on-surface-variant hover:text-on-surface cursor-pointer"
+              onClick={() => setIsSizeModalOpen(false)}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[24px]">close</span>
+            </button>
+
+            <span className="font-label-caps text-label-caps text-secondary tracking-widest block mb-1 font-bold">
+              PROPORTIONAL ARCHITECTURE
+            </span>
+            <h3 className="font-serif text-2xl text-on-surface mb-2 font-normal">Anatomical Fit Specification</h3>
+            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-md leading-relaxed">
+              Our dusters are cut deliberately oversized to celebrate the natural weight and drape of 410 GSM linen. Choose based on your height preference and desired spatial presence.
+            </p>
+
+            <div className="bg-surface-container-low rounded-lg overflow-hidden mb-space-md border border-surface-variant/60">
+              <table className="w-full text-left font-body-sm text-xs">
+                <thead className="bg-surface-container font-label-caps text-[10px] text-on-surface uppercase border-b border-surface-variant">
+                  <tr>
+                    <th className="py-2.5 px-3">Atelier Size</th>
+                    <th className="py-2.5 px-3">Chest Circumference</th>
+                    <th className="py-2.5 px-3">Garment Length</th>
+                    <th className="py-2.5 px-3">Recommended Height</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-variant/40">
+                  <tr>
+                    <td className="py-2.5 px-3 font-bold text-on-surface">Size I</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">120 cm / 47.2"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">116 cm / 45.6"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">158 – 168 cm</td>
+                  </tr>
+                  <tr className="bg-primary/10">
+                    <td className="py-2.5 px-3 font-bold text-on-surface">Size II (Selected)</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">132 cm / 51.9"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">122 cm / 48.0"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">168 – 178 cm</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-bold text-on-surface">Size III</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">144 cm / 56.6"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">126 cm / 49.6"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">178 – 188 cm</td>
+                  </tr>
+                  <tr className="bg-surface/60">
+                    <td className="py-2.5 px-3 font-bold text-on-surface">Size IV</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">156 cm / 61.4"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">130 cm / 51.1"</td>
+                    <td className="py-2.5 px-3 text-on-surface-variant">185+ cm</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-end">
+              <button
+                className="bg-primary text-on-primary px-space-md py-2.5 rounded-lg font-label-caps text-xs uppercase font-bold tracking-wider hover:bg-secondary transition-colors cursor-pointer"
+                onClick={() => setIsSizeModalOpen(false)}
+                type="button"
+              >
+                RETURN TO PIECE
               </button>
             </div>
-            <div className="space-y-3 font-body-sm text-xs text-on-surface-variant">
-              <p>• <strong>350ml (SOLO)</strong>: Perfect for 1-2 cups of quiet morning tea ritual.</p>
-              <p>• <strong>500ml (DUO)</strong>: Ideal for 3-4 cups during afternoon tea sessions.</p>
-              <p>• <strong>750ml (GATHERING)</strong>: Serves 5-6 guests during intimate gatherings.</p>
-            </div>
-            <button
-              onClick={() => setIsSizeModalOpen(false)}
-              className="w-full h-10 mt-space-lg rounded bg-primary text-on-primary font-label-md uppercase cursor-pointer"
-            >
-              Close Guide
-            </button>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+

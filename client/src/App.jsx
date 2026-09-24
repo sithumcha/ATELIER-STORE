@@ -11,8 +11,10 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import AboutPage from './pages/AboutPage';
 import AccountPage from './pages/AccountPage';
 import CheckoutPage from './pages/CheckoutPage';
-import ApparelPage from './pages/ApparelPage';
-import LivingPage from './pages/LivingPage';
+import WomensWardrobePage from './pages/WomensWardrobePage';
+import MensTailoringPage from './pages/MensTailoringPage';
+import TextilesFiberPage from './pages/TextilesFiberPage';
+import LookbookJournalPage from './pages/LookbookJournalPage';
 
 
 
@@ -25,6 +27,10 @@ const getTabFromPath = (pathname) => {
   if (!cleanPath || cleanPath === '') return { tab: 'home', prodId: 'p1' };
   if (cleanPath === '/shop') return { tab: 'shop', prodId: 'p1' };
   if (cleanPath === '/apparel') return { tab: 'apparel', prodId: 'p1' };
+  if (cleanPath === '/womens-wardrobe') return { tab: 'womens-wardrobe', prodId: 'p1' };
+  if (cleanPath === '/mens-tailoring') return { tab: 'mens-tailoring', prodId: 'p1' };
+  if (cleanPath === '/textiles' || cleanPath === '/textiles-and-fiber') return { tab: 'textiles', prodId: 'p1' };
+  if (cleanPath === '/lookbook' || cleanPath === '/lookbook-and-journal') return { tab: 'lookbook', prodId: 'p1' };
   if (cleanPath === '/living') return { tab: 'living', prodId: 'p1' };
   if (cleanPath === '/about') return { tab: 'about', prodId: 'p1' };
   if (cleanPath === '/account') return { tab: 'account', prodId: 'p1' };
@@ -41,6 +47,10 @@ const getPathForTab = (tab, prodId) => {
   if (tab === 'home') return '/';
   if (tab === 'shop') return '/shop';
   if (tab === 'apparel') return '/apparel';
+  if (tab === 'womens-wardrobe') return '/womens-wardrobe';
+  if (tab === 'mens-tailoring') return '/mens-tailoring';
+  if (tab === 'textiles') return '/textiles-and-fiber';
+  if (tab === 'lookbook') return '/lookbook-and-journal';
   if (tab === 'living') return '/living';
   if (tab === 'about') return '/about';
   if (tab === 'account') return '/account';
@@ -55,6 +65,7 @@ export default function App() {
   const initialRoute = getTabFromPath(window.location.pathname);
   const [activeTab, setActiveTabState] = useState(initialRoute.tab);
   const [selectedProductId, setSelectedProductId] = useState(initialRoute.prodId);
+  const [selectedCategory, setSelectedCategory] = useState('All Objects');
 
   // Router Navigator: updates state & pushes browser history URL
   const navigateTo = (tab, prodId = selectedProductId) => {
@@ -64,6 +75,15 @@ export default function App() {
     if (window.location.pathname !== newPath) {
       window.history.pushState({ tab, prodId }, '', newPath);
     }
+  };
+
+  const handleExploreCategory = (category) => {
+    if (category) {
+      setSelectedCategory(category);
+    } else {
+      setSelectedCategory('All Objects');
+    }
+    navigateTo('shop');
   };
 
   // Sync state on Browser Back / Forward buttons (popstate)
@@ -80,33 +100,65 @@ export default function App() {
 
   // User Auth State
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('kura_user');
+    const savedUser = localStorage.getItem('atelierstore_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Cart Items State (Initial state empty array - data from database/user interactions)
-  const [cartItems, setCartItems] = useState([]);
+  // Cart Items State (Persisted in localStorage across page refreshes)
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const savedCart = localStorage.getItem('atelierstore_cart');
+      return savedCart ? JSON.parse(savedCart) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
-  // Wishlist Items State (Initial state empty array)
-  const [wishlistItems, setWishlistItems] = useState([]);
+  // Wishlist Items State (Persisted in localStorage across page refreshes)
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    try {
+      const savedWishlist = localStorage.getItem('atelierstore_wishlist');
+      return savedWishlist ? JSON.parse(savedWishlist) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Sync Cart Items to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('atelierstore_cart', JSON.stringify(cartItems));
+    } catch (e) {
+      console.error('Error saving cart to localStorage:', e);
+    }
+  }, [cartItems]);
+
+  // Sync Wishlist Items to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('atelierstore_wishlist', JSON.stringify(wishlistItems));
+    } catch (e) {
+      console.error('Error saving wishlist to localStorage:', e);
+    }
+  }, [wishlistItems]);
+
   // Sync user state to localStorage
   const handleAuthSuccess = (userData) => {
     setUser(userData);
-    localStorage.setItem('kura_user', JSON.stringify(userData));
+    localStorage.setItem('atelierstore_user', JSON.stringify(userData));
     setToastMessage(`Welcome back, ${userData.name}!`);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleLogOut = () => {
     setUser(null);
-    localStorage.removeItem('kura_user');
+    localStorage.removeItem('atelierstore_user');
     setToastMessage('Signed out of Patron account');
     setTimeout(() => setToastMessage(null), 3000);
     navigateTo('home');
@@ -114,15 +166,19 @@ export default function App() {
 
   const handleUpdateUser = (updatedUserData) => {
     setUser(updatedUserData);
-    localStorage.setItem('kura_user', JSON.stringify(updatedUserData));
+    localStorage.setItem('atelierstore_user', JSON.stringify(updatedUserData));
   };
 
   // Add product to cart handler
   const handleAddToCart = (product) => {
-    const numericPrice =
-      typeof product.price === 'number'
-        ? product.price
-        : parseInt(product.price.toString().replace('$', ''), 10) || 150;
+    let rawPrice = product.price;
+    let numericPrice = typeof rawPrice === 'number'
+      ? rawPrice
+      : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
+
+    if (numericPrice > 0 && numericPrice < 1000) {
+      numericPrice = numericPrice * 100;
+    }
 
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -175,27 +231,43 @@ export default function App() {
 
   // Toggle item in Wishlist / Favorites
   const handleToggleWishlist = (product) => {
-    const numericPrice =
-      typeof product.price === 'number'
-        ? product.price
-        : parseInt((product.price || '150').toString().replace(/[^0-9.]/g, ''), 10) || 150;
+    if (!product) return;
+    let rawPrice = product.price;
+    let numericPrice = typeof rawPrice === 'number'
+      ? rawPrice
+      : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
+
+    if (numericPrice > 0 && numericPrice < 1000) {
+      numericPrice = numericPrice * 100;
+    }
+
+    const prodId = product._id || product.id || 'wish_' + Date.now();
+    const titleStr = product.title || product.name || 'Atelier Garment';
+    let displayImg = product.img;
+    if (!displayImg && product.images && product.images.length > 0) {
+      displayImg = product.images[0];
+    }
 
     setWishlistItems((prev) => {
-      const exists = prev.some((item) => item.id === product.id || item.title === product.title);
+      const exists = prev.some(
+        (item) => String(item.id) === String(prodId) || String(item.id) === String(product.id) || (product.title && item.title === product.title)
+      );
       if (exists) {
-        setToastMessage(`Removed "${product.title}" from Wishlist`);
+        setToastMessage(`Removed "${titleStr}" from Wishlist`);
         setTimeout(() => setToastMessage(null), 2500);
-        return prev.filter((item) => item.id !== product.id && item.title !== product.title);
+        return prev.filter(
+          (item) => String(item.id) !== String(prodId) && String(item.id) !== String(product.id) && item.title !== titleStr
+        );
       } else {
-        setToastMessage(`Saved "${product.title}" to your Wishlist ❤️`);
+        setToastMessage(`Saved "${titleStr}" to your Wishlist ❤️`);
         setTimeout(() => setToastMessage(null), 2500);
         return [
           ...prev,
           {
-            id: product.id || 'wish_' + Date.now(),
-            title: product.title,
+            id: prodId,
+            title: titleStr,
             price: numericPrice,
-            img: product.img,
+            img: displayImg || 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
           },
         ];
       }
@@ -251,29 +323,38 @@ export default function App() {
               setCartItems([]);
             }}
           />
-        ) : activeTab === 'apparel' ? (
-          <ApparelPage
+        ) : activeTab === 'apparel' || activeTab === 'womens-wardrobe' ? (
+          <WomensWardrobePage
             onAddToCart={handleAddToCart}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
             onSelectProduct={(id) => {
-              navigateTo('product-detail', id || 'p2');
+              navigateTo('product-detail', id || 'w1');
             }}
-            onExploreCatalog={() => navigateTo('shop')}
           />
-        ) : activeTab === 'living' ? (
-          <LivingPage
+        ) : activeTab === 'mens-tailoring' ? (
+          <MensTailoringPage
             onAddToCart={handleAddToCart}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
             onSelectProduct={(id) => {
-              navigateTo('product-detail', id || 'p1');
+              navigateTo('product-detail', id || 'm1');
             }}
-            onExploreCatalog={() => navigateTo('shop')}
+          />
+        ) : activeTab === 'textiles' ? (
+          <TextilesFiberPage
+            onAddToCart={handleAddToCart}
+          />
+        ) : activeTab === 'lookbook' ? (
+          <LookbookJournalPage
+            onSelectProduct={(id) => {
+              navigateTo('product-detail', id || 'a1');
+            }}
           />
         ) : activeTab === 'shop' ? (
           <ShopPage
             activeTab={activeTab}
+            initialCategory={selectedCategory}
             onAddToCart={handleAddToCart}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
@@ -281,8 +362,6 @@ export default function App() {
               navigateTo('product-detail', id || 'p1');
             }}
           />
-
-
         ) : activeTab === 'product-detail' ? (
           <ProductDetailPage
             selectedProductId={selectedProductId}
@@ -290,9 +369,10 @@ export default function App() {
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
             onBackToHome={() => navigateTo('shop')}
+            onSelectProduct={(id) => navigateTo('product-detail', id)}
           />
         ) : activeTab === 'about' ? (
-          <AboutPage onExploreShop={() => navigateTo('shop')} />
+          <AboutPage onExploreShop={(cat) => handleExploreCategory(cat)} />
         ) : activeTab === 'account' ? (
           <AccountPage
             user={user}
@@ -304,11 +384,12 @@ export default function App() {
         ) : (
           /* Modular Home Page View */
           <HomePage
-            onExploreShop={() => navigateTo('shop')}
+            onExploreShop={(cat) => handleExploreCategory(cat)}
             onReadAbout={() => navigateTo('about')}
             onAddToCart={handleAddToCart}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
+            onSelectProduct={(id) => navigateTo('product-detail', id || 'a1')}
           />
         )}
       </main>
@@ -343,18 +424,18 @@ export default function App() {
               {/* Free Shipping Progress Meter */}
               <div className="mb-space-lg p-space-xs rounded bg-surface-container-low border border-surface-variant">
                 <div className="flex justify-between font-label-caps text-xs text-on-surface mb-1.5">
-                  <span>Insured Global Shipping Status</span>
+                  <span>Insured Courier Delivery Status</span>
                   <span className="text-secondary font-bold">
-                    {totalCartPrice >= 350
-                      ? 'Complimentary Shipping Qualified'
-                      : `Add $${350 - totalCartPrice} for Free Shipping`}
+                    {totalCartPrice >= 35000
+                      ? 'Complimentary Delivery Qualified'
+                      : `Add Rs. ${(35000 - totalCartPrice).toLocaleString('en-LK')} for Free Shipping`}
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
                   <div
                     className="h-full bg-secondary transition-all duration-500 rounded-full"
                     style={{
-                      width: `${Math.min(100, (totalCartPrice / 350) * 100)}%`,
+                      width: `${Math.min(100, (totalCartPrice / 35000) * 100)}%`,
                     }}
                   ></div>
                 </div>
@@ -383,8 +464,8 @@ export default function App() {
                         <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
                           {item.title}
                         </h4>
-                        <span className="font-price-editorial text-price-editorial text-on-surface block">
-                          ${item.price}
+                        <span className="font-price-editorial text-price-editorial text-on-surface font-semibold block">
+                          Rs. {Math.round(item.price).toLocaleString('en-LK')}
                         </span>
 
                         <div className="flex items-center gap-3 mt-2">
@@ -423,8 +504,8 @@ export default function App() {
               <div className="pt-space-lg border-t border-surface-variant mt-space-lg">
                 <div className="flex items-center justify-between font-headline-sm mb-space-md">
                   <span className="text-on-surface-variant">Subtotal</span>
-                  <span className="font-price-editorial text-on-surface">
-                    ${totalCartPrice}
+                  <span className="font-price-editorial text-on-surface font-bold">
+                    Rs. {Math.round(totalCartPrice).toLocaleString('en-LK')}
                   </span>
                 </div>
                 <button
@@ -434,7 +515,7 @@ export default function App() {
                   }}
                   className="w-full h-12 rounded bg-primary text-on-primary font-label-md text-label-md uppercase tracking-wider hover:bg-secondary transition-colors cursor-pointer"
                 >
-                  Proceed to Checkout — ${totalCartPrice}
+                  Proceed to Checkout — Rs. {Math.round(totalCartPrice).toLocaleString('en-LK')}
                 </button>
               </div>
             )}

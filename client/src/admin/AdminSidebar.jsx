@@ -12,13 +12,13 @@ export default function AdminSidebar({ activeNav, setActiveNav, onGoToPublicStor
             className="h-8 w-auto text-primary"
             fill="none"
           >
-            <text x="10" y="40" fontFamily="'Playfair Display', serif" fontSize="28" fontWeight="600" letterSpacing="0.2em" fill="currentColor">KURA</text>
-            <text x="135" y="40" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize="14" fontWeight="400" letterSpacing="0.35em" fill="#78716c">STUDIO</text>
-            <circle cx="120" cy="32" r="2.5" fill="#c27803" />
+            <text x="10" y="40" fontFamily="'Playfair Display', serif" fontSize="26" fontWeight="600" letterSpacing="0.18em" fill="currentColor">ATELIER</text>
+            <text x="150" y="40" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize="14" fontWeight="400" letterSpacing="0.3em" fill="#78716c">STORE</text>
+            <circle cx="138" cy="32" r="2.5" fill="#c27803" />
           </svg>
           <div className="flex flex-col ml-1">
-            <span className="font-headline-sm text-headline-sm leading-none text-primary tracking-tight">KURA</span>
-            <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest mt-0.5">Studio Console</span>
+            <span className="font-headline-sm text-headline-sm leading-none text-primary tracking-tight">ATELIERSTORE</span>
+            <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest mt-0.5">Admin Console</span>
           </div>
         </div>
 

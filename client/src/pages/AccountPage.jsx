@@ -7,7 +7,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
 
   // Edit form fields
   const [editName, setEditName] = useState(user?.name || 'Elin Lindqvist');
-  const [editEmail, setEditEmail] = useState(user?.email || 'elin@kurastudio.com');
+  const [editEmail, setEditEmail] = useState(user?.email || 'elin@atelierstore.com');
   const [editAvatar, setEditAvatar] = useState(user?.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBVc9DU0FPf5cvkDbLsmajjIhrqxVzcprYSiMVl52H84IrGx-8KX7sAFTfDcCp_Jkh7ui-wjuxF_GCOTmZMC6FFSQ_1xmC1ln7j7_ag4eIyYD3NThID8SC7gXukjhUq_IQNeR0hA7sSSmKgP9OEScujERw4GKLr2iNdYSKBZt0gB_e3seq4o9Q31KXBbs09WpqRULVK9xwvPXKZ0tkFsNYyEjbYKTOi_uwg-44pt2XJPSoz8Q5QI2E');
   const [editStreet, setEditStreet] = useState(user?.address?.street || 'Åsögatan 142, Apt 4B');
   const [editCity, setEditCity] = useState(user?.address?.city || 'Stockholm');

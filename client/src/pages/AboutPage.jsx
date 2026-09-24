@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 export default function AboutPage({ onExploreShop }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('Bespoke Architectural Commission');
+  const [subject, setSubject] = useState('Bespoke Haute Couture Tailoring');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
 
@@ -30,11 +30,11 @@ export default function AboutPage({ onExploreShop }) {
               Monograph &amp; Atelier Provenance
             </span>
             <h1 className="font-display-hero text-display-hero-mobile md:text-display-hero text-on-surface leading-[1.05] mb-space-lg font-normal">
-              Crafting Objects for <br />
-              <span className="italic font-normal">Unhurried Living</span>
+              Crafting Garments of <br />
+              <span className="italic font-normal">Breath &amp; Architectural Drape</span>
             </h1>
             <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl leading-relaxed mb-space-xl">
-              KURA Studio was founded at the intersection of Kyoto’s ancient wabi-sabi ceramic traditions and Sweden’s unadorned Scandinavian functionalism. We shape objects intended to slow down daily rituals.
+              ATELIER ÉDITIONS was founded at the intersection of Kyoto’s ancient raw silk weaving traditions and Stockholm’s unadorned structural tailoring. We shape garments intended to honor natural human form and fiber.
             </p>
           </div>
         </div>
@@ -45,8 +45,8 @@ export default function AboutPage({ onExploreShop }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-space-2xl items-center mb-space-5xl">
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-md bg-surface-container">
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQjJaZbuuh0cdPj9n7SLQozd5AqsEn9oism6vFpYa6i5UcfNjUFoBIbLBSOHGXGZUmNCCURBNl8tHnOdzbZMfrM6-ji5DJpy0Zep5MF7g_fJ1wgN75o8i1bEoHj9oj7Lzp8TJbhMauesMa7aPMGXjgZZJV6VQ4CxarOFv-LmVSX_U9Vpq0Bs241lLwWMQFWgNnoiSgCTkDeiK-3ceL77auCIaZlEQybff-Vsx0cO1MVA3k9W_jqI8"
-              alt="Kyoto Kiln Workshop"
+              src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80"
+              alt="Kyoto Weaving Studio"
               className="w-full h-full object-cover"
             />
           </div>
@@ -55,13 +55,13 @@ export default function AboutPage({ onExploreShop }) {
               Atelier 01 · Kyoto, Japan
             </span>
             <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-space-md">
-              Shigaraki Clay &amp; Wood Kiln Fire
+              Hand-Loomed Raw Silk &amp; Botanical Indigo
             </h2>
             <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">
-              Nestled in the hills of Shigaraki, our master ceramic artisans continue a 700-year legacy of unglazed stoneware. Kilns are fired with pine wood over three consecutive days, allowing flying ash to form natural mineral glazes unique to every vessel.
+              Nestled in the historic textile quarters of Kyoto, master artisans hand-spin raw mulberry silk and dip unbleached fibers into organic indigo fermentation vats over seven consecutive cycles.
             </p>
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-              No two pieces leave the kiln identical. Each reflects the temperature, weather, and atmosphere of the moment it was born.
+              No two bolts of silk leave the loom identical. Each reflects the subtle tension, humidity, and rhythm of the artisan weaver's hands.
             </p>
           </div>
         </div>
@@ -72,19 +72,19 @@ export default function AboutPage({ onExploreShop }) {
               Atelier 02 · Stockholm, Sweden
             </span>
             <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-space-md">
-              Honest Timber Joinery &amp; Loomed Flax
+              Unstructured Tailoring &amp; Organic Flax Linen
             </h2>
             <p className="font-body-md text-body-md text-on-surface-variant mb-space-md leading-relaxed">
-              In our Södermalm workshop, Scandinavian woodworkers turn sustainably felled Swedish oak and Kiso hinoki cypress into minimalist, low-profile furniture held together purely by traditional Japanese wood joinery—without single nails or synthetic adhesives.
+              In our Södermalm design parlour, Scandinavian master tailors construct soft-shouldered suits and sculptural dresses from heavy-grade Belgian flax linen and soft Japanese virgin wool.
             </p>
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-              Our textiles are woven on vintage shuttle looms from unbleached European flax, finished with organic plant dyes that age into soft, tactile textures over decades.
+              Every seam is finished with french binding and organic cotton threading, ensuring fluid movement and lifetime structural integrity without stiff synthetic interlinings.
             </p>
           </div>
           <div className="order-1 md:order-2 relative aspect-[4/3] rounded-xl overflow-hidden shadow-md bg-surface-container">
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlQAz7BQ9_Bm3auw-jbIhPV--EEbfdNX4NN7O5xJChZI3NsaEWcxew_howubHslS3o0ZgipMFcDKZeKSdUw-NSbxXak9-qLmrv3gksOqsCDfZsX8jNhm17tkaM-rjvCss-gZl8CJ1uVkpH3pXJP6oRDCb54ktCYq9BJnZS7EQIyYIMJeGLyDB_o22AbQltPGojlUREJiNLoiWEtAQDFJ6b79WM1vUrXW2fhUvfBIVJ_a0IqHdEYoU"
-              alt="Stockholm Joinery Studio"
+              src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80"
+              alt="Stockholm Tailoring Parlour"
               className="w-full h-full object-cover"
             />
           </div>
@@ -96,10 +96,10 @@ export default function AboutPage({ onExploreShop }) {
         <div className="max-w-max-width-editorial mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop">
           <div className="text-center max-w-xl mx-auto mb-space-3xl">
             <span className="font-label-caps text-label-caps uppercase text-secondary tracking-widest block mb-space-xxs">
-              Our Commitments
+              Our Garment Protocol
             </span>
             <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">
-              The Protocol of Slow Craft
+              The Art of Slow Fashion
             </h2>
           </div>
 
@@ -109,10 +109,10 @@ export default function AboutPage({ onExploreShop }) {
                 01
               </span>
               <h3 className="font-subheading-lg text-subheading-lg text-on-surface mb-2">
-                Generational Heritage
+                Pure Natural Fibers
               </h3>
               <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                We partner exclusively with independent artisan families operating continuously across Japan and Scandinavia, guaranteeing fair wage stability and preservation of dying master skills.
+                We utilize 100% natural, unblended organic fibers—Belgian flax linen, mulberry silk, and cruelty-free virgin wool—ensuring garments breathe naturally against your skin.
               </p>
             </div>
 
@@ -121,10 +121,10 @@ export default function AboutPage({ onExploreShop }) {
                 02
               </span>
               <h3 className="font-subheading-lg text-subheading-lg text-on-surface mb-2">
-                Zero Synthetic Additives
+                Zero-Waste Patterning
               </h3>
               <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                From raw unglazed clay to pure organic oils and beeswax wood finishes, our products are 100% natural, biodegradable, and free from plastic polyurethanes.
+                Garments are cut using zero-waste geometric pattern drafts, minimizing textile scrap, while leftover offcuts are re-spun into handmade fiber paper tags.
               </p>
             </div>
 
@@ -133,27 +133,27 @@ export default function AboutPage({ onExploreShop }) {
                 03
               </span>
               <h3 className="font-subheading-lg text-subheading-lg text-on-surface mb-2">
-                Lifetime Circular Repair
+                Lifetime Fitting &amp; Mending
               </h3>
               <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-                We offer traditional Kintsugi (gold lacquer repair) for ceramic acquisitions and complimentary timber re-oiling service at our Kyoto and Stockholm sanctuaries.
+                We offer complimentary seam alterations and sashiko hand-mending services at our Kyoto and Stockholm private showrooms for all client acquisitions.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Atelier Direct Inquiry Section (POST /api/inquiries) */}
+      {/* Atelier Direct Inquiry Section */}
       <section className="w-full py-space-5xl bg-surface-container-low border-b border-surface-variant">
         <div className="max-w-2xl mx-auto px-margin-mobile text-center">
           <span className="font-label-caps text-xs uppercase text-secondary tracking-widest block mb-1">
-            Direct Atelier Correspondence
+            Private Atelier Correspondence
           </span>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb- space-md">
-            Commission &amp; Trade Inquiries
+          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-space-md">
+            Bespoke Fitting &amp; Tailoring Inquiries
           </h2>
           <p className="font-body-md text-on-surface-variant mb-space-xl">
-            Have a custom architectural commission or trade request? Send a direct dispatch to our Kyoto &amp; Stockholm curatorial team.
+            Request a private showroom fitting or inquire about bespoke bridal and custom tailored outerwear.
           </p>
 
           <form onSubmit={handleSubmitInquiry} className="space-y-4 text-left bg-surface-container-lowest p-space-xl rounded-xl shadow-sm border border-surface-variant">
@@ -165,7 +165,7 @@ export default function AboutPage({ onExploreShop }) {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Marcus Lindqvist"
+                  placeholder="e.g. Elena Rostova"
                   className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
                 />
               </div>
@@ -189,10 +189,10 @@ export default function AboutPage({ onExploreShop }) {
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
               >
-                <option>Bespoke Architectural Commission</option>
-                <option>Trade &amp; Hospitality Division</option>
-                <option>Kintsugi Repair Service</option>
-                <option>General Curatorial Inquiry</option>
+                <option>Bespoke Haute Couture Tailoring</option>
+                <option>Private Showroom Fitting Reservation</option>
+                <option>Fabric Swatch &amp; Fiber Order</option>
+                <option>Garment Alteration &amp; Sashiko Mending</option>
               </select>
             </div>
 
@@ -203,7 +203,7 @@ export default function AboutPage({ onExploreShop }) {
                 rows={4}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your vision or inquiry specifications..."
+                placeholder="Describe your sizing, fabric preferences, or showroom appointment window..."
                 className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
               ></textarea>
             </div>
@@ -222,16 +222,16 @@ export default function AboutPage({ onExploreShop }) {
       <section className="w-full py-space-5xl text-center">
         <div className="max-w-xl mx-auto px-margin-mobile">
           <h2 className="font-headline-lg text-headline-lg text-on-surface mb-space-md">
-            Explore the Archive
+            Explore the Garment Archive
           </h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant mb-space-xl">
-            Acquire numbered editions crafted in limited batches for deliberate living.
+            Acquire limited edition garments crafted from pure natural textiles.
           </p>
           <button
             onClick={onExploreShop}
             className="h-12 px-8 rounded bg-primary text-on-primary font-label-md text-label-md uppercase tracking-wider hover:bg-secondary transition-colors cursor-pointer"
           >
-            Browse Catalog / Shop
+            Browse Apparel Catalog
           </button>
         </div>
       </section>

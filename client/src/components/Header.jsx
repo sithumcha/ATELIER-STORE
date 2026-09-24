@@ -53,7 +53,7 @@ export default function Header({ cartCount, wishlistCount, activeTab, setActiveT
         </div>
 
         {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-space-xl">
+        <nav className="hidden lg:flex items-center gap-space-md">
           <button
             onClick={() => setActiveTab('home')}
             className={`transition-colors cursor-pointer ${
@@ -62,7 +62,48 @@ export default function Header({ cartCount, wishlistCount, activeTab, setActiveT
                 : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            Home
+            New Arrivals
+          </button>
+          <button
+            onClick={() => setActiveTab('womens-wardrobe')}
+            className={`transition-colors cursor-pointer ${
+              activeTab === 'womens-wardrobe'
+                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
+                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Women's Wardrobe
+          </button>
+          <button
+            onClick={() => setActiveTab('mens-tailoring')}
+            className={`transition-colors cursor-pointer ${
+              activeTab === 'mens-tailoring'
+                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
+                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Men's Clothing
+          </button>
+
+          <button
+            onClick={() => setActiveTab('textiles')}
+            className={`transition-colors cursor-pointer ${
+              activeTab === 'textiles'
+                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
+                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Textiles &amp; Fiber
+          </button>
+          <button
+            onClick={() => setActiveTab('lookbook')}
+            className={`transition-colors cursor-pointer ${
+              activeTab === 'lookbook'
+                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
+                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Lookbook &amp; Journal
           </button>
           <button
             onClick={() => setActiveTab('shop')}
@@ -72,27 +113,7 @@ export default function Header({ cartCount, wishlistCount, activeTab, setActiveT
                 : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            Catalog / Shop
-          </button>
-          <button
-            onClick={() => setActiveTab('living')}
-            className={`transition-colors cursor-pointer ${
-              activeTab === 'living'
-                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
-                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Living &amp; Objects
-          </button>
-          <button
-            onClick={() => setActiveTab('about')}
-            className={`transition-colors cursor-pointer ${
-              activeTab === 'about'
-                ? 'text-on-surface font-semibold border-b-2 border-primary pb-1'
-                : 'font-label-md text-label-md text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            About Us
+            Catalog
           </button>
         </nav>
 
@@ -106,7 +127,7 @@ export default function Header({ cartCount, wishlistCount, activeTab, setActiveT
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-56 h-10 pl-9 pr-3 rounded bg-surface-container text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container-lowest transition-colors"
-              placeholder="Explore decor..."
+              placeholder="Search natural fiber garments..."
               type="search"
             />
           </div>
@@ -183,9 +204,12 @@ export default function Header({ cartCount, wishlistCount, activeTab, setActiveT
       {mobileMenuOpen && (
         <div className="lg:hidden bg-surface-container-low border-b border-surface-variant px-margin-mobile py-4 space-y-3">
           {[
-            { id: 'home', label: 'Home' },
-            { id: 'shop', label: 'Catalog / Shop' },
-            { id: 'living', label: 'Living & Objects' },
+            { id: 'home', label: 'New Arrivals' },
+            { id: 'womens-wardrobe', label: "Women's Wardrobe" },
+            { id: 'mens-tailoring', label: "Men's Clothing" },
+            { id: 'textiles', label: 'Textiles & Fiber' },
+            { id: 'lookbook', label: 'Lookbook & Journal' },
+            { id: 'shop', label: 'Catalog' },
             { id: 'about', label: 'About Us' },
           ].map((item) => (
             <button

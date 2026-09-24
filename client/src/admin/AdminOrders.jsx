@@ -247,7 +247,7 @@ export default function AdminOrders() {
             <div className="flex items-start justify-between border-b border-surface-variant pb-4">
               <div>
                 <span className="font-label-caps text-[10px] uppercase text-secondary tracking-widest block">
-                  KURA Studio • Consignment Certificate
+                  ATELIERSTORE • Consignment Certificate
                 </span>
                 <h3 className="font-headline-sm text-headline-sm text-primary">
                   Official Waybill &amp; Airway Docket

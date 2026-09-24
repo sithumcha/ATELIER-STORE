@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 
+const formatRs = (val) => {
+  if (val === undefined || val === null) return 'Rs. 0';
+  let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (num > 0 && num < 1000) num = num * 100;
+  return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
+};
+
 export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,13 +22,13 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
           const formatted = data.map((p) => ({
             id: p._id || p.id,
             name: p.title || p.name || 'Untitled Object',
-            category: p.category || 'Home Decor',
-            price: typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : (String(p.price).startsWith('$') ? p.price : `$${p.price}`),
+            category: p.category || "Women's Wardrobe",
+            price: formatRs(p.price),
             stock: p.stock ?? 50,
             kiln: p.studio || 'Kyoto Studio',
             badge: p.badge || 'Limited Edition',
             badgeClass: p.badgeClass || 'bg-surface-container-lowest/90 text-on-surface',
-            img: p.img || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCM1-YTw4n0FPZnbYGrL2ZKpWYVzkC30fp_bkGtOok8G3Yed9DHdwPj_l-B7xV7PUVVIwgo6hrSl5hw4I3K2IYJY8e6x_V7F0hCFtrsQ7y77ZT9Z3SmTtq0udO2gJd_dV6mQD2RdSk9Q_0ZXOa9poTNkg_8fcNoY_DyLm1HZ6Y9fxuzziIpZXsfTfycH8u91TbRCLN67m7LpcMTqqzVN6O0-kxx_CfxrBFT6a2X-3rf7uVi8QQIE4c',
+            img: p.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80',
             alt: p.alt || p.subtitle || p.title,
             rawProduct: p,
           }));
@@ -35,6 +42,7 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchProducts();

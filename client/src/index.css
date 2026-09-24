@@ -40,6 +40,250 @@
 }
 
 /* Custom Keyframe Animations & Micro-interactions */
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.animate-heart-pop {
+  animation: heartPop 0.45s ease-out;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.animate-badge-pop {
+  animation: badgePop 0.35s ease-out;
+}
+
+.pillar-icon-float {
+  animation: floatSlow 3.8s ease-in-out infinite;
+}
+
+.card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.card-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.25), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  transition: none;
+}
+.card-shimmer:hover::after {
+  left: 150%;
+  transition: left 0.85s ease-in-out;
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: rippleEffect 0.6s linear;
+  background-color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+@keyframes rippleEffect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.font-serif-luxury {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+.tracking-luxury {
+  letter-spacing: 0.18em;
+}
+
+/* Ken Burns Slow Breathe for Hero */
+@keyframes kenBurnsSlow {
+  0% {
+    transform: scale(1.02);
+  }
+  50% {
+    transform: scale(1.08) translateY(-4px);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+.animate-ken-burns {
+  animation: kenBurnsSlow 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* Staggered Hero Fade-In Slide Animations */
+@keyframes heroFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-badge-anim {
+  animation: heroFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+.hero-title-anim {
+  animation: heroFadeUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+.hero-desc-anim {
+  animation: heroFadeUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+.hero-cta-anim {
+  animation: heroFadeUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+}
+.hero-foot-anim {
+  animation: heroFadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.75s both;
+}
+
+/* Badge Shimmer Effect */
+@keyframes subtleShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.badge-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: subtleShimmer 6s infinite;
+}
+
+/* Zoom Transition for Bento Cards */
+.card-zoom-img {
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.8s ease;
+}
+.card-zoom:hover .card-zoom-img {
+  transform: scale(1.08);
+  filter: brightness(0.96);
+}
+.card-overlay {
+  transition: background 0.7s ease, opacity 0.7s ease;
+}
+.card-zoom:hover .card-overlay {
+  opacity: 0.95;
+}
+
+/* Button Arrow and Rotate Animations */
+.btn-circle-arrow {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+.card-zoom:hover .btn-circle-arrow {
+  transform: scale(1.1) rotate(-45deg);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Wishlist Heart Bounce/Pulse */
+.wishlist-btn {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.wishlist-btn:hover {
+  transform: scale(1.18);
+}
+.wishlist-btn:active {
+  transform: scale(0.92);
+}
+.wishlist-btn.active-heart svg {
+  fill: #a67253;
+  stroke: #a67253;
+  animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes heartPop {
+  0% { transform: scale(0.7); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Cart Bump / Bounce */
+@keyframes cartBump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); }
+  60% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.cart-bump {
+  animation: cartBump 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Underline Expand */
+.underline-expand {
+  position: relative;
+}
+.underline-expand::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: -3px;
+  left: 0;
+  background-color: currentColor;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.underline-expand:hover::after {
+  width: 100%;
+}
+
+/* Scroll Reveal Baseline */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children in grids */
+.stagger-1 { transition-delay: 0.05s; }
+.stagger-2 { transition-delay: 0.12s; }
+.stagger-3 { transition-delay: 0.19s; }
+.stagger-4 { transition-delay: 0.26s; }
+
+/* Interactive Stat Cards Lift */
+.stat-card-interactive {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+}
+.stat-card-interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(166, 114, 83, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
+  border-color: #d8cebe;
+}
+
+/* Product Card Interactive Lift */
+.product-card-anim {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+.product-card-anim:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 35px -10px rgba(60, 50, 40, 0.1);
+  border-color: #d8cebe;
+}
+
+/* Soft pulse badge */
+@keyframes softPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.pulse-dot {
+  animation: softPulse 2.8s infinite ease-in-out;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

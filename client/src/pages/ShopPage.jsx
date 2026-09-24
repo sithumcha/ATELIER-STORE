@@ -1,12 +1,35 @@
 // Catalog & Shop Page Component
 import React, { useState, useEffect } from 'react';
 
-export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
+// Price helper function for Sri Lankan Rupees (Rs.)
+const formatRs = (val) => {
+  if (val === undefined || val === null) return 'Rs. 0';
+  let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (num > 0 && num < 1000) {
+    num = num * 100;
+  }
+  return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
+};
+
+const getRsNumber = (val) => {
+  if (val === undefined || val === null) return 0;
+  let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (num > 0 && num < 1000) {
+    num = num * 100;
+  }
+  return Math.round(num);
+};
+
+export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
   const [sortOption, setSortOption] = useState('Curated Picks');
-  const [priceMax, setPriceMax] = useState(800);
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(150000);
+  const [activePreset, setActivePreset] = useState('all');
+
   const [selectedDiscipline, setSelectedDiscipline] = useState(() => {
-    if (activeTab === 'apparel') return 'Loomed Linen & Apparel';
-    if (activeTab === 'living') return 'Sculptural Furniture';
+    if (initialCategory) return initialCategory;
+    if (activeTab === 'apparel' || activeTab === 'womens-wardrobe') return 'Women\'s Apparel';
+    if (activeTab === 'mens-tailoring') return 'Men\'s Tailoring';
     return 'All Objects';
   });
 
@@ -18,30 +41,125 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
       const res = await fetch('http://localhost:5001/api/products');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           const formatted = data.map((p) => {
-            const numPrice = typeof p.price === 'number'
-              ? p.price
-              : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 150;
+            const numPrice = getRsNumber(p.price);
 
             return {
               id: p._id || p.id,
-              title: p.title || p.name || 'Untitled Object',
-              category: p.category || 'Home Decor',
+              title: p.title || p.name || 'Untitled Garment',
+              category: p.category || 'Apparel',
               subtitle: p.subtitle || p.description || '',
-              price: typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : (String(p.price).startsWith('$') ? p.price : `$${p.price}`),
+              price: formatRs(numPrice),
               numericPrice: numPrice,
-              studio: p.studio || 'Kyoto Studio',
+              studio: p.studio || 'Kyoto Atelier',
               badge: p.badge || 'Limited Edition',
-              img: p.img || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCM1-YTw4n0FPZnbYGrL2ZKpWYVzkC30fp_bkGtOok8G3Yed9DHdwPj_l-B7xV7PUVVIwgo6hrSl5hw4I3K2IYJY8e6x_V7F0hCFtrsQ7y77ZT9Z3SmTtq0udO2gJd_dV6mQD2RdSk9Q_0ZXOa9poTNkg_8fcNoY_DyLm1HZ6Y9fxuzziIpZXsfTfycH8u91TbRCLN67m7LpcMTqqzVN6O0-kxx_CfxrBFT6a2X-3rf7uVi8QQIE4c',
+              img: p.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
             };
           });
           setProducts(formatted);
+          return;
         }
       }
     } catch (err) {
-      console.log('Database fetch error:', err);
+      console.log('Database fetch error, fallback to curated clothing catalog:', err);
     }
+
+    // Default Curated High-Fashion Apparel Catalog in Rs.
+    const defaultApparelCatalog = [
+      {
+        id: 'c1',
+        title: 'Asymmetrical Silk Haori Dress',
+        category: "Women's Apparel",
+        subtitle: 'Hand-dyed organic Kyoto mulberry silk with fluid sash drape',
+        price: formatRs(48000),
+        numericPrice: 48000,
+        badge: 'Edition 09',
+        img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c2',
+        title: 'Unstructured Belgian Flax Blazer',
+        category: "Men's Tailoring",
+        subtitle: 'Soft-shouldered heavy linen tailored coat with horn buttons',
+        price: formatRs(65000),
+        numericPrice: 65000,
+        badge: 'Bespoke',
+        img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c3',
+        title: 'Pleated Raw Silk Trousers',
+        category: "Women's Apparel",
+        subtitle: 'High-waisted architectural trousers in natural cream silk',
+        price: formatRs(34000),
+        numericPrice: 34000,
+        badge: 'Popular',
+        img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c4',
+        title: 'Kimono Collar Linen Trench',
+        category: "Men's Tailoring",
+        subtitle: 'Double-breasted raw flax overcoat with waist belt',
+        price: formatRs(88000),
+        numericPrice: 88000,
+        badge: 'Limited Run',
+        img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c5',
+        title: 'Wabi-Sabi Indigo Dye Tunic',
+        category: "Women's Apparel",
+        subtitle: 'Fermented plant indigo dipped loose cotton linen tunic',
+        price: formatRs(24000),
+        numericPrice: 24000,
+        badge: 'Artisan Dip',
+        img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c6',
+        title: 'Minimalist Virgin Wool Overcoat',
+        category: "Men's Tailoring",
+        subtitle: 'Unlined Japanese virgin wool cocoon coat in charcoal',
+        price: formatRs(115000),
+        numericPrice: 115000,
+        badge: 'Archival',
+        img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c7',
+        title: 'Hand-Loomed Flax Linen Scarf',
+        category: 'Textiles & Fiber',
+        subtitle: 'Earthy unbleached organic linen woven wrap',
+        price: formatRs(12500),
+        numericPrice: 12500,
+        badge: 'Essential',
+        img: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c8',
+        title: 'Architectural Sculptural Vest',
+        category: "Women's Apparel",
+        subtitle: 'Layered linen-silk tailored vest with side tie',
+        price: formatRs(29500),
+        numericPrice: 29500,
+        badge: 'New Release',
+        img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1000&q=80',
+      },
+      {
+        id: 'c9',
+        title: 'Botanical Silk Swatch Set',
+        category: 'Textiles & Fiber',
+        subtitle: '10 swatch cards of plant-dyed mulberry silk',
+        price: formatRs(8500),
+        numericPrice: 8500,
+        badge: 'Atelier Sample',
+        img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+      },
+    ];
+
+    setProducts(defaultApparelCatalog);
   };
 
   useEffect(() => {
@@ -49,18 +167,28 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'apparel') {
-      setSelectedDiscipline('Loomed Linen & Apparel');
-    } else if (activeTab === 'living') {
-      setSelectedDiscipline('Sculptural Furniture');
+    if (initialCategory) {
+      setSelectedDiscipline(initialCategory);
+    } else if (activeTab === 'apparel' || activeTab === 'womens-wardrobe') {
+      setSelectedDiscipline("Women's Apparel");
+    } else if (activeTab === 'mens-tailoring') {
+      setSelectedDiscipline("Men's Tailoring");
     } else if (activeTab === 'shop') {
       setSelectedDiscipline('All Objects');
     }
-  }, [activeTab]);
+  }, [initialCategory, activeTab]);
+
+  const handleApplyPreset = (preset, minVal, maxVal) => {
+    setActivePreset(preset);
+    setPriceMin(minVal);
+    setPriceMax(maxVal);
+  };
 
   const clearAllFilters = () => {
     setSelectedDiscipline('All Objects');
-    setPriceMax(800);
+    setPriceMin(0);
+    setPriceMax(150000);
+    setActivePreset('all');
   };
 
   const handleQuickAdd = (p) => {
@@ -83,68 +211,57 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
   const matchesDiscipline = (p, discipline) => {
     if (discipline === 'All Objects' || discipline === 'All Disciplines') return true;
     const searchString = (p.category + ' ' + p.title + ' ' + p.subtitle).toLowerCase();
-    
-    if (discipline === 'Loomed Linen & Apparel') {
+
+    if (discipline === "Women's Apparel") {
       return (
-        searchString.includes('linen') ||
+        searchString.includes('women') ||
+        searchString.includes('dress') ||
+        searchString.includes('tunic') ||
+        searchString.includes('silk') ||
+        searchString.includes('skirt') ||
+        searchString.includes('blouse')
+      );
+    }
+    if (discipline === "Men's Clothing" || discipline === "Men's Tailoring") {
+      if (searchString.includes('women') || searchString.includes('dress') || searchString.includes('skirt') || searchString.includes('tunic')) {
+        return false;
+      }
+      return (
+        searchString.includes('men') ||
+        searchString.includes('tailor') ||
+        searchString.includes('blazer') ||
+        searchString.includes('trench') ||
+        searchString.includes('suit') ||
+        searchString.includes('coat') ||
+        searchString.includes('jacket')
+      );
+    }
+    if (discipline === 'Textiles & Fiber') {
+      return (
+        searchString.includes('textile') ||
+        searchString.includes('fiber') ||
         searchString.includes('flax') ||
-        searchString.includes('apparel') ||
-        searchString.includes('garment') ||
-        searchString.includes('robe') ||
-        searchString.includes('haori') ||
-        searchString.includes('duvet') ||
-        searchString.includes('drape')
-      );
-    }
-    if (discipline === 'Ceramics & Vessels') {
-      return (
-        searchString.includes('ceramic') ||
-        searchString.includes('vessel') ||
-        searchString.includes('stoneware') ||
-        searchString.includes('clay') ||
-        searchString.includes('raku') ||
-        searchString.includes('teapot') ||
-        searchString.includes('chawan')
-      );
-    }
-    if (discipline === 'Architectural Lighting') {
-      return (
-        searchString.includes('lighting') ||
-        searchString.includes('lantern') ||
-        searchString.includes('pendant') ||
-        searchString.includes('lamp') ||
-        searchString.includes('washi')
-      );
-    }
-    if (discipline === 'Sculptural Furniture') {
-      return (
-        searchString.includes('furniture') ||
-        searchString.includes('timber') ||
-        searchString.includes('hinoki') ||
-        searchString.includes('stool') ||
-        searchString.includes('bench') ||
-        searchString.includes('table')
-      );
-    }
-    if (discipline === 'Hinoki Bath & Ritual') {
-      return (
-        searchString.includes('bath') ||
-        searchString.includes('hinoki') ||
-        searchString.includes('onsen') ||
-        searchString.includes('mist') ||
-        searchString.includes('ritual')
+        searchString.includes('scarf') ||
+        searchString.includes('swatch') ||
+        searchString.includes('loom')
       );
     }
     return searchString.includes(discipline.toLowerCase());
   };
 
   const categoriesList = [
-    { id: 'all', name: 'All Objects', label: 'All Objects' },
-    { id: 'ceramics', name: 'Ceramics & Vessels', label: 'Ceramics & Vessels' },
-    { id: 'apparel', name: 'Loomed Linen & Apparel', label: 'Linen & Apparel' },
-    { id: 'lighting', name: 'Architectural Lighting', label: 'Lighting Sculptures' },
-    { id: 'furniture', name: 'Sculptural Furniture', label: 'Sculptural Furniture' },
-    { id: 'bath', name: 'Hinoki Bath & Ritual', label: 'Hinoki Bath & Ritual' },
+    { id: 'all', name: 'All Objects', label: 'All Garments' },
+    { id: 'womens', name: "Women's Apparel", label: "Women's Collection" },
+    { id: 'mens', name: "Men's Clothing", label: "Men's Collection" },
+    { id: 'textiles', name: 'Textiles & Fiber', label: 'Textiles & Swatches' },
+  ];
+
+  const pricePresets = [
+    { id: 'all', label: 'All Prices', min: 0, max: 150000 },
+    { id: 'under-15k', label: 'Under Rs. 15,000', min: 0, max: 15000 },
+    { id: '15k-40k', label: 'Rs. 15,000 – 40,000', min: 15000, max: 40000 },
+    { id: '40k-80k', label: 'Rs. 40,000 – 80,000', min: 40000, max: 80000 },
+    { id: 'above-80k', label: 'Rs. 80,000+', min: 80000, max: 200000 },
   ];
 
   const getCategoryCount = (discipline) => {
@@ -152,7 +269,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
   };
 
   const filteredProducts = products.filter((p) => {
-    const matchesPrice = p.numericPrice <= priceMax;
+    const matchesPrice = p.numericPrice >= priceMin && p.numericPrice <= priceMax;
     const matchesDisc = matchesDiscipline(p, selectedDiscipline);
     return matchesPrice && matchesDisc;
   });
@@ -163,7 +280,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
     return 0;
   });
 
-  const isFiltered = selectedDiscipline !== 'All Objects' || priceMax < 800;
+  const isFiltered = selectedDiscipline !== 'All Objects' || priceMin > 0 || priceMax < 150000 || activePreset !== 'all';
 
   return (
     <div className="w-full bg-surface">
@@ -173,16 +290,14 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
             <div>
               <span className="font-label-caps text-label-caps uppercase text-secondary tracking-widest block mb-space-xxs">
-                {activeTab === 'apparel' ? 'Loomed Linen & Garments Archive' : 'Complete Archival Inventory'}
+                ATELIER ÉDITIONS GARMENT ARCHIVE
               </span>
               <h1 className="font-display-hero text-display-hero-mobile md:text-display-hero text-on-surface leading-[1.05]">
-                {activeTab === 'apparel' ? 'Raw Linen & Apparel' : 'Catalog & Numbered Editions'}
+                Apparel Catalog &amp; Custom Tailoring
               </h1>
             </div>
             <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
-              {activeTab === 'apparel'
-                ? 'Woven on vintage shuttle looms from unbleached European flax, finished with organic plant dyes for deliberate lounge rituals.'
-                : 'Tactile objects categorized by material disciplines: unglazed stoneware, Belgian flax, cast bronze, and charred timber.'}
+              Filter luxury garments by price range in Sri Lankan Rupees (Rs.), silk weaving weight, and tailoring discipline.
             </p>
           </div>
         </div>
@@ -194,7 +309,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
         {/* Top Horizontal Category Selector Pills Bar */}
         <div className="mb-space-2xl border-b border-surface-variant pb-space-lg">
           <span className="font-label-caps text-xs text-secondary uppercase tracking-widest block mb-3 font-semibold">
-            Select Material Category Discipline:
+            Select Apparel Category:
           </span>
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
             {categoriesList.map((cat) => {
@@ -224,18 +339,22 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md pb-space-lg border-b border-surface-variant mb-space-2xl">
           <div className="flex flex-wrap items-center gap-space-xs">
             <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mr-1">
-              Active Category:
+              Active Filters:
             </span>
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary text-on-primary font-label-caps text-[11px] uppercase font-bold shadow-xs">
               <span>{selectedDiscipline}</span>
             </span>
 
-            {priceMax < 800 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-highest text-on-surface font-label-caps text-[11px] uppercase">
-                <span>Under ${priceMax}</span>
+            {(priceMin > 0 || priceMax < 150000) && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-secondary text-on-secondary font-label-caps text-[11px] uppercase font-bold shadow-xs">
+                <span>Price: {formatRs(priceMin)} – {formatRs(priceMax)}</span>
                 <button
-                  onClick={() => setPriceMax(800)}
-                  className="hover:text-secondary cursor-pointer"
+                  onClick={() => {
+                    setPriceMin(0);
+                    setPriceMax(150000);
+                    setActivePreset('all');
+                  }}
+                  className="hover:text-primary cursor-pointer ml-1"
                 >
                   <span className="material-symbols-outlined text-[14px]">close</span>
                 </button>
@@ -247,13 +366,13 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
                 onClick={clearAllFilters}
                 className="font-label-caps text-[11px] uppercase tracking-wider text-secondary hover:underline cursor-pointer ml-2"
               >
-                Clear Filters ({products.length} Objects)
+                Clear All Filters ({filteredProducts.length} Garments)
               </button>
             )}
           </div>
 
           <div className="flex items-center gap-space-md">
-            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Sort By:</span>
+            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Sort By Price / Release:</span>
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value)}
@@ -262,7 +381,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
               <option>Curated Picks</option>
               <option>Price: Low to High</option>
               <option>Price: High to Low</option>
-              <option>Newest Kiln Editions</option>
+              <option>Newest Atelier Releases</option>
             </select>
           </div>
         </div>
@@ -270,9 +389,11 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
         {/* Catalog Body Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-2xl items-start">
           <aside className="lg:col-span-3 space-y-space-2xl bg-surface-container-low p-space-xl rounded-xl border border-surface-variant">
+            
+            {/* Category Index Sidebar */}
             <div>
-              <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface mb-space-md border-b border-surface-variant pb-2">
-                Material Index
+              <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface mb-space-md border-b border-surface-variant pb-2 font-semibold">
+                Category Index
               </h3>
               <ul className="space-y-space-xs font-body-sm text-body-sm">
                 {categoriesList.map((cat) => (
@@ -293,41 +414,108 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
               </ul>
             </div>
 
+            {/* Interactive Price Filter Section */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface">
-                  Price Limit
+              <div className="flex items-center justify-between mb-2 border-b border-surface-variant pb-2">
+                <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface font-semibold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base text-secondary">tune</span>
+                  <span>Price Filter (Rs.)</span>
                 </h3>
-                <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">
-                  ${priceMax}
-                </span>
               </div>
-              <input
-                type="range"
-                min="100"
-                max="800"
-                value={priceMax}
-                onChange={(e) => setPriceMax(Number(e.target.value))}
-                className="w-full accent-secondary cursor-pointer"
-              />
-              <div className="flex justify-between font-label-caps text-[10px] text-on-surface-variant mt-1">
-                <span>$100</span>
-                <span>$800</span>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-col gap-1.5 my-3">
+                {pricePresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleApplyPreset(preset.id, preset.min, preset.max)}
+                    className={`w-full text-left px-3 py-1.5 rounded text-[11px] font-label-caps uppercase transition-colors cursor-pointer flex items-center justify-between ${
+                      activePreset === preset.id
+                        ? 'bg-primary text-on-primary font-bold shadow-xs'
+                        : 'bg-surface-container-lowest border border-surface-variant/60 text-on-surface-variant hover:border-primary'
+                    }`}
+                  >
+                    <span>{preset.label}</span>
+                    {activePreset === preset.id && <span>✓</span>}
+                  </button>
+                ))}
+              </div>
+
+              {/* Range Inputs / Slider Controls */}
+              <div className="space-y-3 pt-2">
+                <div>
+                  <div className="flex justify-between text-xs text-on-surface font-medium mb-1">
+                    <span>Min Price:</span>
+                    <span className="font-semibold text-secondary">{formatRs(priceMin)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="150000"
+                    step="5000"
+                    value={priceMin}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (val <= priceMax) {
+                        setPriceMin(val);
+                        setActivePreset('custom');
+                      }
+                    }}
+                    className="w-full accent-secondary cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs text-on-surface font-medium mb-1">
+                    <span>Max Price:</span>
+                    <span className="font-semibold text-secondary">{formatRs(priceMax)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="150000"
+                    step="5000"
+                    value={priceMax}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      if (val >= priceMin) {
+                        setPriceMax(val);
+                        setActivePreset('custom');
+                      }
+                    }}
+                    className="w-full accent-secondary cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-surface-variant/40">
+                  <span className="font-label-caps text-[10px] text-on-surface-variant">Range: Rs. 0 – Rs. 150,000+</span>
+                  <button
+                    onClick={() => {
+                      setPriceMin(0);
+                      setPriceMax(150000);
+                      setActivePreset('all');
+                    }}
+                    className="font-label-caps text-[10px] text-secondary hover:underline cursor-pointer"
+                  >
+                    Reset Price
+                  </button>
+                </div>
               </div>
             </div>
+
           </aside>
 
           <div className="lg:col-span-9">
             {sortedProducts.length === 0 ? (
               <div className="py-16 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-surface-variant p-8">
-                <span className="material-symbols-outlined text-[48px] block mb-3 opacity-40">strikethrough_s</span>
-                <h3 className="font-headline-sm text-on-surface mb-2">No items found in {selectedDiscipline}</h3>
-                <p className="font-body-sm text-xs mb-4">Try clearing your price filter or selecting another discipline.</p>
+                <span className="material-symbols-outlined text-[48px] block mb-3 opacity-40">filter_alt_off</span>
+                <h3 className="font-headline-sm text-on-surface mb-2">No garments match price range {formatRs(priceMin)} – {formatRs(priceMax)}</h3>
+                <p className="font-body-sm text-xs mb-4">Try increasing your price slider or choosing another price preset.</p>
                 <button
                   onClick={clearAllFilters}
-                  className="px-4 py-2 rounded bg-primary text-on-primary font-label-md text-xs uppercase cursor-pointer"
+                  className="px-5 py-2.5 rounded bg-primary text-on-primary font-label-md text-xs uppercase cursor-pointer"
                 >
-                  Show All Archival Objects
+                  Reset Price &amp; Filters
                 </button>
               </div>
             ) : (
@@ -347,7 +535,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
                         className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://lh3.googleusercontent.com/aida-public/AB6AXuC7VK4Qn61mQPz4bQ6u0Z8FGzbqjYJvgMPqLyVrl_U5rw8zMgKFmYxR2RYaFcJb8gAO-nTIfO_kc1ratauWCpOU-u67Q4sQ_hMEAF36vTpGIZWZBX2Pkz7kk8UW41YFr96mRr-iUvKoCDPu-eARO10RcSnPksGoqvKDFYjSa0lsrGa6YUypRvkzR7akycKGjXDADIurcjslasNNFQeB8t666hIOUqFpxHE-2ruxGhTHqCv8uzFdgiU';
+                          e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
                         }}
                       />
                       {p.badge && (
@@ -356,21 +544,27 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
                         </span>
                       )}
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onToggleWishlist) onToggleWishlist(p);
-                        }}
-                        className={`absolute top-3 right-3 w-9 h-9 rounded-full glass-panel flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer z-10 ${
-                          wishlistIds.includes(p.id) ? 'text-error bg-surface-container-lowest scale-110' : 'text-on-surface hover:text-error hover:scale-110'
-                        }`}
-                        title={wishlistIds.includes(p.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                        type="button"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          {wishlistIds.includes(p.id) ? 'favorite' : 'favorite_border'}
-                        </span>
-                      </button>
+                      {(() => {
+                        const pIdStr = String(p.id || p._id || '');
+                        const isFav = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onToggleWishlist) onToggleWishlist(p);
+                            }}
+                            className={`absolute top-3 right-3 w-9 h-9 rounded-full glass-panel flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer z-10 ${
+                              isFav ? 'text-error bg-surface-container-lowest scale-110' : 'text-on-surface hover:text-error hover:scale-110'
+                            }`}
+                            title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                            type="button"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">
+                              {isFav ? 'favorite' : 'favorite_border'}
+                            </span>
+                          </button>
+                        );
+                      })()}
 
                       <button
                         onClick={(e) => {
@@ -398,7 +592,7 @@ export default function ShopPage({ activeTab = 'shop', onAddToCart, onSelectProd
                         </button>
                       </div>
                       <div className="pt-2 flex items-center justify-between border-t border-surface-variant/40">
-                        <span className="font-price-editorial text-price-editorial text-primary font-medium">
+                        <span className="font-price-editorial text-price-editorial text-primary font-bold">
                           {p.price}
                         </span>
                         <span className="font-label-caps text-[10px] text-secondary font-semibold group-hover:underline">
