@@ -547,55 +547,18 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
           <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm border border-surface-variant space-y-4">
             <h3 className="font-headline-sm text-sm uppercase text-secondary font-semibold border-b border-surface-variant pb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-base">texture</span>
-              02. Loom Shuttles &amp; Fiber Density
+              02. Textile Fiber Weight (GSM)
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Shuttle / Loom Designation</label>
-                <input
-                  type="text"
-                  value={shuttle}
-                  onChange={(e) => setShuttle(e.target.value)}
-                  placeholder="KYOTO WEAVE SHUTTLE NO. 4"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1">GSM Fiber Weight</label>
-                <input
-                  type="text"
-                  value={gsm}
-                  onChange={(e) => setGsm(e.target.value)}
-                  placeholder="410 GSM RAW UNBLEACHED FLAX"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Loom Model Origin</label>
-                <input
-                  type="text"
-                  value={loomOrigin}
-                  onChange={(e) => setLoomOrigin(e.target.value)}
-                  placeholder="Toyoda Non-Automated (1948)"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Weaving Velocity</label>
-                <input
-                  type="text"
-                  value={weavingSpeed}
-                  onChange={(e) => setWeavingSpeed(e.target.value)}
-                  placeholder="9.5 meters per work day"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
+            <div>
+              <label className="font-label-caps text-xs block mb-1">GSM Fiber Weight</label>
+              <input
+                type="text"
+                value={gsm}
+                onChange={(e) => setGsm(e.target.value)}
+                placeholder="410 GSM RAW UNBLEACHED FLAX"
+                className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
+              />
             </div>
           </div>
 
@@ -834,27 +797,48 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
                     key={col.id}
                     className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-container-low border border-surface-variant/70 shadow-xs"
                   >
-                    <div className="relative shrink-0">
+                    {/* Swatch Circle & Picker */}
+                    <div
+                      className="relative w-9 h-9 rounded-full overflow-hidden border border-black/20 shadow-inner flex items-center justify-center shrink-0 cursor-pointer"
+                      style={{ backgroundColor: /^#[0-9A-F]{6}$/i.test(col.hex) ? col.hex : '#C5B8A5' }}
+                      title="Click circle to open visual color palette picker"
+                    >
                       <input
                         type="color"
-                        value={col.hex}
+                        value={/^#[0-9A-F]{6}$/i.test(col.hex) ? col.hex : '#C5B8A5'}
                         onChange={(e) => handleUpdateColor(col.id, 'hex', e.target.value)}
-                        className="w-9 h-9 rounded-full border-0 p-0 cursor-pointer overflow-hidden shadow-inner"
-                        title="Pick color"
+                        className="w-14 h-14 absolute -inset-2 opacity-0 cursor-pointer"
                       />
                     </div>
 
-                    <input
-                      type="text"
-                      value={col.name}
-                      onChange={(e) => handleUpdateColor(col.id, 'name', e.target.value)}
-                      placeholder="Colorway Name (e.g. Undyed Natural Ecru)"
-                      className="flex-1 h-10 px-3 rounded bg-surface border border-surface-variant text-on-surface text-xs font-medium focus:outline-none focus:border-primary"
-                    />
+                    {/* Colorway Name */}
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={col.name}
+                        onChange={(e) => handleUpdateColor(col.id, 'name', e.target.value)}
+                        placeholder="Colorway Name (e.g. Undyed Natural Ecru)"
+                        className="w-full h-10 px-3 rounded bg-surface border border-surface-variant text-on-surface text-xs font-medium focus:outline-none focus:border-primary"
+                      />
+                    </div>
 
-                    <span className="font-mono text-xs text-on-surface-variant uppercase w-16 text-center">
-                      {col.hex}
-                    </span>
+                    {/* Hex Code Input */}
+                    <div className="w-28 shrink-0">
+                      <input
+                        type="text"
+                        value={col.hex}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val && !val.startsWith('#') && val.length <= 6) {
+                            val = '#' + val;
+                          }
+                          handleUpdateColor(col.id, 'hex', val);
+                        }}
+                        placeholder="#E8E2D5"
+                        className="w-full h-10 px-2 rounded bg-surface border border-surface-variant text-on-surface text-xs font-mono font-bold text-center uppercase focus:outline-none focus:border-primary"
+                        title="Type or paste color hex code (e.g. #E8E2D5)"
+                      />
+                    </div>
 
                     <button
                       type="button"
@@ -999,30 +983,6 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
                   placeholder="The raw flax fibers are cultivated across Normandy coastal terrains, naturally retted..."
                   className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Loom Model Origin</label>
-                  <input
-                    type="text"
-                    value={loomOrigin}
-                    onChange={(e) => setLoomOrigin(e.target.value)}
-                    placeholder="Toyoda Non-Automated (1948)"
-                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Weaving Speed / Velocity</label>
-                  <input
-                    type="text"
-                    value={weavingSpeed}
-                    onChange={(e) => setWeavingSpeed(e.target.value)}
-                    placeholder="9.5 meters per work day"
-                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
-                  />
-                </div>
               </div>
             </div>
 

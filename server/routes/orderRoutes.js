@@ -39,11 +39,11 @@ router.post('/', async (req, res) => {
 // 3. Order status eka update kireema (PUT /api/orders/:id/status)
 router.put('/:id/status', async (req, res) => {
   try {
-    const query = req.params.id.startsWith('#') 
-      ? { orderId: req.params.id } 
-      : { _id: req.params.id };
-
-    const order = await Order.findOne(query);
+    const { id } = req.params;
+    let order = await Order.findOne({ orderId: id });
+    if (!order && id.match(/^[0-9a-fA-F]{24}$/)) {
+      order = await Order.findById(id);
+    }
     if (order) {
       order.status = req.body.status || order.status;
       const updatedOrder = await order.save();
@@ -59,11 +59,11 @@ router.put('/:id/status', async (req, res) => {
 // 4. Order ekak ain kireema (DELETE /api/orders/:id)
 router.delete('/:id', async (req, res) => {
   try {
-    const query = req.params.id.startsWith('#') 
-      ? { orderId: req.params.id } 
-      : { _id: req.params.id };
-
-    const deleted = await Order.findOneAndDelete(query);
+    const { id } = req.params;
+    let deleted = await Order.findOneAndDelete({ orderId: id });
+    if (!deleted && id.match(/^[0-9a-fA-F]{24}$/)) {
+      deleted = await Order.findByIdAndDelete(id);
+    }
     if (deleted) {
       res.json({ message: 'Order deleted successfully' });
     } else {

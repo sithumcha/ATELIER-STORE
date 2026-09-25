@@ -449,10 +449,12 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
                         e.stopPropagation();
                         if (onToggleWishlist) onToggleWishlist(g);
                       }}
-                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-surface/80 backdrop-blur-md hover:bg-surface flex items-center justify-center text-on-surface transition-transform active:scale-95 cursor-pointer shadow-xs z-10"
+                      className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-surface/80 backdrop-blur-md hover:bg-surface flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-xs z-10 ${
+                        isFav ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
+                      }`}
                       title="Save to Wishlist"
                     >
-                      <span className={`material-symbols-outlined text-lg ${isFav ? 'text-secondary font-fill' : ''}`}>
+                      <span className="material-symbols-outlined text-lg">
                         {isFav ? 'favorite' : 'favorite_border'}
                       </span>
                     </button>

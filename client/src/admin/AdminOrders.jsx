@@ -50,6 +50,16 @@ export default function AdminOrders() {
     } catch (err) {
       console.log('Status update API error:', err);
     }
+
+    // Sync to localStorage
+    try {
+      const localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const updatedLocal = localOrds.map((o) =>
+        (o.orderId === orderId || o.id === orderId) ? { ...o, status: newStatus } : o
+      );
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify(updatedLocal));
+    } catch (e) {}
+
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );

@@ -44,11 +44,15 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   });
 
   useEffect(() => {
-    fetchUserOrders();
-  }, [user]);
+    fetchUserOrders(true);
+    const interval = setInterval(() => {
+      fetchUserOrders(false);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [user, activeTab]);
 
-  const fetchUserOrders = async () => {
-    setLoadingOrders(true);
+  const fetchUserOrders = async (showSpinner = false) => {
+    if (showSpinner) setLoadingOrders(true);
     let localOrds = [];
     try {
       localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
@@ -65,9 +69,11 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
             : dbOrders;
 
           const map = new Map();
-          [...localOrds, ...filteredDb].forEach(item => {
+          
+          // DB Orders take precedence for live admin updates
+          filteredDb.forEach(item => {
             const id = item.orderId || item.id || item._id;
-            if (id && !map.has(id)) {
+            if (id) {
               let formattedPrice = 'Rs. 0';
               if (typeof item.total === 'number') {
                 formattedPrice = `Rs. ${Math.round(item.total).toLocaleString('en-LK')}`;
@@ -102,6 +108,29 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
               });
             }
           });
+
+          // Add any local-only items not yet in DB
+          localOrds.forEach(item => {
+            const id = item.orderId || item.id;
+            if (id && !map.has(id)) {
+              let formattedPrice = typeof item.total === 'number' ? `Rs. ${Math.round(item.total).toLocaleString('en-LK')}` : item.total;
+              map.set(id, {
+                id: id,
+                date: item.date || 'Recent Order',
+                total: formattedPrice,
+                status: item.status || 'Awaiting Dispatch',
+                courier: 'DHL Insured Vault Courier',
+                estimatedDelivery: '3-5 Business Days',
+                items: Array.isArray(item.items) ? item.items.map(it => ({
+                  title: it.title,
+                  qty: it.qty || 1,
+                  price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
+                  img: it.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
+                })) : []
+              });
+            }
+          });
+
           setPlacedOrders(Array.from(map.values()));
           setLoadingOrders(false);
           return;

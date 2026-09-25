@@ -6,6 +6,7 @@ import AdminProducts from './AdminProducts';
 import AdminPatrons from './AdminPatrons';
 import AdminInquiries from './AdminInquiries';
 import AddProductPage from './AddProductPage';
+import AdminDiscounts from './AdminDiscounts';
 
 
 export default function AdminDashboard({ onGoToPublicStore }) {
@@ -105,7 +106,7 @@ export default function AdminDashboard({ onGoToPublicStore }) {
     return true;
   });
 
-  const handleUpdateOrderStatus = (id, newStatus) => {
+  const handleUpdateOrderStatus = async (id, newStatus) => {
     let statusClass = 'bg-slate-100 text-slate-900 border border-slate-300 font-semibold';
     if (newStatus.includes('Awaiting')) statusClass = 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold';
     if (newStatus.includes('Transit')) statusClass = 'bg-sky-100 text-sky-900 border border-sky-300 font-semibold';
@@ -114,6 +115,26 @@ export default function AdminDashboard({ onGoToPublicStore }) {
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status: newStatus, statusClass } : o))
     );
+
+    // Sync to backend DB
+    try {
+      await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(id)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (e) {
+      console.error('API order status update failed:', e);
+    }
+
+    // Sync to localStorage
+    try {
+      const localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const updatedLocal = localOrds.map((o) =>
+        (o.orderId === id || o.id === id) ? { ...o, status: newStatus } : o
+      );
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify(updatedLocal));
+    } catch (e) {}
   };
 
   const handleProcessOrder = (id) => {
@@ -284,6 +305,8 @@ export default function AdminDashboard({ onGoToPublicStore }) {
                 setActiveNav('editions');
               }}
             />
+          ) : activeNav === 'discounts' ? (
+            <AdminDiscounts />
           ) : activeNav === 'customers' ? (
             <AdminPatrons />
           ) : activeNav === 'artisans' || activeNav === 'journal' || activeNav === 'architectural' || activeNav === 'inquiries' ? (

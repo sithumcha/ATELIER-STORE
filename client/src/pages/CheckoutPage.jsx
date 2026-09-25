@@ -1,35 +1,48 @@
 import React, { useState } from 'react';
 
-export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems = [], user }) {
+export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems = [], user, isDirectBuy = false }) {
+  // Email & Contact
+  const [email, setEmail] = useState(user?.email || 'clara.vanderbilt@atelier.co');
+  
   // Address State
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({
-    firstName: '',
-    lastName: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
+    firstName: user?.name ? user.name.split(' ')[0] : 'Clara',
+    lastName: user?.name ? user.name.split(' ')[1] || '' : 'Vanderbilt',
+    street: '142 Franklin St, Apt 4B',
+    city: 'Colombo',
+    state: 'Western Province',
+    zip: '00300',
+    phone: '+94 77 123 4567',
   });
 
-  // Shipping Speed State
-  const [shippingCost, setShippingCost] = useState(0.00);
+  // Shipping Logistics Option State
+  const [shippingCost, setShippingCost] = useState(0);
+  const [shippingLabel, setShippingLabel] = useState('Complimentary Carbon-Neutral Courier');
 
-  // Payment Method State
+  // Payment Method State: 'card' | 'koko' | 'bank' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [cardDetails, setCardDetails] = useState({
+    number: '4532 •••• •••• 8819',
+    exp: '09 / 27',
+    cvc: '842',
+    name: 'CLARA VANDERBILT',
+  });
 
   // Promo Code State
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [promoError, setPromoError] = useState('');
 
   // Order Submission State
   const [submitting, setSubmitting] = useState(false);
+  const [submitStepText, setSubmitStepText] = useState('');
   const [orderSecured, setOrderSecured] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
   
-  const [orderId] = useState(() => `KR-${Math.floor(10000 + Math.random() * 90000)}`);
+  const [orderId] = useState(() => `ATL-${Math.floor(100000 + Math.random() * 900000)}`);
   const [orderDate] = useState(() => new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -38,37 +51,79 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
     minute: '2-digit'
   }));
 
-  // Dynamic Item List & Pricing math in LKR (Rs.)
-  const displayItems = cartItems.length > 0 ? cartItems : [
-    { id: 'p1', title: 'Vicuna Tailored Cashmere Overcoat', price: 28500, qty: 1, color: 'Obsidian Black', size: 'M' },
-    { id: 'p2', title: 'Raw Silk Trousers - Archival Edition', price: 11000, qty: 1, color: 'Natural Cream', size: '32' }
+  // Items List
+  const displayItems = (cartItems && cartItems.length > 0) ? cartItems : [
+    {
+      id: 'p1',
+      title: 'Solitude Raw Linen Kimono Duster',
+      price: 42000,
+      qty: 1,
+      color: 'Undyed Ecru',
+      size: 'II',
+      img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+    },
   ];
 
+  // Pricing math in LKR (Rs.)
   const itemsSubtotal = displayItems.reduce((acc, item) => {
     let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
     if (p > 0 && p < 1000) p = p * 100;
-    return acc + (p * (item.qty || 1));
+    const q = item.qty || item.quantity || 1;
+    return acc + (p * q);
   }, 0);
 
+  const discountAmount = promoApplied ? Math.round(itemsSubtotal * discountPercent) : 0;
   const activeSubtotal = Math.max(0, itemsSubtotal - discountAmount);
-  const estimatedTax = Math.round(activeSubtotal * 0.08); // 8% estimated tax
+  const estimatedTax = Math.round(activeSubtotal * 0.08); // 8% estimated luxury VAT/Tax
   const totalSettlement = activeSubtotal + estimatedTax + shippingCost;
 
   const handleApplyPromo = () => {
-    if (promoCode.trim().length > 0) {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+
+    // Load dynamic promo codes configured by Admin in localStorage
+    let activeDiscounts = [
+      { code: 'ATELIER10', percentage: 10, active: true },
+      { code: 'LUXURY20', percentage: 20, active: true },
+      { code: 'WELCOME15', percentage: 15, active: true },
+      { code: 'SUMMER25', percentage: 25, active: true },
+    ];
+
+    try {
+      const saved = localStorage.getItem('atelierstore_discount_codes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          activeDiscounts = parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Error loading discount codes in Checkout:', e);
+    }
+
+    const matched = activeDiscounts.find(
+      (d) => d.code.toUpperCase() === code && d.active !== false
+    );
+
+    if (matched) {
+      const pctDecimal = (matched.percentage || 10) / 100;
       setPromoApplied(true);
-      setDiscountAmount(Math.round(itemsSubtotal * 0.10)); // 10% discount
+      setDiscountPercent(pctDecimal);
+      setPromoError('');
+    } else {
+      setPromoApplied(false);
+      setDiscountPercent(0);
+      setPromoError(`Invalid or inactive promo code "${code}".`);
     }
   };
 
   const handleTriggerOrder = () => {
     setSubmitting(true);
+    setSubmitStepText('Encrypting Vault Transaction...');
 
     const customerName = useNewAddress
       ? `${newAddress.firstName || ''} ${newAddress.lastName || ''}`.trim() || (user?.name || 'Clara Vanderbilt')
       : (user?.name || 'Clara Vanderbilt');
-
-    const customerEmail = (document.getElementById('contact-email')?.value) || user?.email || 'clara.vanderbilt@atelier.co';
 
     const customerDestination = useNewAddress
       ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}`
@@ -77,7 +132,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
     const orderPayload = {
       orderId: orderId,
       patronName: customerName,
-      patronEmail: customerEmail,
+      patronEmail: email,
       items: displayItems.map(item => {
         let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
         if (p > 0 && p < 1000) p = p * 100;
@@ -85,51 +140,50 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
           id: item.id || 'p1',
           title: item.title,
           price: p,
-          qty: item.qty || 1,
+          qty: item.qty || item.quantity || 1,
           img: item.img || item.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-          color: item.color,
-          size: item.size
+          color: item.color || 'Default',
+          size: item.size || 'M',
         };
       }),
       destination: customerDestination,
       total: totalSettlement,
       status: 'Awaiting Dispatch',
-      date: orderDate
+      date: orderDate,
+      paymentMethod: paymentMethod === 'card' ? 'Credit Card (Vault)' : paymentMethod === 'koko' ? 'Koko / Mint Pay' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Cash on Delivery',
     };
 
-    // Save to Database (Admin receives order in Admin Dashboard / Orders Queue)
-    try {
-      fetch('http://localhost:5001/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      }).catch((err) => console.error('Error saving order to backend DB:', err));
-    } catch (e) {
-      console.error('API call exception:', e);
-    }
+    // Stage 1: DB Save
+    setTimeout(() => {
+      setSubmitStepText('Generating Archival Invoice & Passport...');
+      try {
+        fetch('http://localhost:5001/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        }).catch((err) => console.error('DB Order log error:', err));
+      } catch (e) {
+        console.error('API call exception:', e);
+      }
 
-    // Save to User Profile Local Storage for Profile view
-    try {
-      const existingUserOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
-      localStorage.setItem('atelierstore_user_orders', JSON.stringify([orderPayload, ...existingUserOrders]));
-    } catch (e) {
-      console.error('Error saving order to localStorage:', e);
-    }
+      try {
+        const existingUserOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+        localStorage.setItem('atelierstore_user_orders', JSON.stringify([orderPayload, ...existingUserOrders]));
+      } catch (e) {
+        console.error('Error saving order to localStorage:', e);
+      }
+    }, 700);
 
+    // Stage 2: Finalize
     setTimeout(() => {
       setSubmitting(false);
       setOrderSecured(true);
       setShowToast(true);
       setShowBillModal(true);
 
-      // Auto trigger print dialog when order completes
-      setTimeout(() => {
-        window.print();
-      }, 600);
-
       if (onOrderComplete) onOrderComplete();
       setTimeout(() => setShowToast(false), 5000);
-    }, 1400);
+    }, 1600);
   };
 
   const scrollToSection = (id) => {
@@ -138,235 +192,303 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
   };
 
   return (
-    <div className="w-full bg-surface min-h-screen text-on-surface">
+    <div className="w-full bg-surface min-h-screen text-on-surface selection:bg-surface-variant selection:text-on-surface">
+      
       {/* Toast Overlay */}
       {showToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-space-xl py-space-md rounded-full shadow-2xl transition-all duration-500 flex items-center gap-space-md z-50 animate-bounce">
-          <span className="material-symbols-outlined text-secondary text-subheading-lg">check_circle</span>
-          <span className="font-body-md text-body-md">
-            Order KR-80291 confirmed. Dispatch preparation initialized for Clara Vanderbilt.
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-6 py-4 rounded-full shadow-2xl transition-all duration-500 flex items-center gap-3 z-50 animate-bounce border border-secondary/30">
+          <span className="material-symbols-outlined text-secondary text-2xl">check_circle</span>
+          <span className="font-body-md text-sm font-medium">
+            Order #{orderId} confirmed! Archival dispatch initialized.
           </span>
         </div>
       )}
 
-      {/* Minimalist Security Header */}
-      <header className="w-full bg-surface-container-low/70 backdrop-blur-md px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop py-space-lg">
-        <div className="max-w-[1360px] mx-auto flex items-center justify-between">
-          <button onClick={onBackToHome} className="flex items-center gap-space-xs group cursor-pointer">
-            <span className="font-headline-md text-headline-md tracking-tight text-on-surface">ATELIER</span>
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-secondary -mt-1" />
-            <span className="font-label-caps text-label-caps tracking-[0.24em] text-on-surface-variant font-semibold pl-1">STORE</span>
-          </button>
-          <div className="flex items-center gap-space-sm bg-surface-container px-space-md py-space-xs rounded-full">
-            <span className="material-symbols-outlined text-secondary text-subheading-md" style={{ fontVariationSettings: "'FILL' 1" }}>
-              lock
-            </span>
-            <span className="font-label-caps text-label-caps tracking-wider text-on-surface-variant">
-              256-BIT ENCRYPTED VAULT
-            </span>
+      {/* Minimalist Professional Security Header */}
+      <header className="w-full bg-surface-container-lowest border-b border-surface-variant/50 sticky top-0 z-40 backdrop-blur-md shadow-xs">
+        <div className="max-w-[1360px] mx-auto px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop h-20 flex items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBackToHome}
+              className="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer flex items-center gap-1.5 font-label-caps text-xs uppercase"
+              title="Return to store"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              <span className="hidden sm:inline">Back to Store</span>
+            </button>
+
+            <div className="h-6 w-px bg-surface-variant/60 hidden sm:block"></div>
+
+            <button onClick={onBackToHome} className="flex items-center gap-space-xs group cursor-pointer">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 240 60"
+                className="h-8 md:h-9 w-auto text-on-surface transition-transform duration-300 group-hover:scale-105"
+                fill="none"
+              >
+                <text x="10" y="40" fontFamily="'Playfair Display', serif" fontSize="26" fontWeight="600" letterSpacing="0.18em" fill="currentColor">ATELIER</text>
+                <text x="150" y="40" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize="14" fontWeight="400" letterSpacing="0.3em" fill="#78716c">STORE</text>
+                <circle cx="138" cy="32" r="2.5" fill="#c27803" />
+              </svg>
+            </button>
           </div>
+
+          <div className="flex items-center gap-3">
+            {isDirectBuy ? (
+              <span className="px-3 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30 font-label-caps text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs">bolt</span>
+                <span>Direct Item Checkout</span>
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-label-caps text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs">shopping_bag</span>
+                <span>Shopping Bag Checkout ({displayItems.length})</span>
+              </span>
+            )}
+
+            <div className="hidden md:flex items-center gap-1.5 bg-surface-container-low border border-surface-variant/60 px-3.5 py-1.5 rounded-full text-xs font-label-caps text-on-surface-variant">
+              <span className="material-symbols-outlined text-secondary text-base">lock</span>
+              <span className="font-semibold tracking-wider">256-Bit SSL Encrypted Vault</span>
+            </div>
+          </div>
+
         </div>
       </header>
 
       {/* Main Checkout Workspace */}
-      <div className="w-full max-w-[1360px] mx-auto px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop py-space-2xl lg:py-space-3xl">
+      <div className="w-full max-w-[1360px] mx-auto px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop py-space-2xl">
         
-        {/* Progress Stepper */}
-        <div className="mb-space-3xl">
-          <div className="grid grid-cols-3 gap-space-md max-w-2xl relative">
-            <div className="flex flex-col gap-space-xs relative group cursor-pointer" onClick={() => scrollToSection('step-shipping')}>
-              <div className="flex items-center gap-space-xs">
-                <span className="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-caps text-[10px]">1</span>
-                <span className="font-label-caps text-label-caps text-on-surface font-semibold tracking-widest">SHIPPING</span>
+        {/* Step Navigation Bar */}
+        <div className="mb-space-2xl bg-surface-container-low p-4 rounded-2xl border border-surface-variant/60 shadow-xs">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 max-w-3xl mx-auto">
+            
+            <div
+              onClick={() => scrollToSection('step-shipping')}
+              className="flex flex-col items-center sm:items-start gap-1 p-2 rounded-xl cursor-pointer hover:bg-surface-container transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-caps text-xs font-bold shadow-xs">1</span>
+                <span className="font-label-caps text-xs text-on-surface font-bold tracking-widest hidden sm:inline">1. ADDRESS &amp; IDENTITY</span>
+                <span className="font-label-caps text-[10px] text-on-surface font-bold sm:hidden">ADDRESS</span>
               </div>
-              <div className="h-0.5 w-full bg-primary rounded-full mt-space-xs" />
-              <span className="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Franklin St, NY</span>
+              <div className="h-1 w-full bg-primary rounded-full mt-1" />
+              <span className="font-body-sm text-[11px] text-on-surface-variant hidden sm:inline">Contact &amp; Atelier Destination</span>
             </div>
 
-            <div className="flex flex-col gap-space-xs relative group cursor-pointer" onClick={() => scrollToSection('step-delivery')}>
-              <div className="flex items-center gap-space-xs">
-                <span className="w-5 h-5 rounded-full bg-secondary text-on-primary flex items-center justify-center font-label-caps text-[10px]">2</span>
-                <span className="font-label-caps text-label-caps text-secondary font-semibold tracking-widest">DELIVERY</span>
+            <div
+              onClick={() => scrollToSection('step-delivery')}
+              className="flex flex-col items-center sm:items-start gap-1 p-2 rounded-xl cursor-pointer hover:bg-surface-container transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-caps text-xs font-bold shadow-xs">2</span>
+                <span className="font-label-caps text-xs text-secondary font-bold tracking-widest hidden sm:inline">2. LOGISTICS &amp; FULFILLMENT</span>
+                <span className="font-label-caps text-[10px] text-secondary font-bold sm:hidden">DELIVERY</span>
               </div>
-              <div className="h-0.5 w-full bg-secondary rounded-full mt-space-xs" />
-              <span className="font-body-sm text-body-sm text-on-surface-variant">Carbon-Neutral</span>
+              <div className="h-1 w-full bg-secondary rounded-full mt-1" />
+              <span className="font-body-sm text-[11px] text-on-surface-variant hidden sm:inline">Dispatch Pacing</span>
             </div>
 
-            <div className="flex flex-col gap-space-xs relative group cursor-pointer" onClick={() => scrollToSection('step-payment')}>
-              <div className="flex items-center gap-space-xs">
-                <span className="w-5 h-5 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-label-caps text-[10px]">3</span>
-                <span className="font-label-caps text-label-caps text-on-surface-variant tracking-widest">PAYMENT</span>
+            <div
+              onClick={() => scrollToSection('step-payment')}
+              className="flex flex-col items-center sm:items-start gap-1 p-2 rounded-xl cursor-pointer hover:bg-surface-container transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-label-caps text-xs font-bold border border-surface-variant">3</span>
+                <span className="font-label-caps text-xs text-on-surface font-bold tracking-widest hidden sm:inline">3. SETTLEMENT &amp; PAYMENT</span>
+                <span className="font-label-caps text-[10px] text-on-surface font-bold sm:hidden">PAYMENT</span>
               </div>
-              <div className="h-0.5 w-full bg-surface-variant rounded-full mt-space-xs" />
-              <span className="font-body-sm text-body-sm text-on-surface-variant">Vault Verified</span>
+              <div className="h-1 w-full bg-surface-variant rounded-full mt-1" />
+              <span className="font-body-sm text-[11px] text-on-surface-variant hidden sm:inline">Secure Card or Koko</span>
             </div>
+
           </div>
         </div>
 
         {/* Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-xl lg:gap-space-3xl items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap- space-2xl lg:gap-space-3xl items-start">
           
-          {/* Checkout Left Section */}
-          <section className="lg:col-span-7 flex flex-col gap-space-3xl">
+          {/* Left Column: Form Steps */}
+          <section className="lg:col-span-7 flex flex-col gap-space-2xl">
             
-            {/* Express 1-Click Checkout */}
-            <div className="bg-surface-container-low p-space-xl rounded-xl flex flex-col gap-space-md shadow-sm">
+            {/* Frictionless Express Checkout Panel */}
+            <div className="bg-surface-container-low p-space-xl rounded-2xl border border-surface-variant/80 shadow-xs space-y-space-md">
               <div className="flex items-center justify-between">
-                <span className="font-label-caps text-label-caps tracking-widest text-on-surface-variant uppercase">
-                  Express Frictionless Checkout
+                <span className="font-label-caps text-xs tracking-widest text-on-surface-variant uppercase font-semibold">
+                  ⚡ Express Frictionless Checkout
                 </span>
-                <span className="font-body-sm text-body-sm text-secondary flex items-center gap-1 font-medium">
-                  <span className="material-symbols-outlined text-sm">bolt</span> Instant Tokenization
+                <span className="font-body-sm text-xs text-secondary flex items-center gap-1 font-semibold">
+                  <span className="material-symbols-outlined text-sm">verified_user</span> Instant Tokenized Auth
                 </span>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-                <button className="w-full h-12 bg-primary text-on-primary rounded flex items-center justify-center gap-2 hover:bg-secondary transition-colors duration-200 cursor-pointer" type="button">
-                  <span className="font-subheading-md text-subheading-md font-medium tracking-tight"> Pay</span>
+                <button
+                  type="button"
+                  onClick={handleTriggerOrder}
+                  className="w-full h-12 bg-primary text-on-primary rounded-xl flex items-center justify-center gap-2 hover:bg-secondary transition-all cursor-pointer font-bold shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-lg">credit_card</span>
+                  <span className="font-label-caps text-xs tracking-wider uppercase">Vault 1-Click Pay</span>
                 </button>
-                <button className="w-full h-12 bg-[#5A31F4] text-white rounded flex items-center justify-center gap-2 hover:opacity-95 transition-opacity cursor-pointer" type="button">
-                  <span className="font-subheading-md text-subheading-md font-semibold tracking-wide">shop<span className="opacity-80">Pay</span></span>
+                <button
+                  type="button"
+                  onClick={() => { setPaymentMethod('koko'); scrollToSection('step-payment'); }}
+                  className="w-full h-12 bg-[#5A31F4] text-white rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition-opacity cursor-pointer font-bold shadow-xs"
+                >
+                  <span className="font-label-caps text-xs tracking-wider uppercase">koko Pay in 3</span>
                 </button>
               </div>
+
               <div className="flex items-center gap-space-md my-space-xs">
-                <div className="h-[1px] flex-1 bg-surface-variant" />
-                <span className="font-label-caps text-label-caps text-on-surface-variant/80">OR TRADITIONAL ARCHIVAL ORDER</span>
-                <div className="h-[1px] flex-1 bg-surface-variant" />
+                <div className="h-[1px] flex-1 bg-surface-variant/60" />
+                <span className="font-label-caps text-[10px] text-on-surface-variant/80 tracking-widest uppercase">OR STANDARD ARCHIVAL CHECKOUT</span>
+                <div className="h-[1px] flex-1 bg-surface-variant/60" />
               </div>
             </div>
 
             {/* STAGE 01: Contact & Shipping */}
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-xl" id="step-shipping">
-              <div className="flex items-start justify-between">
+            <div className="bg-surface-container-lowest p-space-xl rounded-2xl border border-surface-variant shadow-xs space-y-space-lg" id="step-shipping">
+              <div className="flex items-start justify-between border-b border-surface-variant/50 pb-4">
                 <div>
-                  <div className="flex items-center gap-space-xs mb-1">
-                    <span className="font-label-caps text-label-caps text-secondary uppercase font-semibold">Stage 01</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-label-caps text-xs text-secondary uppercase font-bold">Stage 01</span>
                     <span className="text-on-surface-variant">•</span>
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">Identity</span>
+                    <span className="font-label-caps text-xs text-on-surface-variant font-medium">Customer Identity</span>
                   </div>
-                  <h2 className="font-headline-sm text-headline-sm text-on-surface">Contact &amp; Delivery Destination</h2>
+                  <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Contact &amp; Delivery Destination</h2>
                 </div>
-                <span className="w-7 h-7 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-label-caps text-xs">
-                  <span className="material-symbols-outlined text-base">check</span>
+                <span className="w-8 h-8 rounded-full bg-secondary/15 text-secondary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">person_pin</span>
                 </span>
               </div>
 
-              <div className="flex flex-col gap-space-xxs">
-                <label className="font-label-caps text-label-caps text-on-surface-variant" htmlFor="contact-email">
-                  CORRESPONDENCE EMAIL
+              {/* Correspondence Email */}
+              <div className="space-y-1.5">
+                <label className="font-label-caps text-xs text-on-surface font-bold uppercase tracking-wider block" htmlFor="contact-email">
+                  CORRESPONDENCE EMAIL ADDRESS
                 </label>
-                <input
-                  className="w-full h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all"
-                  id="contact-email"
-                  type="email"
-                  defaultValue="clara.vanderbilt@atelier.co"
-                />
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Order confirmation, artisan dispatch log, and invoice are delivered here.
+                <div className="relative">
+                  <input
+                    className="w-full h-12 pl-10 pr-4 bg-surface-container-low text-on-surface font-body-md text-sm rounded-xl border border-surface-variant/60 focus:outline-none focus:border-secondary focus:bg-surface-container-lowest transition-all"
+                    id="contact-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="patron@ateliereditions.com"
+                  />
+                  <span className="material-symbols-outlined absolute left-3 top-3 text-on-surface-variant text-lg">mail</span>
+                </div>
+                <span className="font-body-sm text-xs text-on-surface-variant block">
+                  Archival invoice, live courier tracking link, and passport digital certificate will be dispatched here.
                 </span>
               </div>
 
-              {/* Saved vs New Location */}
-              <div className="flex flex-col gap-space-sm">
-                <span className="font-label-caps text-label-caps text-on-surface-variant">SAVED LOCATIONS</span>
-                <label className="cursor-pointer flex items-start justify-between p-space-md rounded bg-surface-container-low hover:bg-surface-container transition-all">
-                  <div className="flex items-start gap-space-md">
+              {/* Saved Location vs New Location */}
+              <div className="space-y-3 pt-2">
+                <span className="font-label-caps text-xs text-on-surface font-bold uppercase tracking-wider block">DELIVERY LOCATION PRESET</span>
+                
+                <label className={`cursor-pointer flex items-start justify-between p-4 rounded-xl border transition-all ${!useNewAddress ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 hover:bg-surface-container-low'}`}>
+                  <div className="flex items-start gap-3">
                     <input
                       checked={!useNewAddress}
                       onChange={() => setUseNewAddress(false)}
-                      className="mt-1 accent-primary h-4 w-4"
+                      className="mt-1 accent-secondary h-4 w-4 cursor-pointer"
                       name="shipping-preset"
                       type="radio"
                     />
                     <div>
-                      <div className="flex items-center gap-space-xs">
-                        <span className="font-subheading-md text-subheading-md text-on-surface font-semibold">Clara Vanderbilt</span>
-                        <span className="bg-surface-container-highest text-on-surface-variant font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase">Primary Atelier</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">{user?.name || 'Clara Vanderbilt'}</span>
+                        <span className="bg-primary text-on-primary font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">Primary Residence</span>
                       </div>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-0.5">142 Franklin St, Apt 4B, Tribeca, New York, NY 10013</p>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">+1 (212) 555-0198</p>
+                      <p className="font-body-md text-xs text-on-surface-variant mt-1 font-medium">142 Franklin St, Apt 4B, Tribeca, New York, NY 10013</p>
+                      <p className="font-body-sm text-xs text-on-surface-variant/80 mt-0.5">+1 (212) 555-0198</p>
                     </div>
                   </div>
-                  <span className="font-label-caps text-label-caps text-secondary font-medium">VERIFIED</span>
+                  <span className="font-label-caps text-xs text-secondary font-bold">VERIFIED</span>
                 </label>
 
-                <label className="cursor-pointer flex items-center gap-space-md p-space-md rounded bg-surface-container-lowest hover:bg-surface-container-low transition-all">
+                <label className={`cursor-pointer flex items-center gap-3 p-4 rounded-xl border transition-all ${useNewAddress ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 hover:bg-surface-container-low'}`}>
                   <input
                     checked={useNewAddress}
                     onChange={() => setUseNewAddress(true)}
-                    className="accent-primary h-4 w-4"
+                    className="accent-secondary h-4 w-4 cursor-pointer"
                     name="shipping-preset"
                     type="radio"
                   />
-                  <div className="flex items-center gap-space-xs text-on-surface">
-                    <span className="material-symbols-outlined text-subheading-md">add_location_alt</span>
-                    <span className="font-subheading-md text-subheading-md">Deliver to an alternate residence or studio</span>
+                  <div className="flex items-center gap-2 text-on-surface">
+                    <span className="material-symbols-outlined text-lg text-secondary">add_location_alt</span>
+                    <span className="font-subheading-md text-sm font-semibold">Deliver to an alternate residence or studio</span>
                   </div>
                 </label>
               </div>
 
-              {/* New Address Fields */}
+              {/* New Address Form */}
               {useNewAddress && (
-                <div className="flex flex-col gap-space-md pt-space-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
-                    <div className="flex flex-col gap-1">
-                      <label className="font-label-caps text-label-caps text-on-surface-variant">FIRST NAME</label>
+                <div className="space-y-4 pt-3 border-t border-surface-variant/40 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">FIRST NAME</label>
                       <input
                         value={newAddress.firstName}
                         onChange={(e) => setNewAddress({ ...newAddress, firstName: e.target.value })}
-                        className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                        placeholder="e.g. Maya"
+                        className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                        placeholder="First Name"
                         type="text"
                       />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="font-label-caps text-label-caps text-on-surface-variant">LAST NAME</label>
+                    <div>
+                      <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">LAST NAME</label>
                       <input
                         value={newAddress.lastName}
                         onChange={(e) => setNewAddress({ ...newAddress, lastName: e.target.value })}
-                        className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                        placeholder="e.g. Lin"
+                        className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                        placeholder="Last Name"
                         type="text"
                       />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="font-label-caps text-label-caps text-on-surface-variant">STREET ADDRESS</label>
+
+                  <div>
+                    <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">STREET ADDRESS</label>
                     <input
                       value={newAddress.street}
                       onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })}
-                      className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                      placeholder="Street name and house number"
+                      className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                      placeholder="Street name, house/suite number"
                       type="text"
                     />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
-                    <div className="flex flex-col gap-1">
-                      <label className="font-label-caps text-label-caps text-on-surface-variant">CITY</label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">CITY</label>
                       <input
                         value={newAddress.city}
                         onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                        className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                        placeholder="New York"
+                        className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                        placeholder="Colombo"
                         type="text"
                       />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="font-label-caps text-label-caps text-on-surface-variant">STATE / REGION</label>
+                    <div>
+                      <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">STATE / PROVINCE</label>
                       <input
                         value={newAddress.state}
                         onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                        className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                        placeholder="NY"
+                        className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                        placeholder="Western Province"
                         type="text"
                       />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="font-label-caps text-label-caps text-on-surface-variant">POSTAL CODE</label>
+                    <div>
+                      <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">POSTAL CODE</label>
                       <input
                         value={newAddress.zip}
                         onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
-                        className="h-12 px-space-md bg-surface-container-low text-on-surface font-body-md text-body-md rounded focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary"
-                        placeholder="10013"
+                        className="w-full h-11 px-3 bg-surface-container-low text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                        placeholder="00300"
                         type="text"
                       />
                     </div>
@@ -375,251 +497,456 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
               )}
             </div>
 
-            {/* STAGE 02: Delivery Logistics */}
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-xl" id="step-delivery">
-              <div>
-                <div className="flex items-center gap-space-xs mb-1">
-                  <span className="font-label-caps text-label-caps text-secondary uppercase font-semibold">Stage 02</span>
-                  <span className="text-on-surface-variant">•</span>
-                  <span className="font-label-caps text-label-caps text-on-surface-variant">Fulfillment</span>
+            {/* STAGE 02: Logistics Options */}
+            <div className="bg-surface-container-lowest p-space-xl rounded-2xl border border-surface-variant shadow-xs space-y-space-lg" id="step-delivery">
+              <div className="flex items-start justify-between border-b border-surface-variant/50 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-label-caps text-xs text-secondary uppercase font-bold">Stage 02</span>
+                    <span className="text-on-surface-variant">•</span>
+                    <span className="font-label-caps text-xs text-on-surface-variant font-medium">Logistics &amp; Courier</span>
+                  </div>
+                  <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Select Fulfillment Pacing</h2>
                 </div>
-                <h2 className="font-headline-sm text-headline-sm text-on-surface">Select Logistics &amp; Pacing</h2>
+                <span className="w-8 h-8 rounded-full bg-secondary/15 text-secondary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">local_shipping</span>
+                </span>
               </div>
 
-              <div className="flex flex-col gap-space-md">
-                <label className="cursor-pointer relative p-space-lg rounded bg-surface-container-low hover:bg-surface-container transition-all flex items-start justify-between">
-                  <div className="flex items-start gap-space-md">
+              <div className="space-y-3">
+                
+                {/* Option 1: Free */}
+                <label className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start justify-between ${shippingCost === 0 ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 hover:bg-surface-container-low'}`}>
+                  <div className="flex items-start gap-3">
                     <input
                       checked={shippingCost === 0}
-                      onChange={() => setShippingCost(0)}
-                      className="mt-1 accent-primary h-4 w-4"
+                      onChange={() => { setShippingCost(0); setShippingLabel('Complimentary Carbon-Neutral Courier'); }}
+                      className="mt-1 accent-secondary h-4 w-4 cursor-pointer"
                       name="shipping-speed"
                       type="radio"
                     />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-space-xs">
-                        <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Complimentary Carbon-Neutral Courier</span>
-                        <span className="bg-tertiary-fixed text-on-tertiary-fixed font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase">100% Offset</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">Complimentary Carbon-Neutral Courier</span>
+                        <span className="bg-primary/10 text-primary font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">100% Offset</span>
                       </div>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Delivered via zero-emission fleet partners within 2–3 business days.</p>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Estimated window: Friday, Oct 27 – Monday, Oct 30</p>
+                      <p className="font-body-md text-xs text-on-surface-variant mt-1">Dispatched in insulated protective canvas garment sleeve within 2–3 business days.</p>
+                      <p className="font-body-sm text-[11px] text-secondary font-semibold mt-0.5">Estimated Arrival: 2–3 Days</p>
                     </div>
                   </div>
-                  <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">Free</span>
+                  <span className="font-price-editorial text-sm text-on-surface font-bold">Free</span>
                 </label>
 
-                <label className="cursor-pointer relative p-space-lg rounded bg-surface-container-lowest hover:bg-surface-container-low transition-all flex items-start justify-between">
-                  <div className="flex items-start gap-space-md">
+                {/* Option 2: Express */}
+                <label className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start justify-between ${shippingCost === 1500 ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 hover:bg-surface-container-low'}`}>
+                  <div className="flex items-start gap-3">
                     <input
-                      checked={shippingCost === 2500}
-                      onChange={() => setShippingCost(2500)}
-                      className="mt-1 accent-primary h-4 w-4"
+                      checked={shippingCost === 1500}
+                      onChange={() => { setShippingCost(1500); setShippingLabel('Express Air Dispatch'); }}
+                      className="mt-1 accent-secondary h-4 w-4 cursor-pointer"
                       name="shipping-speed"
                       type="radio"
                     />
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-space-xs">
-                        <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Priority White Glove Courier</span>
-                        <span className="bg-secondary-fixed text-on-secondary-fixed font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase">Fast Track</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">Express Air Dispatch</span>
+                        <span className="bg-secondary/15 text-secondary font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">Priority Air</span>
                       </div>
-                      <p className="font-body-md text-body-md text-on-surface-variant mt-1">Dispatched within 4 hours. Direct courier hand-off in 1 business day.</p>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Estimated window: Tomorrow by 5:00 PM</p>
+                      <p className="font-body-md text-xs text-on-surface-variant mt-1">Priority dispatch from Kyoto or Stockholm depot within 24 hours.</p>
+                      <p className="font-body-sm text-[11px] text-secondary font-semibold mt-0.5">Estimated Arrival: 1–2 Days</p>
                     </div>
                   </div>
-                  <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">Rs. 2,500</span>
+                  <span className="font-price-editorial text-sm text-on-surface font-bold">Rs. 1,500</span>
                 </label>
+
+                {/* Option 3: Priority White Glove */}
+                <label className={`cursor-pointer p-4 rounded-xl border transition-all flex items-start justify-between ${shippingCost === 2500 ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 hover:bg-surface-container-low'}`}>
+                  <div className="flex items-start gap-3">
+                    <input
+                      checked={shippingCost === 2500}
+                      onChange={() => { setShippingCost(2500); setShippingLabel('Priority White Glove Concierge'); }}
+                      className="mt-1 accent-secondary h-4 w-4 cursor-pointer"
+                      name="shipping-speed"
+                      type="radio"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">Priority White Glove Concierge Delivery</span>
+                        <span className="bg-secondary text-on-secondary font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">Same Day</span>
+                      </div>
+                      <p className="font-body-md text-xs text-on-surface-variant mt-1">Dispatched immediately. Direct personal courier hand-off by 5:00 PM.</p>
+                      <p className="font-body-sm text-[11px] text-secondary font-semibold mt-0.5">Estimated Arrival: Next Day / Same Day</p>
+                    </div>
+                  </div>
+                  <span className="font-price-editorial text-sm text-on-surface font-bold">Rs. 2,500</span>
+                </label>
+
               </div>
             </div>
 
-            {/* STAGE 03: Payment Settlement */}
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-xl" id="step-payment">
-              <div>
-                <div className="flex items-center gap-space-xs mb-1">
-                  <span className="font-label-caps text-label-caps text-secondary uppercase font-semibold">Stage 03</span>
-                  <span className="text-on-surface-variant">•</span>
-                  <span className="font-label-caps text-label-caps text-on-surface-variant">Settlement</span>
+            {/* STAGE 03: Payment Methods */}
+            <div className="bg-surface-container-lowest p-space-xl rounded-2xl border border-surface-variant shadow-xs space-y-space-lg" id="step-payment">
+              <div className="flex items-start justify-between border-b border-surface-variant/50 pb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-label-caps text-xs text-secondary uppercase font-bold">Stage 03</span>
+                    <span className="text-on-surface-variant">•</span>
+                    <span className="font-label-caps text-xs text-on-surface-variant font-medium">Payment Settlement</span>
+                  </div>
+                  <h2 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Select Vault Payment Gateway</h2>
                 </div>
-                <h2 className="font-headline-sm text-headline-sm text-on-surface">Payment Method</h2>
+                <span className="w-8 h-8 rounded-full bg-secondary/15 text-secondary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">lock</span>
+                </span>
               </div>
 
-              <div className="flex flex-col gap-space-md">
-                <div className="bg-surface-container-low rounded p-space-lg flex flex-col gap-space-md">
+              <div className="space-y-3">
+                
+                {/* Method 1: Credit / Debit Card */}
+                <div className={`p-4 rounded-xl border transition-all ${paymentMethod === 'card' ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60'}`}>
                   <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-space-md">
+                    <div className="flex items-center gap-3">
                       <input
                         checked={paymentMethod === 'card'}
                         onChange={() => setPaymentMethod('card')}
-                        className="accent-primary h-4 w-4"
+                        className="accent-secondary h-4 w-4 cursor-pointer"
                         name="payment-method"
                         type="radio"
                       />
-                      <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Credit or Debit Card</span>
+                      <span className="font-subheading-md text-sm text-on-surface font-bold">Credit or Debit Card</span>
                     </div>
-                    <div className="flex items-center gap-2 opacity-80">
-                      <span className="font-label-caps text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface">VISA</span>
-                      <span className="font-label-caps text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface">MC</span>
-                      <span className="font-label-caps text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface">AMEX</span>
+                    <div className="flex items-center gap-1.5 opacity-90">
+                      <span className="font-label-caps text-[9px] bg-surface-container px-2 py-0.5 rounded text-on-surface font-bold border border-surface-variant">VISA</span>
+                      <span className="font-label-caps text-[9px] bg-surface-container px-2 py-0.5 rounded text-on-surface font-bold border border-surface-variant">MC</span>
+                      <span className="font-label-caps text-[9px] bg-surface-container px-2 py-0.5 rounded text-on-surface font-bold border border-surface-variant">AMEX</span>
                     </div>
                   </label>
 
                   {paymentMethod === 'card' && (
-                    <div className="flex flex-col gap-space-md pt-space-xs">
-                      <div className="flex flex-col gap-1">
-                        <label className="font-label-caps text-label-caps text-on-surface-variant">CARD NUMBER</label>
+                    <div className="space-y-3 pt-4 mt-3 border-t border-surface-variant/40 animate-fade-in">
+                      <div>
+                        <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">CARD NUMBER</label>
                         <div className="relative">
                           <input
-                            className="w-full h-12 pl-space-md pr-12 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                            placeholder="•••• •••• •••• 4242"
+                            value={cardDetails.number}
+                            onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value })}
+                            className="w-full h-11 pl-3 pr-10 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary font-mono"
+                            placeholder="4532 •••• •••• 8819"
                             type="text"
-                            defaultValue="4532 •••• •••• 8819"
                           />
-                          <span className="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-xl">credit_card</span>
+                          <span className="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant text-lg">credit_card</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-space-md">
-                        <div className="flex flex-col gap-1">
-                          <label className="font-label-caps text-label-caps text-on-surface-variant">EXPIRATION</label>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">EXPIRATION DATE</label>
                           <input
-                            className="h-12 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                            value={cardDetails.exp}
+                            onChange={(e) => setCardDetails({ ...cardDetails, exp: e.target.value })}
+                            className="w-full h-11 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary font-mono"
                             placeholder="MM / YY"
                             type="text"
-                            defaultValue="09 / 27"
                           />
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between">
-                            <label className="font-label-caps text-label-caps text-on-surface-variant">SECURITY CODE</label>
-                            <span className="font-body-sm text-[11px] text-secondary cursor-pointer">What is CVC?</span>
-                          </div>
+                        <div>
+                          <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">SECURITY CVC</label>
                           <input
-                            className="h-12 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                            placeholder="CVC"
+                            value={cardDetails.cvc}
+                            onChange={(e) => setCardDetails({ ...cardDetails, cvc: e.target.value })}
+                            className="w-full h-11 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary font-mono"
+                            placeholder="842"
                             type="password"
-                            defaultValue="842"
                           />
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="font-label-caps text-label-caps text-on-surface-variant">NAME ON CARD</label>
+
+                      <div>
+                        <label className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block mb-1">CARDHOLDER NAME</label>
                         <input
-                          className="h-12 px-space-md bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded focus:outline-none focus:ring-1 focus:ring-primary uppercase"
+                          value={cardDetails.name}
+                          onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })}
+                          className="w-full h-11 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary uppercase"
+                          placeholder="CLARA VANDERBILT"
                           type="text"
-                          defaultValue="CLARA VANDERBILT"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                <label className="flex items-center justify-between p-space-md rounded bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer">
-                  <div className="flex items-center gap-space-md">
-                    <input
-                      checked={paymentMethod === 'klarna'}
-                      onChange={() => setPaymentMethod('klarna')}
-                      className="accent-primary h-4 w-4"
-                      name="payment-method"
-                      type="radio"
-                    />
-                    <div>
-                      <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Koko / Mint Pay 3 Installments</span>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">3 interest-free installments of Rs. {Math.round(totalSettlement / 3).toLocaleString('en-LK')}</p>
+                {/* Method 2: Koko Pay */}
+                <div className={`p-4 rounded-xl border transition-all ${paymentMethod === 'koko' ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60'}`}>
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        checked={paymentMethod === 'koko'}
+                        onChange={() => setPaymentMethod('koko')}
+                        className="accent-secondary h-4 w-4 cursor-pointer"
+                        name="payment-method"
+                        type="radio"
+                      />
+                      <div>
+                        <span className="font-subheading-md text-sm text-on-surface font-bold block">Koko / Mint Pay 3 Monthly Installments</span>
+                        <span className="font-body-sm text-xs text-secondary font-medium block mt-0.5">
+                          Pay 3 interest-free payments of Rs. {Math.round(totalSettlement / 3).toLocaleString('en-LK')}/mo
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="font-label-caps text-label-caps bg-surface-container px-2 py-1 rounded text-on-surface font-semibold">KOKO</span>
-                </label>
+                    <span className="font-label-caps text-xs bg-[#5A31F4] text-white px-2.5 py-1 rounded-md font-bold uppercase">KOKO</span>
+                  </label>
+                </div>
 
-                <label className="flex items-center justify-between p-space-md rounded bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer">
-                  <div className="flex items-center gap-space-md">
-                    <input
-                      checked={paymentMethod === 'paypal'}
-                      onChange={() => setPaymentMethod('paypal')}
-                      className="accent-primary h-4 w-4"
-                      name="payment-method"
-                      type="radio"
-                    />
-                    <span className="font-subheading-md text-subheading-md text-on-surface font-medium">Bank Transfer / Online Portal</span>
-                  </div>
-                  <span className="font-label-caps text-label-caps text-secondary font-semibold">ONLINE</span>
-                </label>
+                {/* Method 3: Bank Transfer */}
+                <div className={`p-4 rounded-xl border transition-all ${paymentMethod === 'bank' ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60'}`}>
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        checked={paymentMethod === 'bank'}
+                        onChange={() => setPaymentMethod('bank')}
+                        className="accent-secondary h-4 w-4 cursor-pointer"
+                        name="payment-method"
+                        type="radio"
+                      />
+                      <div>
+                        <span className="font-subheading-md text-sm text-on-surface font-bold block">Direct Bank Transfer / Online Deposit</span>
+                        <span className="font-body-sm text-xs text-on-surface-variant block mt-0.5">
+                          Transfer directly to Atelier Commercial Bank / Sampath Bank account
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-label-caps text-xs text-secondary font-bold uppercase">BANK</span>
+                  </label>
+
+                  {paymentMethod === 'bank' && (
+                    <div className="mt-3 p-3 bg-surface-container-lowest rounded-lg border border-surface-variant/40 space-y-1 text-xs text-on-surface font-mono">
+                      <p><strong>Bank:</strong> Commercial Bank of Ceylon PLC</p>
+                      <p><strong>Account Name:</strong> ATELIER EDITIONS (PVT) LTD</p>
+                      <p><strong>Account Number:</strong> 1000 4829 9012</p>
+                      <p><strong>Branch:</strong> Cinnamon Gardens Branch (Code: 014)</p>
+                      <p className="text-[11px] text-secondary font-sans mt-1">Please use Order ID #{orderId} as payment reference.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Method 4: Cash on Delivery */}
+                <div className={`p-4 rounded-xl border transition-all ${paymentMethod === 'cod' ? 'bg-surface-container-low border-secondary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60'}`}>
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <input
+                        checked={paymentMethod === 'cod'}
+                        onChange={() => setPaymentMethod('cod')}
+                        className="accent-secondary h-4 w-4 cursor-pointer"
+                        name="payment-method"
+                        type="radio"
+                      />
+                      <div>
+                        <span className="font-subheading-md text-sm text-on-surface font-bold block">Cash on Delivery (COD)</span>
+                        <span className="font-body-sm text-xs text-on-surface-variant block mt-0.5">
+                          Pay cash upon courier arrival at your address
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-label-caps text-xs text-on-surface font-bold uppercase">COD</span>
+                  </label>
+                </div>
+
               </div>
 
-              <div className="pt-space-xs">
-                <label className="flex items-center gap-space-sm cursor-pointer">
-                  <input defaultChecked className="accent-primary h-4 w-4 rounded" type="checkbox" />
-                  <span className="font-body-md text-body-md text-on-surface">Billing address is identical to shipping atelier</span>
-                </label>
-              </div>
-
-              <div className="flex flex-col gap-space-md pt-space-md">
+              {/* Complete Order Button */}
+              <div className="pt-4 space-y-3">
                 <button
                   onClick={handleTriggerOrder}
                   disabled={submitting || orderSecured}
-                  className={`w-full h-14 font-label-md text-label-md tracking-wider uppercase rounded transition-all duration-300 flex items-center justify-center gap-space-sm shadow-md cursor-pointer ${
-                    orderSecured ? 'bg-secondary text-on-primary' : 'bg-primary text-on-primary hover:bg-secondary'
+                  className={`w-full h-14 font-label-md text-sm tracking-wider uppercase rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg cursor-pointer font-bold ${
+                    orderSecured ? 'bg-secondary text-on-secondary' : 'bg-primary text-on-primary hover:bg-secondary'
                   }`}
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-lg">
-                    {submitting ? 'sync' : orderSecured ? 'done' : 'lock'}
+                  <span className={`material-symbols-outlined text-xl ${submitting ? 'animate-spin' : ''}`}>
+                    {submitting ? 'sync' : orderSecured ? 'check_circle' : 'lock'}
                   </span>
                   <span>
                     {submitting
-                      ? 'AUTHORIZING VAULT TRANSACTION...'
+                      ? submitStepText
                       : orderSecured
-                      ? 'ORDER #KR-80291 SECURED'
-                      : `COMPLETE ORDER — Rs. ${Math.round(totalSettlement).toLocaleString('en-LK')}`}
+                      ? `ORDER #${orderId} SECURED ✓`
+                      : `AUTHORIZE & PLACE ORDER — Rs. ${Math.round(totalSettlement).toLocaleString('en-LK')}`}
                   </span>
                 </button>
+
+                <div className="flex items-center justify-center gap-4 text-xs text-on-surface-variant font-label-caps">
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-secondary">verified</span> Guaranteed Delivery
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm text-secondary">autorenew</span> 14-Day Free Returns
+                  </span>
+                </div>
               </div>
+
             </div>
+
           </section>
 
-          {/* Right Summary Sidebar */}
-          <aside className="lg:col-span-5 w-full sticky top-8">
-            <div className="bg-surface-container-low rounded-xl p-space-xl shadow-sm flex flex-col gap-space-xl">
-              <div className="flex items-center justify-between pb-space-md border-b-0">
-                <div className="flex items-baseline gap-space-xs">
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface">Curated Order</h3>
-                  <span className="font-label-caps text-label-caps text-secondary font-semibold">(3 OBJECTS)</span>
+          {/* Right Column: Order Summary Sidebar */}
+          <aside className="lg:col-span-5 w-full lg:sticky lg:top-24">
+            <div className="bg-surface-container-low rounded-2xl p-space-xl border border-surface-variant/80 shadow-xs space-y-space-lg">
+              
+              <div className="flex items-center justify-between pb-3 border-b border-surface-variant/60">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold">Curated Order</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-caps text-[10px] font-bold">
+                    ({displayItems.length} {displayItems.length === 1 ? 'ITEM' : 'ITEMS'})
+                  </span>
                 </div>
-                <button onClick={onBackToHome} className="font-label-caps text-label-caps text-on-surface-variant hover:text-secondary underline underline-offset-4 transition-colors cursor-pointer">
-                  EDIT BASKET
+                <button
+                  onClick={onBackToHome}
+                  className="font-label-caps text-xs text-secondary hover:underline uppercase font-bold cursor-pointer"
+                >
+                  Edit Items
                 </button>
               </div>
 
-              <div className="bg-surface-container p-space-md rounded flex flex-col gap-space-xs">
-                <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
-                  <span>Items Subtotal</span>
-                  <span className="text-on-surface font-medium">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
+              {/* Items List View */}
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {displayItems.map((item, idx) => {
+                  let numPrice = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
+                  if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
+                  const qty = item.qty || item.quantity || 1;
+
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-lowest border border-surface-variant/50">
+                      <img
+                        src={item.img || item.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80'}
+                        alt={item.title}
+                        className="w-14 h-16 object-cover rounded-lg bg-surface-container shrink-0"
+                      />
+                      <div className="flex-1 overflow-hidden">
+                        <h4 className="font-subheading-md text-xs text-on-surface font-bold truncate">
+                          {item.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-[10px] text-on-surface-variant mt-0.5 font-label-caps">
+                          {item.color && <span>Color: {item.color}</span>}
+                          {item.size && <span>• Size: {item.size}</span>}
+                        </div>
+                        <span className="font-label-caps text-[11px] text-on-surface font-bold block mt-1">
+                          Qty: {qty} × Rs. {Math.round(numPrice).toLocaleString('en-LK')}
+                        </span>
+                      </div>
+                      <span className="font-price-editorial text-sm text-primary font-bold shrink-0">
+                        Rs. {Math.round(numPrice * qty).toLocaleString('en-LK')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Promo Code Input */}
+              <div className="pt-2 border-t border-surface-variant/50 space-y-2">
+                <span className="font-label-caps text-[11px] text-on-surface font-bold uppercase tracking-wider block">PROMO CODE / PATRON VOUCHER</span>
+                <div className="flex gap-2">
+                  <input
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="Enter code (e.g. ATELIER10)"
+                    className="flex-1 h-10 px-3 rounded-lg bg-surface-container-lowest border border-surface-variant/60 text-xs text-on-surface focus:outline-none focus:border-secondary uppercase font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="px-4 h-10 rounded-lg bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-secondary transition-colors cursor-pointer"
+                  >
+                    Apply
+                  </button>
                 </div>
+
+                {/* Quick Presets */}
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="font-label-caps text-[10px] text-on-surface-variant">Try:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setPromoCode('ATELIER10'); setPromoApplied(true); setDiscountPercent(0.10); setPromoError(''); }}
+                    className="px-2 py-0.5 rounded bg-surface-container border border-surface-variant/60 font-label-caps text-[10px] font-bold hover:border-secondary cursor-pointer"
+                  >
+                    ATELIER10 (10% OFF)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPromoCode('LUXURY20'); setPromoApplied(true); setDiscountPercent(0.20); setPromoError(''); }}
+                    className="px-2 py-0.5 rounded bg-surface-container border border-surface-variant/60 font-label-caps text-[10px] font-bold hover:border-secondary cursor-pointer"
+                  >
+                    LUXURY20 (20% OFF)
+                  </button>
+                </div>
+
                 {promoApplied && (
-                  <div className="flex justify-between items-center text-body-sm font-body-sm text-secondary">
-                    <span>Member Discount (-10%)</span>
-                    <span className="font-medium">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
+                  <p className="text-xs text-secondary font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">check_circle</span> Promo Code Applied! ({Math.round(discountPercent * 100)}% Discount)
+                  </p>
+                )}
+                {promoError && (
+                  <p className="text-xs text-error font-medium">{promoError}</p>
+                )}
+              </div>
+
+              {/* Price Breakdown Math Table */}
+              <div className="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant/60 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-on-surface-variant">
+                  <span>Items Subtotal</span>
+                  <span className="text-on-surface font-semibold font-mono">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
+                </div>
+
+                {promoApplied && (
+                  <div className="flex justify-between items-center text-secondary font-semibold">
+                    <span>Member Discount (-{Math.round(discountPercent * 100)}%)</span>
+                    <span className="font-mono">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
-                  <span>Logistics</span>
-                  <span className="text-on-surface font-medium">
-                    {shippingCost === 0 ? 'Free' : `Rs. ${shippingCost.toLocaleString('en-LK')}`}
+
+                <div className="flex justify-between items-center text-on-surface-variant">
+                  <span>Shipping Logistics ({shippingCost === 0 ? 'Complimentary' : shippingLabel})</span>
+                  <span className="text-on-surface font-semibold font-mono">
+                    {shippingCost === 0 ? 'FREE' : `Rs. ${shippingCost.toLocaleString('en-LK')}`}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant">
-                  <span>Estimated Tax</span>
-                  <span className="text-on-surface font-medium">Rs. {estimatedTax.toLocaleString('en-LK')}</span>
+
+                <div className="flex justify-between items-center text-on-surface-variant">
+                  <span>Estimated Tax &amp; VAT (8%)</span>
+                  <span className="text-on-surface font-semibold font-mono">Rs. {estimatedTax.toLocaleString('en-LK')}</span>
                 </div>
-                <div className="my-space-xs h-[1px] bg-surface-variant" />
-                <div className="flex justify-between items-baseline">
-                  <span className="font-subheading-md text-subheading-md text-on-surface font-semibold">Total Settlement</span>
-                  <span className="font-headline-md text-headline-md text-on-surface font-bold">
+
+                <div className="my-2 h-px bg-surface-variant/60" />
+
+                <div className="flex justify-between items-baseline pt-1">
+                  <div>
+                    <span className="font-subheading-md text-sm text-on-surface font-bold block">Total Settlement</span>
+                    <span className="font-label-caps text-[10px] text-on-surface-variant">INCLUDES ALL TAXES &amp; DUTIES</span>
+                  </div>
+                  <span className="font-price-editorial text-xl text-primary font-bold">
                     Rs. {Math.round(totalSettlement).toLocaleString('en-LK')}
                   </span>
                 </div>
               </div>
+
+              {/* Archival Security Trust Card */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-surface-variant/50 space-y-2 text-xs text-on-surface-variant">
+                <div className="flex items-center gap-2 text-on-surface font-bold">
+                  <span className="material-symbols-outlined text-secondary text-base">verified</span>
+                  <span>Archival Lifetime Guarantee</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Every garment includes an individual linen passport seam code for lifetime sashiko repair and complimentary seasonal re-dyeing.
+                </p>
+              </div>
+
             </div>
           </aside>
+
         </div>
       </div>
+
       {/* Printable Order Bill Invoice Modal */}
       {(showBillModal || orderSecured) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
@@ -667,7 +994,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
               </div>
               <div className="text-right">
                 <span className="inline-block bg-slate-900 text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-widest uppercase">
-                  TAX INVOICE &amp; RECEIPT
+                  OFFICIAL TAX INVOICE &amp; RECEIPT
                 </span>
                 <p className="text-xs text-slate-500 mt-2 font-mono">Invoice #{orderId}</p>
                 <p className="text-xs text-slate-500 font-mono">{orderDate}</p>
@@ -688,10 +1015,10 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">PAYMENT LOGISTICS</span>
                 <p className="font-semibold text-emerald-700 flex items-center justify-end gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> STATUS: PAID
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> STATUS: AUTHORIZED &amp; PAID
                 </p>
                 <p className="text-slate-600 mt-0.5 uppercase">
-                  Method: {paymentMethod === 'card' ? 'Visa / MasterCard Vault' : paymentMethod === 'apple' ? 'Apple Pay' : 'Online Bank Transfer'}
+                  Method: {paymentMethod === 'card' ? 'Visa / MasterCard Vault' : paymentMethod === 'koko' ? 'Koko / Mint Pay' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Cash on Delivery'}
                 </p>
               </div>
             </div>
@@ -711,7 +1038,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                   {displayItems.map((item, idx) => {
                     let price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
                     if (price > 0 && price < 1000) price = price * 100;
-                    const qty = item.qty || 1;
+                    const qty = item.qty || item.quantity || 1;
                     return (
                       <tr key={idx} className="py-3">
                         <td className="py-2 font-medium">
@@ -741,9 +1068,9 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                 <span className="font-mono text-slate-900 font-medium">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
               </div>
               {promoApplied && (
-                <div className="flex justify-between text-emerald-700">
-                  <span>Member Discount (-10%)</span>
-                  <span className="font-mono font-medium">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
+                <div className="flex justify-between text-emerald-700 font-semibold">
+                  <span>Member Discount (-{Math.round(discountPercent * 100)}%)</span>
+                  <span className="font-mono">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
                 </div>
               )}
               <div className="flex justify-between">
@@ -788,13 +1115,13 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                 className="h-11 px-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs tracking-wider uppercase transition-all cursor-pointer"
                 type="button"
               >
-                Return to Home
+                Return to Store
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
-

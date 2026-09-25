@@ -20,7 +20,7 @@ const getRsNumber = (val) => {
   return Math.round(num);
 };
 
-export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
+export default function ShopPage({ activeTab = 'shop', initialCategory, searchQuery = '', onClearSearch, onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
   const [sortOption, setSortOption] = useState('Curated Picks');
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(150000);
@@ -95,6 +95,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
     setPriceMin(0);
     setPriceMax(150000);
     setActivePreset('all');
+    if (onClearSearch) onClearSearch();
   };
 
   const handleQuickAdd = (p) => {
@@ -174,10 +175,18 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
     return products.filter((p) => matchesDiscipline(p, discipline)).length;
   };
 
+  const matchesSearch = (p) => {
+    if (!searchQuery || !searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const haystack = `${p.title || ''} ${p.category || ''} ${p.subtitle || ''} ${p.studio || ''} ${p.badge || ''}`.toLowerCase();
+    return haystack.includes(q);
+  };
+
   const filteredProducts = products.filter((p) => {
     const matchesPrice = p.numericPrice >= priceMin && p.numericPrice <= priceMax;
     const matchesDisc = matchesDiscipline(p, selectedDiscipline);
-    return matchesPrice && matchesDisc;
+    const matchesQuery = matchesSearch(p);
+    return matchesPrice && matchesDisc && matchesQuery;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -186,7 +195,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
     return 0;
   });
 
-  const isFiltered = selectedDiscipline !== 'All Objects' || priceMin > 0 || priceMax < 150000 || activePreset !== 'all';
+  const isFiltered = selectedDiscipline !== 'All Objects' || priceMin > 0 || priceMax < 150000 || activePreset !== 'all' || Boolean(searchQuery);
 
   return (
     <div className="w-full bg-surface">
@@ -251,8 +260,20 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
               <span>{selectedDiscipline}</span>
             </span>
 
-            {(priceMin > 0 || priceMax < 150000) && (
+            {searchQuery && (
               <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-secondary text-on-secondary font-label-caps text-[11px] uppercase font-bold shadow-xs">
+                <span>Search: "{searchQuery}"</span>
+                <button
+                  onClick={onClearSearch}
+                  className="hover:text-primary cursor-pointer ml-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </span>
+            )}
+
+            {(priceMin > 0 || priceMax < 150000) && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-highest text-on-surface font-label-caps text-[11px] uppercase font-bold shadow-xs">
                 <span>Price: {formatRs(priceMin)} – {formatRs(priceMax)}</span>
                 <button
                   onClick={() => {
@@ -460,7 +481,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
                               if (onToggleWishlist) onToggleWishlist(p);
                             }}
                             className={`absolute top-3 right-3 w-9 h-9 rounded-full glass-panel flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer z-10 ${
-                              isFav ? 'text-error bg-surface-container-lowest scale-110' : 'text-on-surface hover:text-error hover:scale-110'
+                              isFav ? 'text-red-600 bg-surface-container-lowest scale-110 shadow-lg' : 'text-on-surface hover:text-red-600 hover:scale-110'
                             }`}
                             title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
                             type="button"

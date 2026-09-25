@@ -91,12 +91,99 @@ const HOMEPAGE_GARMENTS = [
   },
 ];
 
+const PATRON_TESTIMONIALS = [
+  {
+    id: 1,
+    name: 'Elena Rostova',
+    location: 'Zurich, Switzerland',
+    verified: 'Verified Patron • Edition 07 Collector',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+    quote: '“The weight of the raw Mulberry silk cocoon dress is unlike anything from commercial luxury houses. It drapes naturally, breathes beautifully in summer heat, and gains unmatched softness after every gentle cold wash.”',
+    garment: 'Silk Cocoon Dress',
+  },
+  {
+    id: 2,
+    name: 'Marcus Vance',
+    location: 'Kyoto, Japan',
+    verified: 'Verified Patron • Bespoke Tailoring Client',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+    quote: '“Atelier Store’s unstructured Noragi jacket has become my daily staple for studio work. The hand-loomed texture is architectural, and knowing it has lifetime sashiko repair gives complete peace of mind.”',
+    garment: 'Unstructured Noragi Duster',
+  },
+  {
+    id: 3,
+    name: 'Sophie Laurent',
+    location: 'Paris, France',
+    verified: 'Verified Patron • Archival Linen Collector',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80',
+    quote: '“The plant-dyed linen tunic possesses a tactile richness you can feel immediately. No synthetic stiffeners, just raw organic flax woven with absolute mastery. Truly elevated craftsmanship.”',
+    garment: 'Washed Linen Tunic',
+  },
+  {
+    id: 4,
+    name: 'David Chen',
+    location: 'New York, USA',
+    verified: 'Verified Patron • Tailored Overcoat Collector',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+    quote: '“Ordered a custom-proportioned trench coat. The fit across the shoulders and arm drop is exact. The craftsmanship and botanical dyeing process set a new standard for sustainable luxury.”',
+    garment: 'Architectural Trench Coat',
+  },
+  {
+    id: 5,
+    name: 'Amara Silva',
+    location: 'Colombo, Sri Lanka',
+    verified: 'Verified Patron • Handloom Silk Patron',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    quote: '“The attention to detail from the initial consultation to the final linen passport seam code is astonishing. The fabric stays cool and feels extraordinarily comfortable in tropical weather.”',
+    garment: 'Organic Flax Robe',
+  },
+  {
+    id: 6,
+    name: 'Isabella Rossi',
+    location: 'Milan, Italy',
+    verified: 'Verified Patron • Haute Textiles Connoisseur',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    quote: '“The tactile experience of Atelier Store’s hand-spun alpaca fringe wrap is transcendent. In Milan, everyone asks about the weave provenance. It is rare to find such timeless, soulful luxury.”',
+    garment: 'Alpaca Fringe Wrap',
+  },
+  {
+    id: 7,
+    name: 'Kenji Takahashi',
+    location: 'Tokyo, Japan',
+    verified: 'Verified Patron • Japanese Indigo Enthusiast',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
+    quote: '“The natural mud and botanical indigo dyeing gives each silhouette a subtle, living patina that gets better with every season. Truly an investment in slow, conscious fashion.”',
+    garment: 'Botanical Indigo Noragi',
+  },
+];
+
 export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [], onExploreShop }) {
   const [activeFilter, setActiveFilter] = useState('All Silhouettes');
   const [selectedSizes, setSelectedSizes] = useState({});
   const [addedNotice, setAddedNotice] = useState({});
   const [isFittingModalOpen, setIsFittingModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
+
+  // Testimonials Circular Rotating Carousel State
+  const [testimonialIndex, setTestimonialIndex] = useState(0);
+  const [isTestimonialHovered, setIsTestimonialHovered] = useState(false);
+
+  // Auto-rotate testimonials circularly every 4 seconds
+  useEffect(() => {
+    if (isTestimonialHovered) return;
+    const timer = setInterval(() => {
+      setTestimonialIndex((prev) => (prev + 1) % PATRON_TESTIMONIALS.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isTestimonialHovered]);
+
+  const handleNextTestimonial = () => {
+    setTestimonialIndex((prev) => (prev + 1) % PATRON_TESTIMONIALS.length);
+  };
+
+  const handlePrevTestimonial = () => {
+    setTestimonialIndex((prev) => (prev - 1 + PATRON_TESTIMONIALS.length) % PATRON_TESTIMONIALS.length);
+  };
 
   useEffect(() => {
     fetchDbProducts();
@@ -280,8 +367,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                     <button
                       aria-label="Save to wishlist"
                       onClick={() => onToggleWishlist && onToggleWishlist(heroGarment)}
-                      className={`absolute top-6 right-6 z-10 w-9 h-9 rounded-full bg-surface/85 backdrop-blur flex items-center justify-center transition-colors shadow-sm wishlist-btn cursor-pointer ${
-                        isHeroFav ? 'text-secondary font-fill' : 'text-on-surface hover:text-secondary'
+                      className={`absolute top-6 right-6 z-10 w-9 h-9 rounded-full bg-surface/85 backdrop-blur flex items-center justify-center transition-all shadow-sm wishlist-btn cursor-pointer ${
+                        isHeroFav ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">
@@ -587,7 +674,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                       aria-label="Add to wishlist"
                       onClick={() => onToggleWishlist && onToggleWishlist(p)}
                       className={`wishlist-btn absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-surface/80 backdrop-blur flex items-center justify-center transition-all cursor-pointer ${
-                        isFavorited ? 'text-secondary' : 'text-on-surface hover:text-secondary'
+                        isFavorited ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[16px]">
@@ -750,6 +837,154 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 4.5 CIRCULAR ROTATING PATRON TESTIMONIALS CAROUSEL */}
+      <section className="w-full bg-surface-container-low/70 py-space-2xl border-t border-b border-surface-variant/40 overflow-hidden relative">
+        <div className="max-w-[1380px] mx-auto px-margin">
+          
+          <div className="text-center max-w-2xl mx-auto mb-space-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label-caps text-[11px] uppercase tracking-widest mb-3">
+              <span className="material-symbols-outlined text-sm">stars</span>
+              <span>PATRON DISCOURSES &amp; REVIEWS</span>
+            </div>
+            <h2 className="font-headline-lg text-headline-lg text-on-surface font-normal">
+              Words From Our Global Patrons
+            </h2>
+            <p className="font-body-md text-body-md text-on-surface-variant mt-2">
+              Reflections on tactile luxury, organic drape, and generational sashiko mending.
+            </p>
+          </div>
+
+          {/* Interactive Rotating Carousel Container */}
+          <div
+            className="max-w-4xl mx-auto relative bg-surface-container-lowest rounded-3xl p-8 md:p-12 shadow-xl border border-surface-variant/80 overflow-hidden group"
+            onMouseEnter={() => setIsTestimonialHovered(true)}
+            onMouseLeave={() => setIsTestimonialHovered(false)}
+          >
+            {/* Background Ambient Glow Circles */}
+            <div className="absolute -top-24 -left-24 w-64 h-64 rounded-full bg-secondary/10 blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+
+            {/* Quotation Watermark */}
+            <span className="material-symbols-outlined absolute top-4 right-6 text-[120px] text-surface-container-high/40 select-none pointer-events-none">
+              format_quote
+            </span>
+
+            {/* Active Testimonial Card Content with Animated Transition */}
+            {(() => {
+              const currentT = PATRON_TESTIMONIALS[testimonialIndex];
+
+              return (
+                <div key={currentT.id} className="relative z-10 flex flex-col md:flex-row items-center gap-8 animate-fade-in">
+                  
+                  {/* Patron Avatar with Circular Orbit Frame */}
+                  <div className="relative shrink-0">
+                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full p-1 bg-gradient-to-tr from-secondary via-primary to-secondary shadow-lg">
+                      <img
+                        src={currentT.avatar}
+                        alt={currentT.name}
+                        className="w-full h-full rounded-full object-cover border-2 border-surface-container-lowest shadow-inner"
+                      />
+                    </div>
+                    {/* Badge Pill */}
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-on-primary font-label-caps text-[9px] uppercase tracking-wider px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+                      ★ 5.0 Rating
+                    </span>
+                  </div>
+
+                  {/* Testimonial Quote & Information */}
+                  <div className="flex-1 text-center md:text-left space-y-4">
+                    {/* Stars */}
+                    <div className="flex items-center justify-center md:justify-start gap-1 text-secondary">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className="material-symbols-outlined text-[18px] fill-current">
+                          star
+                        </span>
+                      ))}
+                      <span className="font-label-caps text-xs text-on-surface-variant ml-2 uppercase font-semibold">
+                        {currentT.verified}
+                      </span>
+                    </div>
+
+                    {/* Quote Text */}
+                    <blockquote className="font-serif text-lg md:text-xl text-on-surface leading-relaxed italic">
+                      {currentT.quote}
+                    </blockquote>
+
+                    {/* Author & City */}
+                    <div className="pt-2 border-t border-surface-variant/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="font-title-md text-base text-on-surface font-bold">
+                          {currentT.name}
+                        </h4>
+                        <span className="font-body-sm text-xs text-on-surface-variant">
+                          {currentT.location}
+                        </span>
+                      </div>
+
+                      <span className="px-3 py-1 rounded-lg bg-surface-container-low border border-surface-variant text-secondary font-label-caps text-xs font-semibold self-center sm:self-auto">
+                        Garment: {currentT.garment}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })()}
+
+            {/* Circular Carousel Controls & Indicators */}
+            <div className="mt-8 pt-6 border-t border-surface-variant/50 flex items-center justify-between">
+              
+              {/* Left Previous Button */}
+              <button
+                type="button"
+                onClick={handlePrevTestimonial}
+                aria-label="Previous Testimonial"
+                className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-primary hover:text-on-primary border border-surface-variant flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <span className="material-symbols-outlined text-xl">arrow_back</span>
+              </button>
+
+              {/* Circular Dots & Index Indicator */}
+              <div className="flex items-center gap-2">
+                {PATRON_TESTIMONIALS.map((t, idx) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTestimonialIndex(idx)}
+                    aria-label={`Go to testimonial ${idx + 1}`}
+                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      testimonialIndex === idx
+                        ? 'w-8 bg-secondary shadow-xs'
+                        : 'w-2.5 bg-surface-container-high hover:bg-outline'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Right Next Button */}
+              <button
+                type="button"
+                onClick={handleNextTestimonial}
+                aria-label="Next Testimonial"
+                className="w-10 h-10 rounded-full bg-surface-container-low hover:bg-primary hover:text-on-primary border border-surface-variant flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <span className="material-symbols-outlined text-xl">arrow_forward</span>
+              </button>
+
+            </div>
+
+            {/* Auto-rotation status badge */}
+            <div className="text-center mt-3">
+              <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest">
+                {isTestimonialHovered ? '⏸ Auto-rotation Paused on Hover' : '🔄 Rotating Continuously Every 4 Seconds'}
+              </span>
+            </div>
+
+          </div>
+
         </div>
       </section>
 

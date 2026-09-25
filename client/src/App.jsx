@@ -66,14 +66,36 @@ export default function App() {
   const [activeTab, setActiveTabState] = useState(initialRoute.tab);
   const [selectedProductId, setSelectedProductId] = useState(initialRoute.prodId);
   const [selectedCategory, setSelectedCategory] = useState('All Objects');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [directCheckoutItem, setDirectCheckoutItem] = useState(null);
 
   // Router Navigator: updates state & pushes browser history URL
   const navigateTo = (tab, prodId = selectedProductId) => {
+    if (tab !== 'checkout') {
+      setDirectCheckoutItem(null);
+    }
     setActiveTabState(tab);
     if (prodId) setSelectedProductId(prodId);
     const newPath = getPathForTab(tab, prodId);
     if (window.location.pathname !== newPath) {
       window.history.pushState({ tab, prodId }, '', newPath);
+    }
+  };
+
+  const handleBuyNow = (item) => {
+    setDirectCheckoutItem({
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      qty: item.quantity || item.qty || 1,
+      img: item.img,
+      size: item.size,
+      color: item.color,
+    });
+    setActiveTabState('checkout');
+    const newPath = getPathForTab('checkout', selectedProductId);
+    if (window.location.pathname !== newPath) {
+      window.history.pushState({ tab: 'checkout', prodId: selectedProductId }, '', newPath);
     }
   };
 
@@ -300,6 +322,15 @@ export default function App() {
           wishlistCount={wishlistItems.length}
           activeTab={activeTab}
           user={user}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onSearchSubmit={(q) => {
+            setSearchQuery(q);
+            navigateTo('shop');
+          }}
+          onSelectProduct={(id) => {
+            navigateTo('product-detail', id);
+          }}
           onOpenAuth={() => setIsAuthOpen(true)}
           setActiveTab={(tab) => {
             if (tab === 'wishlist') {
@@ -323,10 +354,18 @@ export default function App() {
         ) : activeTab === 'checkout' ? (
           <CheckoutPage
             user={user}
-            cartItems={cartItems}
-            onBackToHome={() => navigateTo('home')}
+            cartItems={directCheckoutItem ? [directCheckoutItem] : cartItems}
+            isDirectBuy={Boolean(directCheckoutItem)}
+            onBackToHome={() => {
+              setDirectCheckoutItem(null);
+              navigateTo('home');
+            }}
             onOrderComplete={() => {
-              setCartItems([]);
+              if (directCheckoutItem) {
+                setDirectCheckoutItem(null);
+              } else {
+                setCartItems([]);
+              }
             }}
           />
         ) : activeTab === 'apparel' || activeTab === 'womens-wardrobe' ? (
@@ -361,6 +400,8 @@ export default function App() {
           <ShopPage
             activeTab={activeTab}
             initialCategory={selectedCategory}
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
             onAddToCart={handleAddToCart}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
@@ -372,6 +413,7 @@ export default function App() {
           <ProductDetailPage
             selectedProductId={selectedProductId}
             onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
             onToggleWishlist={handleToggleWishlist}
             wishlistIds={wishlistIds}
             onBackToHome={() => navigateTo('shop')}

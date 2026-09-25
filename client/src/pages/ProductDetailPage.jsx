@@ -10,7 +10,7 @@ const formatRs = (val) => {
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
-export default function ProductDetailPage({ selectedProductId, onAddToCart, onToggleWishlist, wishlistIds = [], onBackToHome, onSelectProduct, onNavigate }) {
+export default function ProductDetailPage({ selectedProductId, onAddToCart, onBuyNow, onToggleWishlist, wishlistIds = [], onBackToHome, onSelectProduct, onNavigate }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -188,7 +188,36 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
         : [
             { spec: 'Total Back Length', metric: '122 cm / 48.0"' },
             { spec: 'Chest Width (Pit to Pit)', metric: '66 cm / 26.0"' },
-          ]
+          ],
+      recommendedLooks: [
+        {
+          id: 'p1',
+          title: 'Solitude Raw Linen Kimono Duster',
+          fabric: '410 GSM Raw Normandy Flax',
+          price: 'Rs. 42,000',
+          numericPrice: 42000,
+          badge: 'BESTSELLER',
+          img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+        },
+        {
+          id: 'w1',
+          title: 'Kaze Organic Silk Trench',
+          fabric: '320 GSM Hand-spun Raw Silk',
+          price: 'Rs. 48,000',
+          numericPrice: 48000,
+          badge: 'NEW EDITION',
+          img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
+        },
+        {
+          id: 'm1',
+          title: 'Kyoto Woven Structure Blazer',
+          fabric: '450 GSM Heavyweight Wool Flax',
+          price: 'Rs. 52,000',
+          numericPrice: 52000,
+          badge: 'ARCHIVAL',
+          img: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80',
+        },
+      ]
     };
 
     setProduct(formattedObj);
@@ -221,18 +250,20 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
 
   const handleBuyNowClick = () => {
     if (product) {
-      if (onAddToCart) {
-        onAddToCart({
-          id: `${product.id}-${selectedSize}-${selectedColor}`,
-          title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
-          price: product.numericPrice,
-          img: product.images[selectedImageIndex] || product.img,
-          size: selectedSize,
-          color: selectedColor,
-          quantity: quantity,
-        });
-      }
-      if (onNavigate) {
+      const directItem = {
+        id: `${product.id}-${selectedSize}-${selectedColor}`,
+        title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
+        price: product.numericPrice,
+        img: (product.images && product.images[selectedImageIndex]) || product.img,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: quantity,
+        qty: quantity,
+      };
+
+      if (onBuyNow) {
+        onBuyNow(directItem);
+      } else if (onNavigate) {
         onNavigate('checkout');
       }
     }
@@ -539,7 +570,9 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
                 <button
                   onClick={() => onToggleWishlist && onToggleWishlist(product)}
                   className={`w-14 h-14 rounded-lg flex items-center justify-center transition-all cursor-pointer border shrink-0 ${
-                    isFavorited ? 'bg-secondary text-on-secondary border-secondary' : 'bg-surface-container border-surface-variant hover:bg-surface-container-high text-on-surface'
+                    isFavorited
+                      ? 'bg-red-600 text-white border-red-600 shadow-md scale-105'
+                      : 'bg-surface-container border-surface-variant hover:bg-surface-container-high hover:text-red-600 text-on-surface'
                   }`}
                   title={isFavorited ? 'Saved in Wishlist' : 'Add to Wishlist'}
                   type="button"
@@ -753,7 +786,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-space-lg">
-          {(recommendedProducts && recommendedProducts.length > 0 ? recommendedProducts : product.recommendedLooks).map((rec) => (
+          {(recommendedProducts && recommendedProducts.length > 0 ? recommendedProducts : (product?.recommendedLooks || [])).map((rec) => (
             <div
               key={rec.id}
               onClick={() => onSelectProduct && onSelectProduct(rec.id)}

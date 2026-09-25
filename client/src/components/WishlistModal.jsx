@@ -9,7 +9,9 @@ export default function WishlistModal({ isOpen, onClose, wishlistItems, onAddToC
         <div>
           <div className="flex items-center justify-between pb-space-lg border-b border-surface-variant mb-space-lg">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[22px] text-secondary">bookmark_border</span>
+              <span className={`material-symbols-outlined text-[22px] ${wishlistItems.length > 0 ? 'text-red-600' : 'text-secondary'}`}>
+                {wishlistItems.length > 0 ? 'favorite' : 'favorite_border'}
+              </span>
               <h3 className="font-headline-sm text-headline-sm uppercase text-on-surface">
                 Saved Wishlist ({wishlistItems.length})
               </h3>
