@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, onGoToShop }) {
   const [activeTab, setActiveTab] = useState('orders');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [placedOrders, setPlacedOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   // Edit form fields
-  const [editName, setEditName] = useState(user?.name || 'Elin Lindqvist');
-  const [editEmail, setEditEmail] = useState(user?.email || 'elin@atelierstore.com');
-  const [editAvatar, setEditAvatar] = useState(user?.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBVc9DU0FPf5cvkDbLsmajjIhrqxVzcprYSiMVl52H84IrGx-8KX7sAFTfDcCp_Jkh7ui-wjuxF_GCOTmZMC6FFSQ_1xmC1ln7j7_ag4eIyYD3NThID8SC7gXukjhUq_IQNeR0hA7sSSmKgP9OEScujERw4GKLr2iNdYSKBZt0gB_e3seq4o9Q31KXBbs09WpqRULVK9xwvPXKZ0tkFsNYyEjbYKTOi_uwg-44pt2XJPSoz8Q5QI2E');
-  const [editStreet, setEditStreet] = useState(user?.address?.street || 'Åsögatan 142, Apt 4B');
-  const [editCity, setEditCity] = useState(user?.address?.city || 'Stockholm');
-  const [editCountry, setEditCountry] = useState(user?.address?.country || 'Sweden');
-  const [editPostal, setEditPostal] = useState(user?.address?.postalCode || '116 24');
-  const [editPhone, setEditPhone] = useState(user?.address?.phone || '+46 8 123 4567');
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
+  const [editStreet, setEditStreet] = useState(user?.address?.street || '');
+  const [editCity, setEditCity] = useState(user?.address?.city || '');
+  const [editCountry, setEditCountry] = useState(user?.address?.country || '');
+  const [editPostal, setEditPostal] = useState(user?.address?.postalCode || '');
+  const [editPhone, setEditPhone] = useState(user?.address?.phone || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // New Address form
@@ -22,70 +24,113 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   const [newCity, setNewCity] = useState('');
   const [newCountry, setNewCountry] = useState('');
 
-  // Extra Addresses database
-  const [addresses, setAddresses] = useState([
-    {
-      id: 'addr-1',
-      label: 'Primary Residence',
-      isPrimary: true,
-      street: user?.address?.street || 'Åsögatan 142, Apt 4B',
-      city: user?.address?.city || 'Stockholm',
-      country: user?.address?.country || 'Sweden',
-      postal: user?.address?.postalCode || '116 24',
-      phone: user?.address?.phone || '+46 8 123 4567',
-    },
-    {
-      id: 'addr-2',
-      label: 'Kyoto Studio Sanctuary',
-      isPrimary: false,
-      street: 'Minami-ku, Higashikujo 12-4',
-      city: 'Kyoto',
-      country: 'Japan',
-      postal: '601-8014',
-      phone: '+81 75 987 6543',
-    },
-  ]);
+  // Extra Addresses database (Dynamically loaded from user profile)
+  const [addresses, setAddresses] = useState(() => {
+    if (user?.address && (user?.address?.street || user?.address?.city)) {
+      return [
+        {
+          id: 'addr-1',
+          label: 'Primary Residence',
+          isPrimary: true,
+          street: user.address.street || '',
+          city: user.address.city || '',
+          country: user.address.country || '',
+          postal: user.address.postalCode || '',
+          phone: user.address.phone || '',
+        },
+      ];
+    }
+    return [];
+  });
 
-  const orders = [
-    {
-      id: 'KS-8904',
-      date: 'September 04, 2026',
-      total: '$505.00',
-      status: 'In Transit',
-      courier: 'DHL Express Insured · 7849204819',
-      estimatedDelivery: 'Sep 12, 2026',
-      items: [
-        {
-          title: 'Hasami Stoneware Teapot No. 04',
-          qty: 1,
-          price: '$145',
-          img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBb6hR_9c17ClnOTO_xM8-6RYiy1Y2Ee4ccZrvX-54Ah0-hREfQBVbWEVHcH5k6rtnBgDAx1Q8gPnSKGqENDhGz4g7xCLNHJzliSmVk3W93AaxZyFoiD345VxI_Or1Srg2lRYUtJJrzUw_OA10lnSejpvC087W-FnL1DqxJoCTN4VYp48XT1ZjrpCW-kamWHOxwYeYZvEsAZTzwleP5eW672eobhPfmbWLrSYCs-1ywVbc4bez3FyA',
-        },
-        {
-          title: 'Akari Lantern No. 04',
-          qty: 1,
-          price: '$360',
-          img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAy7h1IJVWgA9dCauR6iHvd1c-lHOTrBH1Jt2hZkhI3zGZlb3MQajFs5fqzqDZMiZTGJMhGZforyQ47kRy1mPXFUlLxVQcmZeQw2ovM4PYrrvP0bMclA_hcTYsOaZNN8MDdUEe94HfjCTgvPtvo7xD2UHhNl5Bp2svOygWziZURhEAGnj0MTkHwKgfMrfJjzeqcF7w16SrTfqgS5yv5b0illcqQ7Wc4_UhM4UhvZa1yO4E6d7BAXnQ',
-        },
-      ],
-    },
-    {
-      id: 'KS-7812',
-      date: 'August 18, 2026',
-      total: '$240.00',
-      status: 'Delivered',
-      courier: 'FedEx Carbon Neutral',
-      estimatedDelivery: 'Aug 22, 2026',
-      items: [
-        {
-          title: 'Sora Heavyweight Linen Robe',
-          qty: 1,
-          price: '$240',
-          img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC7VK4Qn61mQPz4bQ6u0Z8FGzbqjYJvgMPqLyVrl_U5rw8zMgKFmYxR2RYaFcJb8gAO-nTIfO_kc1ratauWCpOU-u67Q4sQ_hMEAF36vTpGIZWZBX2Pkz7kk8UW41YFr96mRr-iUvKoCDPu-eARO10RcSnPksGoqvKDFYjSa0lsrGa6YUypRvkzR7akycKGjXDADIurcjslasNNFQeB8t666hIOUqFpxHE-2ruxGhTHqCv8uzFdgiU',
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    fetchUserOrders();
+  }, [user]);
+
+  const fetchUserOrders = async () => {
+    setLoadingOrders(true);
+    let localOrds = [];
+    try {
+      localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+    } catch (e) {}
+
+    try {
+      const res = await fetch('http://localhost:5001/api/orders');
+      if (res.ok) {
+        const dbOrders = await res.json();
+        if (Array.isArray(dbOrders)) {
+          const userEmail = user?.email?.toLowerCase();
+          const filteredDb = userEmail 
+            ? dbOrders.filter(o => !o.patronEmail || o.patronEmail?.toLowerCase() === userEmail || userEmail === 'admin@atelierstore.com') 
+            : dbOrders;
+
+          const map = new Map();
+          [...localOrds, ...filteredDb].forEach(item => {
+            const id = item.orderId || item.id || item._id;
+            if (id && !map.has(id)) {
+              let formattedPrice = 'Rs. 0';
+              if (typeof item.total === 'number') {
+                formattedPrice = `Rs. ${Math.round(item.total).toLocaleString('en-LK')}`;
+              } else if (typeof item.total === 'string') {
+                formattedPrice = item.total.includes('Rs') ? item.total : `Rs. ${item.total}`;
+              }
+
+              map.set(id, {
+                id: id,
+                date: item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent Order'),
+                total: formattedPrice,
+                status: item.status || 'Awaiting Dispatch',
+                courier: item.courier || 'DHL Insured Vault Courier · Insured',
+                estimatedDelivery: item.estimatedDelivery || '3-5 Business Days',
+                items: Array.isArray(item.items) && item.items.length > 0 ? item.items.map(it => {
+                  let itPrice = typeof it.price === 'number' ? it.price : parseFloat(String(it.price).replace(/[^0-9.]/g, '')) || 0;
+                  if (itPrice > 0 && itPrice < 1000) itPrice = itPrice * 100;
+                  return {
+                    title: it.title || 'Archival Garment',
+                    qty: it.qty || 1,
+                    price: itPrice > 0 ? `Rs. ${Math.round(itPrice).toLocaleString('en-LK')}` : (typeof it.price === 'string' ? it.price : 'Rs. 28,500'),
+                    img: it.img || it.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
+                  };
+                }) : [
+                  {
+                    title: 'Archival Luxury Garment',
+                    qty: 1,
+                    price: formattedPrice,
+                    img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
+                  }
+                ]
+              });
+            }
+          });
+          setPlacedOrders(Array.from(map.values()));
+          setLoadingOrders(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching user orders from DB:', err);
+    }
+
+    if (localOrds.length > 0) {
+      setPlacedOrders(localOrds.map(item => ({
+        id: item.orderId || item.id,
+        date: item.date || 'Recent Order',
+        total: typeof item.total === 'number' ? `Rs. ${Math.round(item.total).toLocaleString('en-LK')}` : item.total,
+        status: item.status || 'Awaiting Dispatch',
+        courier: 'DHL Insured Vault Courier',
+        estimatedDelivery: '3-5 Business Days',
+        items: Array.isArray(item.items) ? item.items.map(it => ({
+          title: it.title,
+          qty: it.qty || 1,
+          price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
+          img: it.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
+        })) : []
+      })));
+    } else {
+      setPlacedOrders([]);
+    }
+    setLoadingOrders(false);
+  };
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
@@ -246,64 +291,92 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
         {/* TAB 1: Orders & Tracking */}
         {activeTab === 'orders' && (
           <div className="space-y-space-xl">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="bg-surface-container-low rounded-xl p-space-xl border border-surface-variant shadow-sm"
-              >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-lg">
-                  <div>
-                    <span className="font-label-caps text-xs text-on-surface-variant uppercase block">
-                      Acquisition #{order.id}
-                    </span>
-                    <span className="font-body-sm text-body-sm text-on-surface font-medium">
-                      {order.date}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-space-md">
-                    <span
-                      className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
-                        order.status === 'In Transit'
-                          ? 'bg-secondary/20 text-secondary font-semibold'
-                          : 'bg-surface-container-high text-on-surface-variant'
-                      }`}
-                    >
-                      ● {order.status}
-                    </span>
-                    <span className="font-price-editorial text-price-editorial text-on-surface">
-                      {order.total}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Items */}
-                <div className="space-y-space-md mb-space-lg">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-space-md">
-                      <img
-                        src={item.img}
-                        alt={item.title}
-                        className="w-14 h-16 object-cover rounded bg-surface-container border"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-subheading-md text-on-surface">{item.title}</h4>
-                        <p className="font-body-sm text-xs text-on-surface-variant">
-                          Qty: {item.qty} · {item.price}
-                        </p>
-                      </div>
+            {loadingOrders ? (
+              <div className="py-12 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[36px] animate-spin block mb-2 opacity-50">sync</span>
+                <p className="font-body-sm text-xs">Synchronizing real acquisitions from vault DB...</p>
+              </div>
+            ) : placedOrders.length === 0 ? (
+              <div className="bg-surface-container-low rounded-xl p-12 text-center border border-surface-variant shadow-sm">
+                <span className="material-symbols-outlined text-[48px] text-on-surface-variant block mb-3 opacity-40">
+                  package_2
+                </span>
+                <h3 className="font-headline-sm text-lg text-on-surface font-semibold mb-1">
+                  No Acquisitions Placed Yet
+                </h3>
+                <p className="font-body-sm text-xs text-on-surface-variant max-w-sm mx-auto mb-6">
+                  Your commissioned garments and vault acquisitions will be tracked here in real-time as soon as you place an order.
+                </p>
+                <button
+                  type="button"
+                  onClick={onGoToShop}
+                  className="px-6 py-2.5 rounded bg-primary text-on-primary font-label-caps text-xs uppercase tracking-wider hover:bg-secondary transition-colors cursor-pointer font-bold shadow-sm"
+                >
+                  Explore Archival Collection
+                </button>
+              </div>
+            ) : (
+              placedOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-surface-container-low rounded-xl p-space-xl border border-surface-variant shadow-sm"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-lg">
+                    <div>
+                      <span className="font-label-caps text-xs text-on-surface-variant uppercase block">
+                        Acquisition #{order.id}
+                      </span>
+                      <span className="font-body-sm text-body-sm text-on-surface font-medium">
+                        {order.date}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center gap-space-md">
+                      <span
+                        className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
+                          order.status === 'In Transit'
+                            ? 'bg-secondary/20 text-secondary font-semibold'
+                            : 'bg-surface-container-high text-on-surface-variant font-semibold'
+                        }`}
+                      >
+                        ● {order.status}
+                      </span>
+                      <span className="font-price-editorial text-price-editorial text-on-surface font-bold">
+                        {order.total}
+                      </span>
+                    </div>
+                  </div>
 
-                {/* Courier Progress Meter */}
-                {order.status === 'In Transit' && (
+                  {/* Items */}
+                  <div className="space-y-space-md mb-space-lg">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-space-md">
+                        <img
+                          src={item.img}
+                          alt={item.title}
+                          className="w-14 h-16 object-cover rounded bg-surface-container border"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-subheading-md text-on-surface font-medium">{item.title}</h4>
+                          <p className="font-body-sm text-xs text-on-surface-variant">
+                            Qty: {item.qty} · {item.price}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Courier Progress Meter */}
                   <div className="bg-surface-container-lowest p-space-md rounded-lg border border-surface-variant">
                     <div className="flex items-center justify-between font-label-caps text-xs text-on-surface mb-2">
                       <span>Courier: {order.courier}</span>
                       <span>Est. Arrival: {order.estimatedDelivery}</span>
                     </div>
                     <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                      <div className="w-2/3 h-full bg-secondary rounded-full"></div>
+                      <div
+                        className={`h-full bg-secondary rounded-full transition-all duration-500 ${
+                          order.status === 'Delivered' ? 'w-full' : order.status === 'In Transit' ? 'w-2/3' : 'w-1/3'
+                        }`}
+                      />
                     </div>
                     <div className="flex justify-between font-label-caps text-[10px] text-on-surface-variant mt-2">
                       <span>Kyoto Dispatch</span>
@@ -311,9 +384,9 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                       <span>Delivery</span>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -387,32 +460,53 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-space-xl">
-              {addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  className={`p-space-xl rounded-xl border shadow-sm relative bg-surface-container-low ${
-                    addr.isPrimary ? 'border-secondary' : 'border-surface-variant'
-                  }`}
+            {addresses.length === 0 ? (
+              <div className="p-8 rounded-xl border border-surface-variant bg-surface-container-low text-center shadow-sm">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant block mb-2 opacity-40">
+                  home_pin
+                </span>
+                <p className="font-headline-sm text-sm font-semibold text-on-surface mb-1">
+                  No Saved Address Destinations
+                </p>
+                <p className="font-body-sm text-xs text-on-surface-variant max-w-sm mx-auto mb-4">
+                  Save your home, studio, or atelier addresses for quick 1-click checkout.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingAddress(true)}
+                  className="px-4 py-2 rounded bg-primary text-on-primary font-label-caps text-xs uppercase hover:bg-secondary transition-colors cursor-pointer font-bold shadow-xs"
                 >
-                  {addr.isPrimary && (
-                    <span className="absolute top-4 right-4 font-label-caps text-[10px] uppercase bg-secondary text-on-secondary px-2.5 py-0.5 rounded-full font-semibold">
-                      Primary
-                    </span>
-                  )}
-                  <h3 className="font-subheading-lg text-on-surface mb-2 font-semibold">{addr.label}</h3>
-                  <p className="font-body-sm text-on-surface-variant leading-relaxed mb-4">
-                    {user.name}<br />
-                    {addr.street}<br />
-                    {addr.postal} {addr.city}, {addr.country}<br />
-                    {addr.phone}
-                  </p>
-                  <button className="font-label-md text-xs uppercase text-secondary underline cursor-pointer">
-                    Edit Address
-                  </button>
-                </div>
-              ))}
-            </div>
+                  Add Address
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-xl">
+                {addresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    className={`p-space-xl rounded-xl border shadow-sm relative bg-surface-container-low ${
+                      addr.isPrimary ? 'border-secondary' : 'border-surface-variant'
+                    }`}
+                  >
+                    {addr.isPrimary && (
+                      <span className="absolute top-4 right-4 font-label-caps text-[10px] uppercase bg-secondary text-on-secondary px-2.5 py-0.5 rounded-full font-semibold">
+                        Primary
+                      </span>
+                    )}
+                    <h3 className="font-subheading-lg text-on-surface mb-2 font-semibold">{addr.label}</h3>
+                    <p className="font-body-sm text-on-surface-variant leading-relaxed mb-4">
+                      {user?.name || editName}<br />
+                      {addr.street}<br />
+                      {addr.postal} {addr.city}, {addr.country}<br />
+                      {addr.phone}
+                    </p>
+                    <button className="font-label-md text-xs uppercase text-secondary underline cursor-pointer font-bold">
+                      Edit Address
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

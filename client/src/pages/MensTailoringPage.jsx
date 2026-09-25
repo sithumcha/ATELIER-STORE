@@ -8,149 +8,7 @@ const formatRs = (val) => {
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
-const DEFAULT_MENS_CLOTHING = [
-  {
-    id: 'm1',
-    badge: 'TOKUSHIMA INDIGO',
-    spec: '380 GSM · VINTAGE SHUTTLE',
-    category: 'jackets',
-    title: 'Botanical Indigo Noragi Jacket',
-    subtitle: '14-Times Dip-Dyed Aizome • Tie Fasteners',
-    description: 'Hand-loomed organic cotton dip-dyed 14 times in natural indigo vat with internal cotton tie closures.',
-    numericPrice: 36000,
-    price: formatRs(36000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Deep Tokushima Indigo', hex: '#1C2B40' },
-      { name: 'Sumi Charcoal', hex: '#1C1C18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm2',
-    badge: 'SWEDISH SMÅLAND WOOL',
-    spec: '680 GSM · BOILED FLEECE',
-    category: 'coats',
-    title: 'Småland Tailored Overcoat',
-    subtitle: 'Turbine Milled Swedish Wool • Horn Buttons',
-    description: 'Heavy Swedish wool milled with turbine power. Deep welt pockets with buffalo horn button closure.',
-    numericPrice: 65000,
-    price: formatRs(65000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Moss Stone Wool', hex: '#3A4235' },
-      { name: 'Deep Charcoal', hex: '#1C1C18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm3',
-    badge: 'RAW HIGHLAND YAK',
-    spec: '520 GSM · NOMADIC FLEECE',
-    category: 'knits',
-    title: 'Undyed Yak Wool Shawl Knit',
-    subtitle: 'Hand-Spun Tibetan Underfleece • Continuous Lapel',
-    description: 'Hand-spun nomadic yak underfleece in untouched oat tone with continuous ribbed shawl lapel.',
-    numericPrice: 39000,
-    price: formatRs(39000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Natural Oat Yak', hex: '#D8CFB9' },
-    ],
-    img: 'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm4',
-    badge: 'KYOTO SASHIKO',
-    spec: '460 GSM · HEAVY FLAX',
-    category: 'coats',
-    title: 'Sashiko Reinforced Linen Coat',
-    subtitle: 'French Flax • Hand-Stitched Boxwood Toggle',
-    description: 'Structural French flax interwoven with Japanese cotton sashiko lines and boxwood toggle.',
-    numericPrice: 52000,
-    price: formatRs(52000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Ecru Linen', hex: '#E8E2D5' },
-      { name: 'Indigo Sashiko', hex: '#1C2B40' },
-    ],
-    img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm5',
-    badge: 'SUMI PINE CHARCOAL',
-    spec: '410 GSM · STONE WASHED',
-    category: 'jackets',
-    title: 'Kuro Sumi Unstructured Blazer',
-    subtitle: 'Kimono Neckband • River Stone Tumbled',
-    description: 'Draped with a seamless kimono neckband. Treated with Nara pine soot charcoal for a velvety handfeel.',
-    numericPrice: 46000,
-    price: formatRs(46000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Sumi Soot Charcoal', hex: '#1F1B18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm6',
-    badge: 'OKAYAMA SELVEDGE',
-    spec: '340 GSM · RAMIE TWILL',
-    category: 'trousers',
-    title: 'Higashiyama Hakama Trouser',
-    subtitle: 'Double Origami Pleats • Selvedge ID',
-    description: 'Dual forward architectural pleats creating sculptural volume with selvedge hems.',
-    numericPrice: 31000,
-    price: formatRs(31000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Deep Ramie Indigo', hex: '#1C2B40' },
-      { name: 'Ash Charcoal', hex: '#1C1C18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm7',
-    badge: 'FRENCH LINEN',
-    spec: '320 GSM · BAND COLLAR',
-    category: 'shirts',
-    title: 'Solitude Slub Linen Tunic Shirt',
-    subtitle: 'French Seams • Shell Placket',
-    description: 'Longline unbleached slub tunic shirt cut with French seams and mother-of-pearl buttons.',
-    numericPrice: 28000,
-    price: formatRs(28000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Raw Unbleached Flax', hex: '#E8E2D5' },
-    ],
-    img: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'm8',
-    badge: 'ORGANIC COTTON',
-    spec: '450 GSM · HEAVY TWILL',
-    category: 'trousers',
-    title: 'Nagano Utility Cargo Trouser',
-    subtitle: 'Deep Gusseted Pockets • Adjustable Ankle Hem',
-    description: 'Relaxed heavy cotton twill cargo trousers with deep gusseted pockets and adjustable cuffs.',
-    numericPrice: 34000,
-    price: formatRs(34000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Sage Olive', hex: '#4A5844' },
-      { name: 'Sumi Charcoal', hex: '#1C1C18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=1000&q=80',
-  },
-];
+const DEFAULT_MENS_CLOTHING = [];
 
 export default function MensTailoringPage({ onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
   const [products, setProducts] = useState([]);
@@ -198,34 +56,40 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
             );
           });
 
-          const targetItems = mensItems.length > 0 ? mensItems : DEFAULT_MENS_CLOTHING;
-
-          const formatted = targetItems.map((p, idx) => {
+          const formatted = mensItems.map((p, idx) => {
             let rawP = p.price;
             let numPrice = typeof rawP === 'number' ? rawP : parseFloat(String(rawP).replace(/[^0-9.]/g, '')) || 32000;
             if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
-            let displayImg = DEFAULT_MENS_CLOTHING[idx % DEFAULT_MENS_CLOTHING.length].img;
+            let displayImg = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
             if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
               displayImg = p.images[0];
             } else if (p.img) {
               displayImg = p.img;
             }
 
+            let hoverImg = (p.images && Array.isArray(p.images) && p.images[1]) ? p.images[1] : displayImg;
+
             return {
               id: p._id || p.id || `m_backend_${idx}`,
               title: p.title || p.name || 'Men\'s Garment',
               subtitle: p.subtitle || p.editionName || 'Pure Organic Fiber',
-              badge: p.badge || 'LIMITED EDITION',
-              category: p.category?.toLowerCase().includes('jacket') ? 'jackets' : p.category?.toLowerCase().includes('trouser') ? 'trousers' : p.category?.toLowerCase().includes('knit') ? 'knits' : p.category?.toLowerCase().includes('shirt') ? 'shirts' : 'coats',
-              spec: p.gsm || p.shuttle || 'NATURAL FIBER MENSWEAR',
+              category: (p.category?.toLowerCase().includes('blazer') || p.category?.toLowerCase().includes('suit'))
+                ? 'blazers'
+                : (p.category?.toLowerCase().includes('overcoat') || p.category?.toLowerCase().includes('trench') || p.category?.toLowerCase().includes('coat'))
+                ? 'coats'
+                : (p.category?.toLowerCase().includes('trouser') || p.category?.toLowerCase().includes('pant'))
+                ? 'trousers'
+                : (p.category?.toLowerCase().includes('noragi') || p.category?.toLowerCase().includes('jacket'))
+                ? 'jackets'
+                : 'coats',
               description: p.description || p.summary || 'Architectural menswear garment crafted with patience.',
               numericPrice: numPrice,
               price: formatRs(numPrice),
               sizes: p.sizes ? p.sizes.map((s) => typeof s === 'string' ? s : s.label || s.roman) : ['S', 'M', 'L', 'XL'],
               colors: p.colors || [{ name: 'Sumi', hex: '#1F1B18' }],
               img: displayImg,
-              hoverImg: (p.images && p.images[1]) || DEFAULT_MENS_CLOTHING[idx % DEFAULT_MENS_CLOTHING.length].hoverImg,
+              hoverImg: hoverImg,
             };
           });
           setProducts(formatted);
@@ -237,6 +101,7 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
     } finally {
       setLoading(false);
     }
+    setProducts([]);
   };
 
   const handleSelectSize = (id, sz) => {
@@ -552,11 +417,11 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
                   className="group flex flex-col bg-surface-container-lowest rounded-2xl shadow-xs hover:shadow-2xl transition-all duration-500 border border-surface-variant/70 overflow-hidden cursor-pointer relative"
                 >
                   {/* Image Presentation */}
-                  <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
+                  <div className="relative aspect-[3/4] w-full bg-surface-container-low overflow-hidden">
                     <img
                       src={g.img}
                       alt={g.title}
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';

@@ -8,112 +8,6 @@ const formatRs = (val) => {
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
-const DEFAULT_WOMENS_GARMENTS = [
-  {
-    id: 'w1',
-    badge: 'LIMITED · 28 PIECES',
-    spec: '145 GSM · KYOTO SHUTTLE LOOM',
-    category: 'dresses',
-    title: 'Fluid Mulberry Silk Cocoon Dress',
-    subtitle: 'Wild Tussar Silk • Hand-Draped Back Pleating',
-    description: 'Unrefined wild silk with natural irregular slub texture. Cut with an exaggerated cocoon back pleat that shifts fluidly with body movement.',
-    numericPrice: 48000,
-    price: formatRs(48000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Alabaster Silk', hex: '#F4F0E8' },
-      { name: 'Deep Sumi Charcoal', hex: '#1C1C18' },
-    ],
-    img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'w2',
-    badge: 'CORE WARDROBE',
-    spec: '260 GSM · NORMANDY FLAX',
-    category: 'robes',
-    title: 'Solitude Raw Linen Kimono Duster',
-    subtitle: 'Undyed European Flax • French Bound Seams',
-    description: 'Drop-shoulder sweeping silhouette with generous kimono sleeves. Finished with French seams and raw selvedge edge lapels.',
-    numericPrice: 42000,
-    price: formatRs(42000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Undyed Natural Ecru', hex: '#E8E2D5' },
-      { name: 'Kakishibu Persimmon', hex: '#94492C' },
-    ],
-    img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'w3',
-    badge: 'KAKISHIBU AGED',
-    spec: '180 GSM · BOTANICAL KAKISHIBU',
-    category: 'tunics',
-    title: 'Kyoto Plant-Dyed Linen Tunic',
-    subtitle: '45-Day Mountain Sunlight Cured',
-    description: 'Immersed in three-year-aged unripened persimmon juice and cured under mountain sunlight for 45 days. Patinas gracefully over wear.',
-    numericPrice: 24000,
-    price: formatRs(24000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Fermented Persimmon', hex: '#94492C' },
-    ],
-    img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'w4',
-    badge: 'TRADITIONAL PLEAT',
-    spec: '320 GSM · HEAVY NORMANDY FLAX',
-    category: 'culottes',
-    title: 'Higashiyama Pleated Hakama Pant',
-    description: 'Inspired by historical Kyoto archer trousers. Double deep origami pleating anchored at a high waistband with internal tie adjustments.',
-    numericPrice: 31000,
-    price: formatRs(31000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Ash Charcoal', hex: '#1C1C18' },
-      { name: 'Chalk White', hex: '#E8E2D8' },
-    ],
-    img: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'w5',
-    badge: 'UNDYED WILD FIBER',
-    spec: '220 GSM · HIGHLAND ANDEAN FLEECE',
-    category: 'robes',
-    title: 'Hand-Spun Alpaca Fringe Wrap',
-    description: 'Sheared from free-roaming herds at 3,800m altitude. Completely undyed and unbleached, retaining the hollow thermoregulating fiber core.',
-    numericPrice: 18000,
-    price: formatRs(18000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Fawn Grey', hex: '#D7CFC2' },
-    ],
-    img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-  },
-  {
-    id: 'w6',
-    badge: 'TAILORED CUT',
-    spec: '290 GSM · BELGIAN CRISP FLAX',
-    category: 'culottes',
-    title: 'Wabi Pleated Wide-Leg Linen Trouser',
-    description: 'Engineered with an architectural wide leg and a soft curved inner seam. Washed in Swedish spring water for an immediate broken-in drape.',
-    numericPrice: 29000,
-    price: formatRs(29000),
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: [
-      { name: 'Sumi Black', hex: '#1C1C18' },
-      { name: 'Oat Sand', hex: '#EAE3D5' },
-    ],
-    img: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?auto=format&fit=crop&w=1000&q=80',
-    hoverImg: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=1000&q=80',
-  },
-];
-
 export default function WomensWardrobePage({ onAddToCart, onSelectProduct, onToggleWishlist, wishlistIds = [] }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -137,7 +31,7 @@ export default function WomensWardrobePage({ onAddToCart, onSelectProduct, onTog
       const res = await fetch('http://localhost:5001/api/products');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const womensItems = data.filter((p) => {
             const cat = (p.category || '').toLowerCase();
             const title = (p.title || p.name || '').toLowerCase();
@@ -150,14 +44,12 @@ export default function WomensWardrobePage({ onAddToCart, onSelectProduct, onTog
             return combined.includes('women') || combined.includes('wardrobe') || combined.includes('dress') || combined.includes('skirt') || combined.includes('tunic') || combined.includes('apparel');
           });
 
-          const targetItems = womensItems.length > 0 ? womensItems : DEFAULT_WOMENS_GARMENTS;
-
-          const formatted = targetItems.map((p, idx) => {
+          const formatted = womensItems.map((p, idx) => {
             let rawP = p.price;
             let numPrice = typeof rawP === 'number' ? rawP : parseFloat(String(rawP).replace(/[^0-9.]/g, '')) || 34000;
             if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
-            let displayImg = DEFAULT_WOMENS_GARMENTS[idx % DEFAULT_WOMENS_GARMENTS.length].img;
+            let displayImg = 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80';
             if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
               displayImg = p.images[0];
             } else if (p.img) {
@@ -168,16 +60,20 @@ export default function WomensWardrobePage({ onAddToCart, onSelectProduct, onTog
               id: p._id || p.id || `w_backend_${idx}`,
               title: p.title || p.name || 'Women\'s Garment',
               subtitle: p.subtitle || p.editionName || 'Pure Organic Fiber',
-              badge: p.badge || 'LIMITED EDITION',
-              category: p.category?.toLowerCase().includes('dress') ? 'dresses' : p.category?.toLowerCase().includes('tunic') ? 'tunics' : p.category?.toLowerCase().includes('culotte') || p.category?.toLowerCase().includes('trouser') ? 'culottes' : 'robes',
-              spec: p.gsm || p.shuttle || 'NATURAL ORGANIC SILK & FLAX',
+              category: (p.category?.toLowerCase().includes('dress') || p.category?.toLowerCase().includes('gown'))
+                ? 'dresses'
+                : (p.category?.toLowerCase().includes('tunic') || p.category?.toLowerCase().includes('blouse'))
+                ? 'tunics'
+                : (p.category?.toLowerCase().includes('culotte') || p.category?.toLowerCase().includes('trouser') || p.category?.toLowerCase().includes('pant'))
+                ? 'culottes'
+                : 'robes',
               description: p.description || p.summary || 'Architectural women\'s garment crafted with patience.',
               numericPrice: numPrice,
               price: formatRs(numPrice),
               sizes: p.sizes ? p.sizes.map((s) => typeof s === 'string' ? s : s.label || s.roman) : ['S', 'M', 'L', 'XL'],
               colors: p.colors || [{ name: 'Ecru', hex: '#E8E2D5' }],
               img: displayImg,
-              hoverImg: (p.images && p.images[1]) || DEFAULT_WOMENS_GARMENTS[idx % DEFAULT_WOMENS_GARMENTS.length].hoverImg,
+              hoverImg: (p.images && p.images[1]) || displayImg,
             };
           });
           setProducts(formatted);
@@ -503,11 +399,11 @@ export default function WomensWardrobePage({ onAddToCart, onSelectProduct, onTog
                   className="group flex flex-col bg-surface-container-lowest rounded-2xl shadow-xs hover:shadow-2xl transition-all duration-500 border border-surface-variant/70 overflow-hidden cursor-pointer relative"
                 >
                   {/* Image Presentation */}
-                  <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
+                  <div className="relative aspect-[3/4] w-full bg-surface-container-low overflow-hidden">
                     <img
                       src={g.img}
                       alt={g.title}
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80';

@@ -17,16 +17,16 @@ router.get('/', async (req, res) => {
 // 2. Aluth Order ekak daaneema (POST /api/orders)
 router.post('/', async (req, res) => {
   try {
-    const { patronName, patronEmail, items, destination, total } = req.body;
+    const { orderId, patronName, patronEmail, items, destination, total, status } = req.body;
 
     const newOrder = new Order({
-      orderId: `#ORDER-${Math.floor(1000 + Math.random() * 9000)}`,
-      patronName: patronName || 'Archival Collector',
+      orderId: orderId || `#KR-${Math.floor(10000 + Math.random() * 90000)}`,
+      patronName: patronName || 'Clara Vanderbilt',
       patronEmail: patronEmail || 'patron@store.com',
       items: items || [],
       destination: destination || 'Global Destination',
-      total: Number(total) || 150,
-      status: 'Awaiting Dispatch',
+      total: Number(total) || 0,
+      status: status || 'Awaiting Dispatch',
     });
 
     const savedOrder = await newOrder.save();

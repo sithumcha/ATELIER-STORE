@@ -24,7 +24,7 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
             name: p.title || p.name || 'Untitled Object',
             category: p.category || "Women's Wardrobe",
             price: formatRs(p.price),
-            stock: p.stock ?? 50,
+            stock: p.stock !== undefined && p.stock !== null ? p.stock : (Array.isArray(p.sizes) ? p.sizes.reduce((sum, s) => sum + (Number(s.stock) || 0), 0) : 0),
             kiln: p.studio || 'Kyoto Studio',
             badge: p.badge || 'Limited Edition',
             badgeClass: p.badgeClass || 'bg-surface-container-lowest/90 text-on-surface',

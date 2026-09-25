@@ -41,7 +41,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
       const res = await fetch('http://localhost:5001/api/products');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const formatted = data.map((p) => {
             const numPrice = getRsNumber(p.price);
 
@@ -62,104 +62,10 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
         }
       }
     } catch (err) {
-      console.log('Database fetch error, fallback to curated clothing catalog:', err);
+      console.log('Database fetch error:', err);
     }
 
-    // Default Curated High-Fashion Apparel Catalog in Rs.
-    const defaultApparelCatalog = [
-      {
-        id: 'c1',
-        title: 'Asymmetrical Silk Haori Dress',
-        category: "Women's Apparel",
-        subtitle: 'Hand-dyed organic Kyoto mulberry silk with fluid sash drape',
-        price: formatRs(48000),
-        numericPrice: 48000,
-        badge: 'Edition 09',
-        img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c2',
-        title: 'Unstructured Belgian Flax Blazer',
-        category: "Men's Tailoring",
-        subtitle: 'Soft-shouldered heavy linen tailored coat with horn buttons',
-        price: formatRs(65000),
-        numericPrice: 65000,
-        badge: 'Bespoke',
-        img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c3',
-        title: 'Pleated Raw Silk Trousers',
-        category: "Women's Apparel",
-        subtitle: 'High-waisted architectural trousers in natural cream silk',
-        price: formatRs(34000),
-        numericPrice: 34000,
-        badge: 'Popular',
-        img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c4',
-        title: 'Kimono Collar Linen Trench',
-        category: "Men's Tailoring",
-        subtitle: 'Double-breasted raw flax overcoat with waist belt',
-        price: formatRs(88000),
-        numericPrice: 88000,
-        badge: 'Limited Run',
-        img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c5',
-        title: 'Wabi-Sabi Indigo Dye Tunic',
-        category: "Women's Apparel",
-        subtitle: 'Fermented plant indigo dipped loose cotton linen tunic',
-        price: formatRs(24000),
-        numericPrice: 24000,
-        badge: 'Artisan Dip',
-        img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c6',
-        title: 'Minimalist Virgin Wool Overcoat',
-        category: "Men's Tailoring",
-        subtitle: 'Unlined Japanese virgin wool cocoon coat in charcoal',
-        price: formatRs(115000),
-        numericPrice: 115000,
-        badge: 'Archival',
-        img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c7',
-        title: 'Hand-Loomed Flax Linen Scarf',
-        category: 'Textiles & Fiber',
-        subtitle: 'Earthy unbleached organic linen woven wrap',
-        price: formatRs(12500),
-        numericPrice: 12500,
-        badge: 'Essential',
-        img: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c8',
-        title: 'Architectural Sculptural Vest',
-        category: "Women's Apparel",
-        subtitle: 'Layered linen-silk tailored vest with side tie',
-        price: formatRs(29500),
-        numericPrice: 29500,
-        badge: 'New Release',
-        img: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'c9',
-        title: 'Botanical Silk Swatch Set',
-        category: 'Textiles & Fiber',
-        subtitle: '10 swatch cards of plant-dyed mulberry silk',
-        price: formatRs(8500),
-        numericPrice: 8500,
-        badge: 'Atelier Sample',
-        img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-      },
-    ];
-
-    setProducts(defaultApparelCatalog);
+    setProducts([]);
   };
 
   useEffect(() => {
@@ -532,7 +438,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, onAddToC
                       <img
                         src={p.img}
                         alt={p.title}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+                        className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-108"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';

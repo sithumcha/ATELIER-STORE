@@ -10,7 +10,7 @@ const formatRs = (val) => {
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
-export default function ProductDetailPage({ selectedProductId, onAddToCart, onToggleWishlist, wishlistIds = [], onBackToHome, onSelectProduct }) {
+export default function ProductDetailPage({ selectedProductId, onAddToCart, onToggleWishlist, wishlistIds = [], onBackToHome, onSelectProduct, onNavigate }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -38,82 +38,8 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
     }));
   };
 
-  // High-Fashion Garment Fallback Profile
-  const DEFAULT_GARMENT = {
-    id: 'a1',
-    edition: 'EDITION 08 — ITEM 044',
-    shuttle: 'KYOTO WEAVE SHUTTLE NO. 4',
-    gsm: '410 GSM RAW UNBLEACHED FLAX',
-    editionName: 'EDITION 08 — THE SOLITUDE WEAVES',
-    title: 'Solitude Raw Linen Kimono Duster',
-    numericPrice: 42000,
-    price: formatRs(42000),
-    density: '410 GSM density',
-    summary: 'Spun from unbleached 100% Normandy long-staple flax and woven on vintage 1948 Toyoda shuttle looms in Kyoto. Cut with an unhurried, architectural silhouette designed to age gracefully over decades of wear.',
-    colors: [
-      { name: 'Undyed Natural Ecru', hex: '#E8E2D5', img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80' },
-      { name: 'Fermented Persimmon (Kakishibu)', hex: '#94492C', img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80' },
-      { name: 'Deep Sumi Charcoal', hex: '#1F1B18', img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1200&q=80' },
-    ],
-    sizes: [
-      { roman: 'I', label: 'Size I', fit: 'Generous 36–38', stock: 5 },
-      { roman: 'II', label: 'Size II', fit: 'Relaxed 40–42', stock: 3 },
-      { roman: 'III', label: 'Size III', fit: 'Sculptural 44–46', stock: 4 },
-      { roman: 'IV', label: 'Size IV', fit: 'Cocoon 48–50', stock: 1 },
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=80',
-    ],
-    provenanceText: 'The raw flax fibers are cultivated across Normandy coastal terrains, naturally retted in regional precipitation before being dispatched to our partner preservation workshop in Kyoto.',
-    loomOrigin: 'Toyoda Non-Automated (1948)',
-    weavingSpeed: '9.5 meters per work day',
-    careInstructions: [
-      'Submerge in cool water (under 25°C) with mild neutral pH vegetable detergent.',
-      'Do not wring or centrifuge aggressively; squeeze softly and lay flat in filtered shade.',
-      'Press while slightly damp using low heat steam if a smooth architectural fold is desired.',
-    ],
-    passportText: 'Each Solitude Duster carries an individual linen archival passport sewn into the internal seam. Should a tear, fray, or pocket tension point fail over your lifetime, dispatch it to our Kyoto or Stockholm studio for complimentary hand-stitched indigo sashiko reinforcement.',
-    measurementsTable: [
-      { spec: 'Total Back Length', metric: '122 cm / 48.0"' },
-      { spec: 'Chest Width (Pit to Pit)', metric: '66 cm / 26.0"' },
-      { spec: 'Drop Sleeve (From Collar)', metric: '78 cm / 30.7"' },
-      { spec: 'Hem Sweep Circumference', metric: '144 cm / 56.6"' },
-    ],
-    recommendedLooks: [
-      {
-        id: 'rec1',
-        title: 'Wabi Wide-Leg Trouser',
-        fabric: 'Japanese Ramie · Double Pleat',
-        price: formatRs(29000),
-        numericPrice: 29000,
-        badge: 'SUMI INK WASH',
-        img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'rec2',
-        title: 'Komorebi Silk Tunic',
-        fabric: 'Raw Slub Silk · French Seams',
-        price: formatRs(26000),
-        numericPrice: 26000,
-        badge: 'WILD TUSSAR SILK',
-        img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80',
-      },
-      {
-        id: 'rec3',
-        title: 'Altiplano Cocoon Wrap',
-        fabric: 'Hand-Loomed · Undyed Fawn',
-        price: formatRs(21000),
-        numericPrice: 21000,
-        badge: 'ROYAL BABY ALPACA',
-        img: 'https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=1000&q=80',
-      },
-    ]
-  };
-
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     fetchGarmentDetail(selectedProductId);
     fetchDbRecommendations(selectedProductId);
   }, [selectedProductId]);
@@ -155,8 +81,8 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
     } catch (err) {
       console.log('Error fetching DB recommendations:', err);
     }
+    setRecommendedProducts([]);
   };
-
 
   const fetchGarmentDetail = async (id) => {
     setLoading(true);
@@ -165,35 +91,113 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
         const res = await fetch(`http://localhost:5001/api/products/${id}`);
         if (res.ok) {
           const data = await res.json();
-          if (data) {
+          if (data && (data._id || data.id || data.title)) {
             formatAndSetGarment(data);
             return;
           }
         }
       }
+
+      // Try fetching all products to find matching product
+      const resAll = await fetch('http://localhost:5001/api/products');
+      if (resAll.ok) {
+        const allProds = await resAll.json();
+        if (Array.isArray(allProds) && allProds.length > 0) {
+          const match = allProds.find(p => String(p._id || p.id) === String(id)) || allProds[0];
+          if (match) {
+            formatAndSetGarment(match);
+            return;
+          }
+        }
+      }
     } catch (err) {
-      console.log('Using local high-fashion garment monograph for:', id);
+      console.log('Error fetching product monograph from API:', err);
     }
-    formatAndSetGarment(DEFAULT_GARMENT);
+    setProduct(null);
+    setLoading(false);
   };
 
   const formatAndSetGarment = (data) => {
-    let rawPrice = data.price || DEFAULT_GARMENT.numericPrice;
-    let numericPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 42000;
+    let rawPrice = data.price;
+    let numericPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 28000;
     if (numericPrice > 0 && numericPrice < 1000) numericPrice = numericPrice * 100;
 
+    let imgs = [];
+    if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+      imgs = data.images.filter(Boolean);
+    } else if (data.img) {
+      imgs = [data.img];
+    } else if (data.image) {
+      imgs = [data.image];
+    } else {
+      imgs = ['https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80'];
+    }
+
+    const parsedSizes = Array.isArray(data.sizes) && data.sizes.length > 0
+      ? data.sizes.map((s, idx) => typeof s === 'string' ? { id: `sz_${idx}`, roman: s, label: s, fit: 'Regular Fit', stock: 5 } : ({
+          id: s._id || s.id || `sz_${idx}`,
+          roman: s.roman || s.code || s.label || 'M',
+          label: s.label || s.code || s.roman || 'Size M',
+          fit: s.fit || 'Regular Fit',
+          stock: Number(s.stock) || 0
+        }))
+      : [
+          { id: 's1', roman: 'S', label: 'S', fit: 'Small (Chest 36–38")', stock: 5 },
+          { id: 's2', roman: 'M', label: 'M', fit: 'Medium (Chest 40–42")', stock: 8 },
+          { id: 's3', roman: 'L', label: 'L', fit: 'Large (Chest 44–46")', stock: 6 },
+          { id: 's4', roman: 'XL', label: 'XL', fit: 'Extra Large (Chest 48–50")', stock: 3 },
+        ];
+
+    const computedTotalStock = parsedSizes.reduce((acc, s) => acc + (Number(s.stock) || 0), 0);
+    const finalTotalStock = (data.stock !== undefined && data.stock !== null && Number(data.stock) > 0)
+      ? Number(data.stock)
+      : computedTotalStock;
+
     const formattedObj = {
-      ...DEFAULT_GARMENT,
-      ...data,
-      id: data._id || data.id || DEFAULT_GARMENT.id,
-      title: data.title || data.name || DEFAULT_GARMENT.title,
+      id: data._id || data.id || 'p_unknown',
+      title: data.title || data.name || 'Archival Garment',
+      edition: data.edition || data.category || 'ATELIER COLLECTION',
+      editionName: data.editionName || data.category || 'ATELIER COLLECTION',
+      shuttle: data.shuttle || data.category || 'HAND-WOVEN LOOM',
+      gsm: data.gsm || '380 GSM HEAVYWEIGHT',
+      density: data.density || data.gsm || '380 GSM density',
       price: formatRs(numericPrice),
       numericPrice: numericPrice,
-      img: data.img || DEFAULT_GARMENT.images[0],
-      images: (data.images && data.images.length > 0) ? data.images : DEFAULT_GARMENT.images,
+      totalStock: finalTotalStock,
+      stock: finalTotalStock,
+      badge: data.badge || data.category || 'LIMITED EDITION',
+      summary: data.description || data.summary || data.subtitle || 'Hand-crafted archival garment woven with patience.',
+      colors: Array.isArray(data.colors) && data.colors.length > 0 ? data.colors.map((c, idx) => ({
+        id: `c_${idx}`,
+        name: typeof c === 'string' ? c : (c.name || 'Natural Hue'),
+        hex: typeof c === 'object' && c.hex ? c.hex : '#1C1C18',
+        img: imgs[0]
+      })) : [{ id: 'c0', name: 'Natural Hue', hex: '#1C1C18', img: imgs[0] }],
+      sizes: parsedSizes,
+      img: imgs[0],
+      images: imgs,
+      provenanceText: data.provenanceText || data.provenance || 'The raw natural fibers are cultivated across pristine coastal terrains and hand-woven in our partner preservation workshops.',
+      loomOrigin: data.loomOrigin || 'Vintage Non-Automated Shuttle Loom',
+      weavingSpeed: data.weavingSpeed || '8.5 meters per day',
+      careInstructions: Array.isArray(data.careInstructions) && data.careInstructions.length > 0
+        ? data.careInstructions
+        : [data.careText || data.careInstructionsText || data.careProtocol || 'Submerge in cool water (under 25°C) with mild neutral pH detergent.'],
+      passportText: data.passportText || data.passportInfo || 'Each archival garment carries an individual linen passport seam code for lifetime sashiko repair guarantee.',
+      measurementsTable: (data.measurementsTable && Array.isArray(data.measurementsTable) && data.measurementsTable.length > 0)
+        ? data.measurementsTable
+        : [
+            { spec: 'Total Back Length', metric: '122 cm / 48.0"' },
+            { spec: 'Chest Width (Pit to Pit)', metric: '66 cm / 26.0"' },
+          ]
     };
 
     setProduct(formattedObj);
+    if (parsedSizes.length > 0) {
+      setSelectedSize(parsedSizes[0].label || parsedSizes[0].roman || 'M');
+    }
+    if (formattedObj.colors.length > 0) {
+      setSelectedColor(formattedObj.colors[0].name);
+    }
     setSelectedImageIndex(0);
     setLoading(false);
   };
@@ -212,6 +216,25 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
 
       setAddedNotice(true);
       setTimeout(() => setAddedNotice(false), 2500);
+    }
+  };
+
+  const handleBuyNowClick = () => {
+    if (product) {
+      if (onAddToCart) {
+        onAddToCart({
+          id: `${product.id}-${selectedSize}-${selectedColor}`,
+          title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
+          price: product.numericPrice,
+          img: product.images[selectedImageIndex] || product.img,
+          size: selectedSize,
+          color: selectedColor,
+          quantity: quantity,
+        });
+      }
+      if (onNavigate) {
+        onNavigate('checkout');
+      }
     }
   };
 
@@ -477,33 +500,45 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onTo
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
                   </span>
-                  <span>Only {activeSizeObj.stock} pieces remaining in Size {activeSizeObj.label || activeSizeObj.roman}</span>
+                  <span>Total Stock: <strong className="text-on-surface">{product.totalStock}</strong> pieces ({activeSizeObj.stock || 0} in Size {activeSizeObj.label || activeSizeObj.roman})</span>
                 </div>
                 <span className="text-on-surface-variant font-label-caps text-[10px] uppercase font-semibold">
-                  Unisex drop cut
+                  {product.totalStock > 0 ? 'In Vault Stock' : 'Out of Stock'}
                 </span>
               </div>
             </div>
 
-            {/* Add to Bag & Secondary Wishlist Actions */}
+            {/* Action Buttons: Add to Cart, Buy Now & Wishlist */}
             <div className="pt-space-sm space-y-space-sm">
-              <div className="flex items-center gap-space-sm">
+              <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                {/* Add to Cart Button */}
                 <button
                   onClick={handleAcquireClick}
-                  className="group flex-1 bg-primary text-on-primary py-4 px-space-lg rounded-lg hover:bg-secondary active:scale-[0.99] transition-all flex items-center justify-center gap-space-md shadow-md cursor-pointer font-bold"
+                  className="flex-1 bg-surface-container-highest text-on-surface border border-surface-variant py-4 px-space-md rounded-lg hover:bg-primary hover:text-on-primary active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer font-bold"
                   type="button"
                 >
-                  <span className="font-label-caps text-xs tracking-[0.16em] uppercase">
-                    {addedNotice ? 'ADDED TO CART ✓' : `ADD TO CART — ${product.price}`}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                    east
+                  <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
+                  <span className="font-label-caps text-xs tracking-[0.14em] uppercase">
+                    {addedNotice ? 'ADDED TO CART ✓' : 'ADD TO CART'}
                   </span>
                 </button>
 
+                {/* Buy Now Button */}
+                <button
+                  onClick={handleBuyNowClick}
+                  className="flex-1 bg-primary text-on-primary py-4 px-space-md rounded-lg hover:bg-secondary active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer font-bold"
+                  type="button"
+                >
+                  <span className="font-label-caps text-xs tracking-[0.14em] uppercase">
+                    BUY NOW
+                  </span>
+                  <span className="material-symbols-outlined text-[18px]">east</span>
+                </button>
+
+                {/* Wishlist Button */}
                 <button
                   onClick={() => onToggleWishlist && onToggleWishlist(product)}
-                  className={`w-14 h-14 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                  className={`w-14 h-14 rounded-lg flex items-center justify-center transition-all cursor-pointer border shrink-0 ${
                     isFavorited ? 'bg-secondary text-on-secondary border-secondary' : 'bg-surface-container border-surface-variant hover:bg-surface-container-high text-on-surface'
                   }`}
                   title={isFavorited ? 'Saved in Wishlist' : 'Add to Wishlist'}

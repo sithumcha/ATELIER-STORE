@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
+export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems = [], user }) {
   // Address State
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({
@@ -27,28 +27,108 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
   const [submitting, setSubmitting] = useState(false);
   const [orderSecured, setOrderSecured] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [showBillModal, setShowBillModal] = useState(false);
+  
+  const [orderId] = useState(() => `KR-${Math.floor(10000 + Math.random() * 90000)}`);
+  const [orderDate] = useState(() => new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }));
 
-  // Pricing math in LKR (Rs.)
-  const itemsSubtotal = 39500;
-  const activeSubtotal = itemsSubtotal - discountAmount;
-  const estimatedTax = 3450;
+  // Dynamic Item List & Pricing math in LKR (Rs.)
+  const displayItems = cartItems.length > 0 ? cartItems : [
+    { id: 'p1', title: 'Vicuna Tailored Cashmere Overcoat', price: 28500, qty: 1, color: 'Obsidian Black', size: 'M' },
+    { id: 'p2', title: 'Raw Silk Trousers - Archival Edition', price: 11000, qty: 1, color: 'Natural Cream', size: '32' }
+  ];
+
+  const itemsSubtotal = displayItems.reduce((acc, item) => {
+    let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
+    if (p > 0 && p < 1000) p = p * 100;
+    return acc + (p * (item.qty || 1));
+  }, 0);
+
+  const activeSubtotal = Math.max(0, itemsSubtotal - discountAmount);
+  const estimatedTax = Math.round(activeSubtotal * 0.08); // 8% estimated tax
   const totalSettlement = activeSubtotal + estimatedTax + shippingCost;
 
   const handleApplyPromo = () => {
     if (promoCode.trim().length > 0) {
       setPromoApplied(true);
-      setDiscountAmount(3950); // 10% discount
+      setDiscountAmount(Math.round(itemsSubtotal * 0.10)); // 10% discount
     }
   };
 
   const handleTriggerOrder = () => {
     setSubmitting(true);
+
+    const customerName = useNewAddress
+      ? `${newAddress.firstName || ''} ${newAddress.lastName || ''}`.trim() || (user?.name || 'Clara Vanderbilt')
+      : (user?.name || 'Clara Vanderbilt');
+
+    const customerEmail = (document.getElementById('contact-email')?.value) || user?.email || 'clara.vanderbilt@atelier.co';
+
+    const customerDestination = useNewAddress
+      ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}`
+      : '142 Franklin St, Apt 4B, Tribeca, New York, NY 10013';
+
+    const orderPayload = {
+      orderId: orderId,
+      patronName: customerName,
+      patronEmail: customerEmail,
+      items: displayItems.map(item => {
+        let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
+        if (p > 0 && p < 1000) p = p * 100;
+        return {
+          id: item.id || 'p1',
+          title: item.title,
+          price: p,
+          qty: item.qty || 1,
+          img: item.img || item.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+          color: item.color,
+          size: item.size
+        };
+      }),
+      destination: customerDestination,
+      total: totalSettlement,
+      status: 'Awaiting Dispatch',
+      date: orderDate
+    };
+
+    // Save to Database (Admin receives order in Admin Dashboard / Orders Queue)
+    try {
+      fetch('http://localhost:5001/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      }).catch((err) => console.error('Error saving order to backend DB:', err));
+    } catch (e) {
+      console.error('API call exception:', e);
+    }
+
+    // Save to User Profile Local Storage for Profile view
+    try {
+      const existingUserOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify([orderPayload, ...existingUserOrders]));
+    } catch (e) {
+      console.error('Error saving order to localStorage:', e);
+    }
+
     setTimeout(() => {
       setSubmitting(false);
       setOrderSecured(true);
       setShowToast(true);
+      setShowBillModal(true);
+
+      // Auto trigger print dialog when order completes
+      setTimeout(() => {
+        window.print();
+      }, 600);
+
       if (onOrderComplete) onOrderComplete();
-      setTimeout(() => setShowToast(false), 4000);
+      setTimeout(() => setShowToast(false), 5000);
     }, 1400);
   };
 
@@ -540,6 +620,181 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete }) {
           </aside>
         </div>
       </div>
+      {/* Printable Order Bill Invoice Modal */}
+      {(showBillModal || orderSecured) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+          {/* Printable Invoice Container */}
+          <div
+            id="printable-bill"
+            className="w-full max-w-2xl bg-white text-slate-900 rounded-2xl shadow-2xl p-6 sm:p-10 border border-slate-200 relative my-8"
+          >
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-bill, #printable-bill * {
+                  visibility: visible !important;
+                }
+                #printable-bill {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  margin: 0 !important;
+                  padding: 32px !important;
+                  background: #ffffff !important;
+                  color: #0f172a !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
+
+            {/* Invoice Header */}
+            <div className="flex items-start justify-between border-b border-slate-200 pb-6 mb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900">ATELIER</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span>
+                  <span className="text-xs tracking-[0.25em] font-semibold text-slate-500 uppercase">STORE</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Haute Couture &amp; Fine Textiles</p>
+              </div>
+              <div className="text-right">
+                <span className="inline-block bg-slate-900 text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-widest uppercase">
+                  TAX INVOICE &amp; RECEIPT
+                </span>
+                <p className="text-xs text-slate-500 mt-2 font-mono">Invoice #{orderId}</p>
+                <p className="text-xs text-slate-500 font-mono">{orderDate}</p>
+              </div>
+            </div>
+
+            {/* Billed To & Payment Meta */}
+            <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl mb-6 text-xs text-slate-700">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">CUSTOMER DETAILS</span>
+                <p className="font-semibold text-slate-900 text-sm">
+                  {useNewAddress ? `${newAddress.firstName || 'Valued'} ${newAddress.lastName || 'Patron'}` : (user?.name || 'Clara Vanderbilt')}
+                </p>
+                <p className="text-slate-600 mt-0.5">
+                  {useNewAddress ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}` : '142 Franklin St, Apt 4B, Tribeca, New York, NY 10013'}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">PAYMENT LOGISTICS</span>
+                <p className="font-semibold text-emerald-700 flex items-center justify-end gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> STATUS: PAID
+                </p>
+                <p className="text-slate-600 mt-0.5 uppercase">
+                  Method: {paymentMethod === 'card' ? 'Visa / MasterCard Vault' : paymentMethod === 'apple' ? 'Apple Pay' : 'Online Bank Transfer'}
+                </p>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div className="mb-6">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b-2 border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
+                    <th className="py-2">Item Description</th>
+                    <th className="py-2 text-center">Qty</th>
+                    <th className="py-2 text-right">Unit Price</th>
+                    <th className="py-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-800">
+                  {displayItems.map((item, idx) => {
+                    let price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
+                    if (price > 0 && price < 1000) price = price * 100;
+                    const qty = item.qty || 1;
+                    return (
+                      <tr key={idx} className="py-3">
+                        <td className="py-2 font-medium">
+                          {item.title}
+                          {(item.color || item.size) && (
+                            <span className="block text-[10px] text-slate-400">
+                              {[item.color, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' • ')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 text-center font-semibold">{qty}</td>
+                        <td className="py-2 text-right font-mono">Rs. {Math.round(price).toLocaleString('en-LK')}</td>
+                        <td className="py-2 text-right font-mono font-bold text-slate-900">
+                          Rs. {Math.round(price * qty).toLocaleString('en-LK')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bill Summary */}
+            <div className="border-t border-slate-200 pt-4 flex flex-col gap-1.5 text-xs text-slate-600 max-w-xs ml-auto">
+              <div className="flex justify-between">
+                <span>Items Subtotal</span>
+                <span className="font-mono text-slate-900 font-medium">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
+              </div>
+              {promoApplied && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Member Discount (-10%)</span>
+                  <span className="font-mono font-medium">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Shipping &amp; Logistics</span>
+                <span className="font-mono text-slate-900 font-medium">
+                  {shippingCost === 0 ? 'COMPLIMENTARY' : `Rs. ${shippingCost.toLocaleString('en-LK')}`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Estimated Tax (8%)</span>
+                <span className="font-mono text-slate-900 font-medium">Rs. {estimatedTax.toLocaleString('en-LK')}</span>
+              </div>
+              <div className="border-t-2 border-slate-900 my-1 pt-2 flex justify-between items-baseline font-bold text-slate-900 text-sm">
+                <span>GRAND TOTAL PAID</span>
+                <span className="font-mono text-base text-amber-700">Rs. {Math.round(totalSettlement).toLocaleString('en-LK')}</span>
+              </div>
+            </div>
+
+            {/* Official Seal / Thank you */}
+            <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+              <p>Thank you for your archival order with Atelier Store. Authentic certified luxury.</p>
+              <span className="font-mono font-bold text-slate-800 border border-slate-300 px-2 py-0.5 rounded uppercase tracking-wider">
+                SEALED &amp; VERIFIED
+              </span>
+            </div>
+
+            {/* Action Buttons (Hidden when printing) */}
+            <div className="no-print mt-8 flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
+              <button
+                onClick={() => window.print()}
+                className="h-11 px-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs tracking-wider uppercase flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-base">print</span>
+                Print Bill / Save PDF
+              </button>
+              <button
+                onClick={() => {
+                  setShowBillModal(false);
+                  if (onBackToHome) onBackToHome();
+                }}
+                className="h-11 px-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs tracking-wider uppercase transition-all cursor-pointer"
+                type="button"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

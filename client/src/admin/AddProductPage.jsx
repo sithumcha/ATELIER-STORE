@@ -134,6 +134,8 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
   const [provenanceText, setProvenanceText] = useState(
     'The raw flax fibers are cultivated across Normandy coastal terrains, naturally retted in regional precipitation before being dispatched to our partner preservation workshop in Kyoto.'
   );
+  const [backLength, setBackLength] = useState('122 cm / 48.0"');
+  const [chestWidth, setChestWidth] = useState('66 cm / 26.0"');
   const [careText, setCareText] = useState(
     'Submerge in cool water (under 25°C) with mild neutral pH vegetable detergent. Do not wring or centrifuge aggressively; squeeze softly and lay flat in filtered shade.'
   );
@@ -196,11 +198,15 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
       if (editingProduct.provenanceText || editingProduct.provenance) {
         setProvenanceText(editingProduct.provenanceText || editingProduct.provenance);
       }
-      if (editingProduct.careText || editingProduct.careProtocol) {
-        setCareText(editingProduct.careText || editingProduct.careProtocol);
+      if (editingProduct.careText || editingProduct.careInstructionsText || editingProduct.careProtocol) {
+        setCareText(editingProduct.careText || editingProduct.careInstructionsText || editingProduct.careProtocol);
       }
       if (editingProduct.passportText || editingProduct.passportInfo) {
         setPassportText(editingProduct.passportText || editingProduct.passportInfo);
+      }
+      if (editingProduct.measurementsTable && Array.isArray(editingProduct.measurementsTable) && editingProduct.measurementsTable.length > 0) {
+        if (editingProduct.measurementsTable[0]?.metric) setBackLength(editingProduct.measurementsTable[0].metric);
+        if (editingProduct.measurementsTable[1]?.metric) setChestWidth(editingProduct.measurementsTable[1].metric);
       }
     }
   }, [editingProduct]);
@@ -279,13 +285,28 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
     setPassportText('Archival seam passport included with complimentary sashiko bar-tack mending.');
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
+  // Multiple files upload handler for multi-angle gallery
+  const handleMultipleFilesChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
+
+    const setters = [setImg1, setImg2, setImg3, setImg4];
+    files.slice(0, 4).forEach((file, index) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImg1(reader.result);
+        setters[index](reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Single file handler for specific angle
+  const handleSingleAngleFileChange = (e, setAngle) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAngle(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -325,8 +346,10 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
         roman: sz.code,
         label: sz.code,
         fit: sz.fit || 'Regular',
-        stock: Number(sz.stock) || 5,
+        stock: Number(sz.stock) || 0,
       }));
+
+      const totalStockCalculated = formattedSizes.reduce((sum, sz) => sum + (Number(sz.stock) || 0), 0);
 
       const numericPrice = typeof price === 'number'
         ? price
@@ -350,7 +373,7 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
         loomOrigin,
         weavingSpeed,
         price: numericPrice,
-        stock: Number(stock),
+        stock: totalStockCalculated,
         badge,
         studio,
         description,
@@ -361,8 +384,21 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
         colors: formattedColors,
         sizes: formattedSizes,
         provenanceText,
+        provenance: provenanceText,
         careInstructionsText: careText,
+        careText,
+        careProtocol: careText,
+        careInstructions: [careText],
         passportText,
+        passportInfo: passportText,
+        measurementsTable: [
+          { spec: 'Total Back Length', metric: backLength },
+          { spec: 'Chest Width (Pit to Pit)', metric: chestWidth },
+        ],
+        measurements: [
+          { spec: 'Total Back Length', metric: backLength },
+          { spec: 'Chest Width (Pit to Pit)', metric: chestWidth },
+        ],
       };
 
       const url = isEdit
@@ -466,10 +502,28 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary cursor-pointer"
                 >
-                  <option value="Women's Wardrobe">Women's Wardrobe</option>
-                  <option value="Men's Tailoring">Men's Tailoring</option>
-                  <option value="Textiles &amp; Fiber">Textiles &amp; Fiber</option>
-                  <option value="Archive 2026">Archive 2026</option>
+                  <optgroup label="Women's Wardrobe">
+                    <option value="Women's Wardrobe - Dresses &amp; Gowns">Women's Wardrobe - Cocoon Dresses &amp; Gowns</option>
+                    <option value="Women's Wardrobe - Tunics &amp; Blouses">Women's Wardrobe - Linen Tunics &amp; Blouses</option>
+                    <option value="Women's Wardrobe - Kimono Dusters &amp; Robes">Women's Wardrobe - Kimono Dusters &amp; Robes</option>
+                    <option value="Women's Wardrobe - Pleated Culottes &amp; Pants">Women's Wardrobe - Pleated Culottes &amp; Pants</option>
+                    <option value="Women's Wardrobe">Women's Wardrobe (General)</option>
+                  </optgroup>
+                  <optgroup label="Men's Tailoring">
+                    <option value="Men's Tailoring - Blazers &amp; Suiting">Men's Tailoring - Blazers &amp; Suiting</option>
+                    <option value="Men's Tailoring - Overcoats &amp; Trench Coats">Men's Tailoring - Overcoats &amp; Trench Coats</option>
+                    <option value="Men's Tailoring - Tailored Trousers">Men's Tailoring - Tailored Trousers</option>
+                    <option value="Men's Tailoring - Noragi &amp; Jackets">Men's Tailoring - Noragi &amp; Jackets</option>
+                    <option value="Men's Tailoring">Men's Tailoring (General)</option>
+                  </optgroup>
+                  <optgroup label="Textiles &amp; Fiber">
+                    <option value="Textiles &amp; Fiber - Woven Wraps &amp; Scarves">Textiles &amp; Fiber - Woven Wraps &amp; Scarves</option>
+                    <option value="Textiles &amp; Fiber - Swatch Sets &amp; Samples">Textiles &amp; Fiber - Swatch Sets &amp; Samples</option>
+                    <option value="Textiles &amp; Fiber">Textiles &amp; Fiber (General)</option>
+                  </optgroup>
+                  <optgroup label="Archive &amp; Special Editions">
+                    <option value="Archive 2026">Archive 2026</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -486,64 +540,7 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Edition Code</label>
-                <input
-                  type="text"
-                  value={edition}
-                  onChange={(e) => setEdition(e.target.value)}
-                  placeholder="EDITION 08 — ITEM 044"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
 
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Collection Release Name</label>
-                <input
-                  type="text"
-                  value={editionName}
-                  onChange={(e) => setEditionName(e.target.value)}
-                  placeholder="EDITION 08 — THE SOLITUDE WEAVES"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Vault Stock Count</label>
-                <input
-                  type="number"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value)}
-                  placeholder="12"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Badge Tag</label>
-                <input
-                  type="text"
-                  value={badge}
-                  onChange={(e) => setBadge(e.target.value)}
-                  placeholder="LIMITED EDITION NO. 18 / 60"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Atelier Studio Origin</label>
-                <input
-                  type="text"
-                  value={studio}
-                  onChange={(e) => setStudio(e.target.value)}
-                  placeholder="Kyoto Preservation Studio"
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Section 2: Loom & Textile Specifications */}
@@ -625,94 +622,134 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
             </div>
           </div>
 
-          {/* Section 4: Multi-Angle Imagery */}
+          {/* Section 4: Multi-Angle Editorial Gallery Imagery */}
           <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm border border-surface-variant space-y-4">
-            <h3 className="font-headline-sm text-sm uppercase text-secondary font-semibold border-b border-surface-variant pb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">photo_library</span>
-              04. Multi-Angle Editorial Gallery Imagery
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-variant pb-2 gap-2">
+              <h3 className="font-headline-sm text-sm uppercase text-secondary font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">photo_library</span>
+                04. Multi-Angle Editorial Gallery Imagery
+              </h3>
 
-            <div className="flex items-center gap-4 mb-2">
-              <label className="font-label-caps text-xs flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="uploadMode"
-                  value="url"
-                  checked={uploadMode === 'url'}
-                  onChange={() => setUploadMode('url')}
-                />
-                Image URLs
-              </label>
+              <div className="flex items-center gap-4">
+                <label className="font-label-caps text-xs flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    value="url"
+                    checked={uploadMode === 'url'}
+                    onChange={() => setUploadMode('url')}
+                  />
+                  Image URLs
+                </label>
 
-              <label className="font-label-caps text-xs flex items-center gap-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="uploadMode"
-                  value="file"
-                  checked={uploadMode === 'file'}
-                  onChange={() => setUploadMode('file')}
-                />
-                Upload Main File
-              </label>
+                <label className="font-label-caps text-xs flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="uploadMode"
+                    value="file"
+                    checked={uploadMode === 'file'}
+                    onChange={() => setUploadMode('file')}
+                  />
+                  Upload Multiple Files
+                </label>
+              </div>
             </div>
 
-            {uploadMode === 'file' ? (
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Main Cover Image File</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full p-2 bg-surface-container-low rounded border border-surface-variant text-xs text-on-surface cursor-pointer"
-                />
+            {/* Multiple File Upload Box */}
+            {uploadMode === 'file' && (
+              <div className="p-4 rounded-xl bg-surface-container-low border-2 border-dashed border-secondary/40 text-center space-y-2">
+                <span className="material-symbols-outlined text-3xl text-secondary block">
+                  cloud_upload
+                </span>
+                <div>
+                  <p className="font-label-caps text-xs text-on-surface font-bold">
+                    Upload Multiple Product Gallery Files
+                  </p>
+                  <p className="font-body-sm text-[11px] text-on-surface-variant">
+                    Select up to 4 image files at once (Main shot, Macro weave, Back view, Close-up detail).
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-caps text-xs uppercase tracking-wider hover:bg-secondary cursor-pointer transition-all shadow-xs font-bold">
+                  <span className="material-symbols-outlined text-base">add_photo_alternate</span>
+                  <span>Choose Multiple Files</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleMultipleFilesChange}
+                    className="hidden"
+                  />
+                </label>
               </div>
-            ) : null}
+            )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Angle 1: Main Full Body Shot *</label>
-                <input
-                  required
-                  type="text"
-                  value={img1}
-                  onChange={(e) => setImg1(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary text-xs"
-                />
-              </div>
+            {/* 4 Angle Fields Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {[
+                { label: 'Angle 1: Main Full Body Shot *', value: img1, setter: setImg1, req: true },
+                { label: 'Angle 2: Macro Weave Texture Close-up', value: img2, setter: setImg2, req: false },
+                { label: 'Angle 3: Back View Drape', value: img3, setter: setImg3, req: false },
+                { label: 'Angle 4: Horn Button / Sashiko Stitch Macro', value: img4, setter: setImg4, req: false },
+              ].map((angle, idx) => (
+                <div key={idx} className="space-y-1.5 p-3 bg-surface-container-low/50 rounded-lg border border-surface-variant/60">
+                  <div className="flex items-center justify-between">
+                    <label className="font-label-caps text-xs block font-semibold text-on-surface">
+                      {angle.label}
+                    </label>
+                    {angle.value && (
+                      <button
+                        type="button"
+                        onClick={() => angle.setter('')}
+                        className="text-[10px] text-error font-label-caps uppercase hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
 
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Angle 2: Macro Weave Texture Close-up</label>
-                <input
-                  type="text"
-                  value={img2}
-                  onChange={(e) => setImg2(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary text-xs"
-                />
-              </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      required={angle.req}
+                      type="text"
+                      value={angle.value}
+                      onChange={(e) => angle.setter(e.target.value)}
+                      placeholder="https://... or choose file"
+                      className="flex-1 h-10 px-3 rounded bg-surface border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary text-xs"
+                    />
 
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Angle 3: Back View Drape</label>
-                <input
-                  type="text"
-                  value={img3}
-                  onChange={(e) => setImg3(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary text-xs"
-                />
-              </div>
+                    <label className="h-10 px-3 rounded bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-caps text-xs uppercase tracking-wider flex items-center gap-1 cursor-pointer shrink-0 border border-surface-variant font-bold">
+                      <span className="material-symbols-outlined text-base">upload_file</span>
+                      <span className="hidden sm:inline">File</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleSingleAngleFileChange(e, angle.setter)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
 
-              <div>
-                <label className="font-label-caps text-xs block mb-1">Angle 4: Horn Button / Sashiko Stitch Macro</label>
-                <input
-                  type="text"
-                  value={img4}
-                  onChange={(e) => setImg4(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:border-primary text-xs"
-                />
-              </div>
+                  {/* Thumbnail Preview */}
+                  {angle.value && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="w-14 h-14 rounded overflow-hidden border border-surface-variant bg-surface-container shadow-2xs shrink-0">
+                        <img
+                          src={angle.value}
+                          alt={`Angle ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80';
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-secondary font-mono truncate">
+                        {angle.value.startsWith('data:') ? 'Local Image File Loaded ✓' : 'Web URL Connected ✓'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -937,46 +974,130 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
                 ))}
               </div>
             </div>
-
           </div>
 
-          {/* Section 6: Garment Integrity Accordions */}
-          <div className="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm border border-surface-variant space-y-4">
+          {/* Section 06: Monograph Accordions (4 Accordion Cards matching Product Detail Page) */}
+          <div className="space-y-4">
             <h3 className="font-headline-sm text-sm uppercase text-secondary font-semibold border-b border-surface-variant pb-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-base">verified</span>
-              06. Integrity Accordions (Provenance, Care &amp; Sashiko Guarantee)
+              06. Monograph Accordions &amp; Garment Specifications (4 Accordion Cards)
             </h3>
 
-            <div>
-              <label className="font-label-caps text-xs block mb-1">Material Provenance History</label>
-              <textarea
-                rows={2}
-                value={provenanceText}
-                onChange={(e) => setProvenanceText(e.target.value)}
-                className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
-              />
+            {/* Accordion Card 1: Material Provenance & Weave History */}
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant space-y-3">
+              <div className="flex items-center gap-2 text-on-surface font-semibold text-sm border-b border-surface-variant/50 pb-2">
+                <span className="material-symbols-outlined text-base text-secondary">source_notes</span>
+                <span>Accordion 1: Material Provenance &amp; Weave History</span>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Material Provenance History Text</label>
+                <textarea
+                  rows={2}
+                  value={provenanceText}
+                  onChange={(e) => setProvenanceText(e.target.value)}
+                  placeholder="The raw flax fibers are cultivated across Normandy coastal terrains, naturally retted..."
+                  className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Loom Model Origin</label>
+                  <input
+                    type="text"
+                    value={loomOrigin}
+                    onChange={(e) => setLoomOrigin(e.target.value)}
+                    placeholder="Toyoda Non-Automated (1948)"
+                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Weaving Speed / Velocity</label>
+                  <input
+                    type="text"
+                    value={weavingSpeed}
+                    onChange={(e) => setWeavingSpeed(e.target.value)}
+                    placeholder="9.5 meters per work day"
+                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="font-label-caps text-xs block mb-1">Care &amp; Living Protocol Instructions</label>
-              <textarea
-                rows={2}
-                value={careText}
-                onChange={(e) => setCareText(e.target.value)}
-                className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
-              />
+            {/* Accordion Card 2: Garment Measurements */}
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant space-y-3">
+              <div className="flex items-center gap-2 text-on-surface font-semibold text-sm border-b border-surface-variant/50 pb-2">
+                <span className="material-symbols-outlined text-base text-secondary">straighten</span>
+                <span>Accordion 2: Garment Measurements (Size S Spec)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Total Back Length</label>
+                  <input
+                    type="text"
+                    value={backLength}
+                    onChange={(e) => setBackLength(e.target.value)}
+                    placeholder="122 cm / 48.0&quot;"
+                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Chest Width (Pit to Pit)</label>
+                  <input
+                    type="text"
+                    value={chestWidth}
+                    onChange={(e) => setChestWidth(e.target.value)}
+                    placeholder="66 cm / 26.0&quot;"
+                    className="w-full h-10 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="font-label-caps text-xs block mb-1">Lifetime Passport &amp; Sashiko Repair Guarantee</label>
-              <textarea
-                rows={2}
-                value={passportText}
-                onChange={(e) => setPassportText(e.target.value)}
-                className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
-              />
+            {/* Accordion Card 3: Care & Living Protocol */}
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant space-y-3">
+              <div className="flex items-center gap-2 text-on-surface font-semibold text-sm border-b border-surface-variant/50 pb-2">
+                <span className="material-symbols-outlined text-base text-secondary">spa</span>
+                <span>Accordion 3: Care &amp; Living Protocol</span>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Care &amp; Living Protocol Instructions</label>
+                <textarea
+                  rows={2}
+                  value={careText}
+                  onChange={(e) => setCareText(e.target.value)}
+                  placeholder="Submerge in cool water (under 25°C) with mild neutral pH vegetable detergent..."
+                  className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Accordion Card 4: Lifetime Passport & Sashiko Repair */}
+            <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant space-y-3">
+              <div className="flex items-center gap-2 text-on-surface font-semibold text-sm border-b border-surface-variant/50 pb-2">
+                <span className="material-symbols-outlined text-base text-secondary">handyman</span>
+                <span>Accordion 4: Lifetime Passport &amp; Sashiko Repair</span>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 text-on-surface-variant">Passport &amp; Repair Guarantee Text</label>
+                <textarea
+                  rows={2}
+                  value={passportText}
+                  onChange={(e) => setPassportText(e.target.value)}
+                  placeholder="Each Solitude Duster carries an individual linen archival passport sewn into internal seam..."
+                  className="w-full p-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm text-xs focus:outline-none focus:border-primary"
+                />
+              </div>
             </div>
           </div>
+
+
 
           {/* Submit Actions */}
           <div className="flex items-center gap-4 pt-space-md">
@@ -1008,11 +1129,11 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
             </span>
 
             <div className="bg-surface-container-lowest rounded-xl shadow-md border border-surface-variant overflow-hidden">
-              <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
+              <div className="relative aspect-[3/4] w-full bg-surface-container-low overflow-hidden">
                 <img
                   src={img1}
                   alt={title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80';
@@ -1060,7 +1181,9 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
 
                 <div className="pt-2 border-t border-surface-variant flex items-center justify-between">
                   <span className="font-serif text-lg font-bold text-on-surface">Rs. {Number(price || 42000).toLocaleString('en-LK')}</span>
-                  <span className="font-label-caps text-xs text-secondary font-bold">{stock} in stock</span>
+                  <span className="font-label-caps text-xs text-secondary font-bold">
+                    {sizes.reduce((sum, sz) => sum + (Number(sz.stock) || 0), 0)} in stock
+                  </span>
                 </div>
               </div>
             </div>

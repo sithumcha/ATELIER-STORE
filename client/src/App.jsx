@@ -98,6 +98,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Automatically scroll window to top on tab or product selection changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [activeTab, selectedProductId]);
+
   // User Auth State
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('atelierstore_user');
@@ -318,6 +323,7 @@ export default function App() {
         ) : activeTab === 'checkout' ? (
           <CheckoutPage
             user={user}
+            cartItems={cartItems}
             onBackToHome={() => navigateTo('home')}
             onOrderComplete={() => {
               setCartItems([]);
@@ -370,6 +376,7 @@ export default function App() {
             wishlistIds={wishlistIds}
             onBackToHome={() => navigateTo('shop')}
             onSelectProduct={(id) => navigateTo('product-detail', id)}
+            onNavigate={(tab) => navigateTo(tab)}
           />
         ) : activeTab === 'about' ? (
           <AboutPage onExploreShop={(cat) => handleExploreCategory(cat)} />
