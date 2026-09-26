@@ -11,18 +11,71 @@ export default function AdminPatrons() {
   }, []);
 
   const fetchPatrons = async () => {
+    let combined = [];
+
+    // 1. Fetch from LocalStorage registered users list & logged-in user
+    try {
+      const regList = JSON.parse(localStorage.getItem('atelierstore_registered_users') || '[]');
+      if (Array.isArray(regList)) {
+        combined = [...regList];
+      }
+
+      const currentUser = JSON.parse(localStorage.getItem('atelierstore_user') || 'null');
+      if (currentUser && currentUser.email) {
+        if (!combined.some((u) => u.email === currentUser.email)) {
+          combined.unshift(currentUser);
+        }
+      }
+
+      // Also check patrons who placed orders
+      const userOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      if (Array.isArray(userOrders)) {
+        userOrders.forEach((ord) => {
+          if (ord.patronEmail && !combined.some((u) => u.email === ord.patronEmail)) {
+            combined.push({
+              id: `u_${Date.now()}`,
+              name: ord.patronName || 'Order Patron',
+              email: ord.patronEmail,
+              tier: 'Acquisition Patron',
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(ord.patronName || 'P')}&background=1c1917&color=f5f5f4&bold=true`,
+              address: { city: 'Colombo', country: 'Sri Lanka' },
+            });
+          }
+        });
+      }
+    } catch (e) {}
+
+    // 2. Fetch from Express Backend API (MongoDB)
     try {
       setLoading(true);
       const res = await fetch('http://localhost:5001/api/users');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setPatrons(data);
+          data.forEach((dbU) => {
+            const norm = {
+              id: dbU._id || dbU.id,
+              _id: dbU._id || dbU.id,
+              name: dbU.name || 'Registered Patron',
+              email: dbU.email,
+              tier: dbU.tier || 'Verified Collector',
+              avatar: dbU.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(dbU.name || 'P')}&background=1c1917&color=f5f5f4&bold=true`,
+              address: dbU.address || { city: 'Colombo', country: 'Sri Lanka' },
+            };
+
+            const idx = combined.findIndex((c) => c.email === norm.email || String(c.id) === String(norm.id));
+            if (idx === -1) {
+              combined.unshift(norm);
+            } else {
+              combined[idx] = { ...combined[idx], ...norm };
+            }
+          });
         }
       }
     } catch (err) {
       console.log('Error fetching patrons from database:', err);
     } finally {
+      setPatrons(combined);
       setLoading(false);
     }
   };

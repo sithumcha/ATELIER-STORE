@@ -452,6 +452,7 @@ export default function AdminDashboard({ onGoToPublicStore }) {
                     <div className="text-on-surface-variant font-body-sm text-xs">
                       Highest concentration in Stockholm, Kyoto &amp; Zürich
                     </div>
+                  </div>
                   <div className="pt-space-md border-t border-surface-container flex items-center justify-between font-body-sm text-xs">
                     <span className="text-on-surface-variant">Active collectors</span>
                     <span className="font-subheading-md font-semibold text-primary">{currentMetrics.patronCount}</span>
@@ -459,103 +460,7 @@ export default function AdminDashboard({ onGoToPublicStore }) {
                 </div>
               </div>
 
-              {/* Feature 3: Visual Sales Analytics & Revenue Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
-                {/* Left 8 Cols: Revenue Growth Bar & Line Chart */}
-                <div className="lg:col-span-8 bg-surface-container-lowest p-space-xl rounded-xl border border-surface-variant shadow-sm space-y-space-md">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-space-sm border-b border-surface-variant">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-secondary text-xl">analytics</span>
-                        <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Revenue Growth Trend &amp; Monthly Telemetry</h3>
-                      </div>
-                      <p className="font-body-sm text-xs text-on-surface-variant mt-0.5">
-                        Historical gross settlement trajectories across Kyoto, Stockholm, and Global Consignment.
-                      </p>
-                    </div>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 font-label-caps text-[10px] uppercase font-bold rounded-full self-start sm:self-auto">
-                      +28.4% YoY Growth
-                    </span>
-                  </div>
 
-                  {/* SVG Bar Chart Visualization */}
-                  <div className="pt-2">
-                    <div className="h-64 w-full flex items-end justify-between gap-2 sm:gap-4 px-2 pt-6 pb-2 relative border-b border-surface-variant/60">
-                      {/* Grid Horizontal Lines */}
-                      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                        <div className="border-b border-dashed border-on-surface-variant w-full"></div>
-                        <div className="border-b border-dashed border-on-surface-variant w-full"></div>
-                        <div className="border-b border-dashed border-on-surface-variant w-full"></div>
-                        <div className="border-b border-dashed border-on-surface-variant w-full"></div>
-                      </div>
-
-                      {[
-                        { month: 'Apr', val: '$18,400', height: '40%' },
-                        { month: 'May', val: '$24,200', height: '55%' },
-                        { month: 'Jun', val: '$29,800', height: '68%' },
-                        { month: 'Jul', val: '$32,100', height: '74%' },
-                        { month: 'Aug', val: '$27,600', height: '62%' },
-                        { month: 'Sep', val: '$48,500', height: '95%', highlight: true },
-                      ].map((m, idx) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 group relative z-10 h-full justify-end">
-                          <span className="font-label-caps text-[10px] text-secondary font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-surface border px-1.5 py-0.5 rounded shadow-xs">
-                            {m.val}
-                          </span>
-                          <div
-                            className={`w-full rounded-t-lg transition-all duration-500 hover:scale-105 ${
-                              m.highlight
-                                ? 'bg-gradient-to-t from-primary via-secondary to-amber-500 shadow-md ring-2 ring-secondary/30'
-                                : 'bg-surface-container-high hover:bg-primary/80'
-                            }`}
-                            style={{ height: m.height }}
-                          ></div>
-                          <span className="font-label-caps text-xs text-on-surface-variant font-medium mt-1">{m.month}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between pt-3 font-label-caps text-[11px] text-on-surface-variant">
-                      <span>• Min: $18.4k (Apr)</span>
-                      <span className="text-secondary font-bold">• Peak Moon: $48.5k (Current Edition 09)</span>
-                      <span>• Avg Order Value: $420</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right 4 Cols: Category Sales Breakdown Donut/Progress */}
-                <div className="lg:col-span-4 bg-surface-container-lowest p-space-xl rounded-xl border border-surface-variant shadow-sm space-y-space-md flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 pb-space-sm border-b border-surface-variant mb-space-md">
-                      <span className="material-symbols-outlined text-secondary text-xl">pie_chart</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface font-semibold">Category Breakdown</h3>
-                    </div>
-
-                    <div className="space-y-space-md">
-                      {[
-                        { cat: 'Outerwear & Coats', pct: 42, color: 'bg-primary', amount: '$20,370' },
-                        { cat: 'Dresses & Tunics', pct: 28, color: 'bg-secondary', amount: '$13,580' },
-                        { cat: 'Trousers & Bottoms', pct: 18, color: 'bg-amber-600', amount: '$8,730' },
-                        { cat: 'Knitwear & Accessories', pct: 12, color: 'bg-emerald-600', amount: '$5,820' },
-                      ].map((item, idx) => (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex items-center justify-between text-xs font-body-sm">
-                            <span className="font-semibold text-on-surface">{item.cat}</span>
-                            <span className="font-label-caps text-secondary font-bold">{item.pct}% ({item.amount})</span>
-                          </div>
-                          <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
-                            <div className={`${item.color} h-full rounded-full`} style={{ width: `${item.pct}%` }}></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-space-md border-t border-surface-variant text-center bg-surface-container-low p-3 rounded-lg">
-                    <span className="font-label-caps text-[10px] uppercase text-on-surface-variant tracking-wider block">Top Selling Silhouettes</span>
-                    <span className="font-subheading-md text-xs text-primary font-bold block mt-0.5">Outerwear &amp; Raw Silk Cocoon Dresses</span>
-                  </div>
-                </div>
-              </div>
 
               {/* Lower Section: Recent Orders Table */}
               <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-variant p-space-lg sm:p-space-xl space-y-space-lg">

@@ -7,9 +7,36 @@ export default function AboutPage({ onExploreShop }) {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
 
-  const handleSubmitInquiry = (e) => {
+  const handleSubmitInquiry = async (e) => {
     e.preventDefault();
     if (!email || !message) return;
+
+    const payload = {
+      id: `inq-${Date.now()}`,
+      name: name.trim() || 'Anonymous Patron',
+      email: email.trim(),
+      subject: subject || 'Bespoke Haute Couture Tailoring',
+      message: message.trim(),
+      status: 'Pending Review',
+      createdAt: new Date().toISOString(),
+    };
+
+    // 1. Save to LocalStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem('atelierstore_inquiries') || '[]');
+      localStorage.setItem('atelierstore_inquiries', JSON.stringify([payload, ...existing]));
+    } catch (err) {}
+
+    // 2. Post to Express Backend MongoDB API
+    try {
+      await fetch('http://localhost:5001/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.log('Error posting inquiry to DB:', err);
+    }
 
     setSent(true);
     setTimeout(() => {
@@ -17,7 +44,7 @@ export default function AboutPage({ onExploreShop }) {
       setEmail('');
       setMessage('');
       setSent(false);
-    }, 3500);
+    }, 4000);
   };
 
   return (

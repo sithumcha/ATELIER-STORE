@@ -15,46 +15,94 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
+    try {
       if (mode === 'login') {
-        const mockUser = {
-          id: 'u1',
-          name: email ? email.split('@')[0] : 'Elin Lindqvist',
-          email: email || 'elin@store.com',
-          avatar:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBVc9DU0FPf5cvkDbLsmajjIhrqxVzcprYSiMVl52H84IrGx-8KX7sAFTfDcCp_Jkh7ui-wjuxF_GCOTmZMC6FFSQ_1xmC1ln7j7_ag4eIyYD3NThID8SC7gXukjhUq_IQNeR0hA7sSSmKgP9OEScujERw4GKLr2iNdYSKBZt0gB_e3seq4o9Q31KXBbs09WpqRULVK9xwvPXKZ0tkFsNYyEjbYKTOi_uwg-44pt2XJPSoz8Q5QI2E',
-          tier: 'Patron Tier II',
-          address: {
-            street: 'Åsögatan 142, Apt 4B',
-            city: 'Stockholm',
-            country: 'Sweden',
-            postalCode: '116 24',
-            phone: '+46 8 123 4567',
-          },
-        };
-        onAuthSuccess(mockUser);
+        let loggedUser = null;
+        try {
+          const res = await fetch('http://localhost:5001/api/users/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), password }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            loggedUser = data.user;
+          }
+        } catch (err) {}
+
+        // Fallback: Check local registered users list so custom avatar/profile is preserved
+        if (!loggedUser) {
+          const regList = JSON.parse(localStorage.getItem('atelierstore_registered_users') || '[]');
+          const foundLocal = regList.find((u) => u.email?.toLowerCase() === email.trim().toLowerCase());
+          if (foundLocal) {
+            loggedUser = foundLocal;
+          } else {
+            const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(email ? email.split('@')[0] : 'User')}&background=1c1917&color=f5f5f4&bold=true`;
+            loggedUser = {
+              id: 'u_' + Date.now(),
+              name: email ? email.split('@')[0] : 'User',
+              email: email.trim(),
+              avatar: defaultAvatar,
+              tier: 'Member',
+              address: {},
+            };
+          }
+        }
+
+        onAuthSuccess(loggedUser);
         onClose();
       } else {
-        const newUser = {
+        // Register Mode
+        const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim() || 'User')}&background=1c1917&color=f5f5f4&bold=true`;
+        const userPayload = {
           id: 'u_' + Date.now(),
-          name: name || 'New Patron',
-          email,
-          avatar:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBVc9DU0FPf5cvkDbLsmajjIhrqxVzcprYSiMVl52H84IrGx-8KX7sAFTfDcCp_Jkh7ui-wjuxF_GCOTmZMC6FFSQ_1xmC1ln7j7_ag4eIyYD3NThID8SC7gXukjhUq_IQNeR0hA7sSSmKgP9OEScujERw4GKLr2iNdYSKBZt0gB_e3seq4o9Q31KXBbs09WpqRULVK9xwvPXKZ0tkFsNYyEjbYKTOi_uwg-44pt2XJPSoz8Q5QI2E',
-          tier: 'Patron Tier I',
-          address: {
-            street: '12 Kyoto Sanctuary Way',
-            city: 'Kyoto',
-            country: 'Japan',
-            postalCode: '601-8014',
-            phone: '+81 75 000 0000',
-          },
+          name: name.trim() || 'New User',
+          email: email.trim(),
+          password: password || '123456',
+          avatar: defaultAvatar,
+          tier: 'Member',
+          address: {},
         };
-        onAuthSuccess(newUser);
+
+        // 1. Post to Express Backend API (MongoDB)
+        try {
+          const res = await fetch('http://localhost:5001/api/users/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: userPayload.name,
+              email: userPayload.email,
+              password: userPayload.password,
+              avatar: userPayload.avatar,
+              address: userPayload.address,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.user) {
+              userPayload.id = data.user.id || data.user._id || userPayload.id;
+              if (data.user.avatar) userPayload.avatar = data.user.avatar;
+            }
+          }
+        } catch (err) {
+          console.log('Backend user register API error:', err);
+        }
+
+        // 2. Save to LocalStorage registry of registered users
+        try {
+          const regList = JSON.parse(localStorage.getItem('atelierstore_registered_users') || '[]');
+          const updatedRegList = [userPayload, ...regList.filter((u) => u.email !== userPayload.email)];
+          localStorage.setItem('atelierstore_registered_users', JSON.stringify(updatedRegList));
+        } catch (err) {}
+
+        onAuthSuccess(userPayload);
         onClose();
       }
+    } catch (err) {
+      setError(err.message || 'Authentication error');
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
   const handleDemoSignIn = () => {

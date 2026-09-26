@@ -10,32 +10,55 @@ export default function AdminInquiries() {
   }, []);
 
   const fetchInquiries = async () => {
+    let combined = [];
+
+    // 1. Fetch from LocalStorage for immediate offline/local submissions
+    try {
+      const localInqs = JSON.parse(localStorage.getItem('atelierstore_inquiries') || '[]');
+      if (Array.isArray(localInqs)) {
+        combined = [...localInqs];
+      }
+    } catch (e) {}
+
+    // 2. Fetch from Express Backend API (MongoDB)
     try {
       const res = await fetch('http://localhost:5001/api/inquiries');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const formatted = data.map((inq) => ({
-            id: inq._id || inq.id,
-            name: inq.name || 'Anonymous Collector',
-            email: inq.email || 'collector@atelier.co',
-            subject: inq.subject || 'General Inquiry',
-            message: inq.message || '',
-            status: inq.status || 'Pending Review',
-            createdAt: inq.createdAt || new Date().toISOString(),
-          }));
-          setInquiries(formatted);
+          data.forEach((inq) => {
+            const norm = {
+              id: inq._id || inq.id || `inq-${Date.now()}`,
+              name: inq.name || 'Anonymous Patron',
+              email: inq.email || 'collector@atelier.co',
+              subject: inq.subject || 'General Inquiry',
+              message: inq.message || '',
+              status: inq.status || 'Pending Review',
+              createdAt: inq.createdAt || new Date().toISOString(),
+            };
+
+            const existingIdx = combined.findIndex((c) => String(c.id) === String(norm.id) || (c.email === norm.email && c.message === norm.message));
+            if (existingIdx === -1) {
+              combined.unshift(norm);
+            } else {
+              combined[existingIdx] = { ...combined[existingIdx], ...norm };
+            }
+          });
         }
       }
     } catch (err) {
       console.log('Error fetching inquiries from database:', err);
     }
+
+    setInquiries(combined);
   };
 
   const handleMarkReplied = (id) => {
-    setInquiries((prev) =>
-      prev.map((inq) => (inq.id === id ? { ...inq, status: 'Replied' } : inq))
-    );
+    const updated = inquiries.map((inq) => (inq.id === id ? { ...inq, status: 'Replied' } : inq));
+    setInquiries(updated);
+    try {
+      localStorage.setItem('atelierstore_inquiries', JSON.stringify(updated));
+    } catch (e) {}
   };
 
   return (
@@ -50,43 +73,57 @@ export default function AdminInquiries() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-space-md">
-        {inquiries.map((inq) => (
-          <div
-            key={inq.id}
-            className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant flex flex-col md:flex-row md:items-center justify-between gap-4"
-          >
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-outline">{inq.id}</span>
-                <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px] uppercase font-bold">
-                  {inq.subject}
-                </span>
-                <span className={`px-2 py-0.5 rounded font-label-caps text-[10px] ${inq.status === 'Replied' ? 'bg-surface-container-high text-on-surface-variant' : 'bg-primary text-on-primary'}`}>
-                  {inq.status}
-                </span>
+      {inquiries.length > 0 ? (
+        <div className="grid grid-cols-1 gap-space-md">
+          {inquiries.map((inq) => (
+            <div
+              key={inq.id}
+              className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-variant flex flex-col md:flex-row md:items-center justify-between gap-4"
+            >
+              <div className="space-y-1 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-outline">{inq.id}</span>
+                  <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-caps text-[10px] uppercase font-bold">
+                    {inq.subject}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded font-label-caps text-[10px] ${inq.status === 'Replied' ? 'bg-emerald-700 text-white font-bold' : 'bg-primary text-on-primary font-bold'}`}>
+                    {inq.status}
+                  </span>
+                </div>
+                <h3 className="font-subheading-lg text-on-surface font-semibold pt-1">{inq.name} ({inq.email})</h3>
+                <p className="font-body-md text-xs text-on-surface-variant max-w-3xl leading-relaxed">{inq.message}</p>
               </div>
-              <h3 className="font-subheading-lg text-on-surface font-semibold pt-1">{inq.name} ({inq.email})</h3>
-              <p className="font-body-md text-xs text-on-surface-variant max-w-3xl leading-relaxed">{inq.message}</p>
-            </div>
 
-            <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
-              <button
-                onClick={() => handleMarkReplied(inq.id)}
-                className="px-4 py-2 rounded bg-primary text-on-primary font-label-md text-xs uppercase hover:bg-secondary transition-colors cursor-pointer"
-              >
-                Mark Replied ✓
-              </button>
-              <button
-                onClick={() => alert(`Opening email client for ${inq.email}...`)}
-                className="px-4 py-2 rounded border border-surface-variant text-on-surface font-label-md text-xs uppercase hover:bg-surface-container-low transition-colors cursor-pointer"
-              >
-                Reply Email ✉️
-              </button>
+              <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0">
+                <button
+                  onClick={() => handleMarkReplied(inq.id)}
+                  className="px-4 py-2 rounded bg-primary text-on-primary font-label-md text-xs uppercase hover:bg-secondary transition-colors cursor-pointer font-bold"
+                >
+                  Mark Replied ✓
+                </button>
+                <button
+                  onClick={() => alert(`Opening email client for ${inq.email}...`)}
+                  className="px-4 py-2 rounded border border-surface-variant text-on-surface font-label-md text-xs uppercase hover:bg-surface-container-low transition-colors cursor-pointer"
+                >
+                  Reply Email ✉️
+                </button>
+              </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="p-space-2xl bg-surface-container-low rounded-xl border border-surface-variant text-center space-y-3 py-16">
+          <div className="w-14 h-14 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-3xl">mail</span>
           </div>
-        ))}
-      </div>
+          <div>
+            <h3 className="font-headline-sm text-lg text-on-surface font-bold">No Dispatches Received Yet</h3>
+            <p className="font-body-sm text-xs text-on-surface-variant max-w-md mx-auto mt-1">
+              Bespoke fitting and tailoring inquiries sent by patrons via the Atelier Direct Inquiry form will appear here.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

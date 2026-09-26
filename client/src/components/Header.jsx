@@ -101,29 +101,14 @@ export default function Header({
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-md border-b border-surface-variant/40 shadow-xs">
       {/* Top Banner Bar */}
       <div className="w-full bg-surface-container-low border-b border-surface-variant/30">
-        <div className="max-w-max-width-editorial mx-auto px-margin-mobile md:px-margin-desktop h-9 flex items-center justify-between font-label-caps text-xs text-on-surface-variant uppercase">
-          <div className="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
-            <span className="material-symbols-outlined text-[14px]">public</span>
-            <span>Global Store · USD ($)</span>
-          </div>
-          <div className="hidden md:block tracking-widest text-[11px] text-on-surface-variant/90">
-            Complimentary global insured dispatch on acquisitions above $350
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setActiveTab('admin')}
-              className="hover:text-secondary text-primary font-bold flex items-center gap-1 transition-colors cursor-pointer text-[11px]"
-            >
-              <span className="material-symbols-outlined text-[14px]">space_dashboard</span>
-              <span>Admin Console</span>
-            </button>
-            <a className="hover:text-on-surface transition-colors hidden sm:inline" href="#concierge">
-              Client Concierge
-            </a>
-            <a className="hover:text-on-surface transition-colors hidden sm:inline" href="#stockists">
-              Stockists
-            </a>
-          </div>
+        <div className="max-w-max-width-editorial mx-auto px-margin-mobile md:px-margin-desktop h-9 flex items-center justify-end font-label-caps text-xs text-on-surface-variant uppercase">
+          <button
+            onClick={() => setActiveTab('admin')}
+            className="hover:text-secondary text-primary font-bold flex items-center gap-1 transition-colors cursor-pointer text-[11px]"
+          >
+            <span className="material-symbols-outlined text-[14px]">space_dashboard</span>
+            <span>Admin Console</span>
+          </button>
         </div>
       </div>
 

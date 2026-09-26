@@ -41,6 +41,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
   });
 
   const [products, setProducts] = useState([]);
+  const [addedNotice, setAddedNotice] = useState({});
 
   // Database eken products fetch kireema
   const fetchProducts = async () => {
@@ -118,6 +119,10 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
         price: p.numericPrice,
         img: p.img,
       });
+      setAddedNotice((prev) => ({ ...prev, [p.id]: true }));
+      setTimeout(() => {
+        setAddedNotice((prev) => ({ ...prev, [p.id]: false }));
+      }, 2000);
     }
   };
 
@@ -128,50 +133,41 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
   };
 
   const matchesDiscipline = (p, discipline) => {
-    if (discipline === 'All Objects' || discipline === 'All Disciplines') return true;
-    const searchString = (p.category + ' ' + p.title + ' ' + p.subtitle).toLowerCase();
+    if (!discipline || discipline === 'All Objects' || discipline === 'All Disciplines' || discipline === 'All Garments') return true;
+    const searchString = `${p.category || ''} ${p.title || ''} ${p.subtitle || ''} ${p.type || ''} ${p.description || ''}`.toLowerCase();
+    const dLower = discipline.toLowerCase().trim();
 
-    if (discipline === "Women's Apparel") {
-      return (
-        searchString.includes('women') ||
-        searchString.includes('dress') ||
-        searchString.includes('tunic') ||
-        searchString.includes('silk') ||
-        searchString.includes('skirt') ||
-        searchString.includes('blouse')
-      );
+    // Check exact category match
+    if (p.category && p.category.toLowerCase().trim() === dLower) return true;
+
+    // Check partial category/title/type matches
+    if (dLower.includes('women') || dLower.includes('casual')) {
+      return searchString.includes('women') || searchString.includes('dress') || searchString.includes('tunic') || searchString.includes('casual') || searchString.includes('silk') || searchString.includes('skirt') || searchString.includes('blouse');
     }
-    if (discipline === "Men's Clothing" || discipline === "Men's Tailoring") {
-      if (searchString.includes('women') || searchString.includes('dress') || searchString.includes('skirt') || searchString.includes('tunic')) {
-        return false;
-      }
-      return (
-        searchString.includes('men') ||
-        searchString.includes('tailor') ||
-        searchString.includes('blazer') ||
-        searchString.includes('trench') ||
-        searchString.includes('suit') ||
-        searchString.includes('coat') ||
-        searchString.includes('jacket')
-      );
+    if (dLower.includes('men') || dLower.includes('office') || dLower.includes('workwear')) {
+      if (searchString.includes('women') || searchString.includes('dress') || searchString.includes('skirt')) return false;
+      return searchString.includes('men') || searchString.includes('tailor') || searchString.includes('trouser') || searchString.includes('pant') || searchString.includes('office') || searchString.includes('blazer') || searchString.includes('trench') || searchString.includes('coat') || searchString.includes('suit') || searchString.includes('jacket');
     }
-    if (discipline === 'Textiles & Fiber') {
-      return (
-        searchString.includes('textile') ||
-        searchString.includes('fiber') ||
-        searchString.includes('flax') ||
-        searchString.includes('scarf') ||
-        searchString.includes('swatch') ||
-        searchString.includes('loom')
-      );
+    if (dLower.includes('textile') || dLower.includes('weekend') || dLower.includes('fiber')) {
+      return searchString.includes('textile') || searchString.includes('fiber') || searchString.includes('flax') || searchString.includes('linen') || searchString.includes('outerwear') || searchString.includes('kimono') || searchString.includes('robe') || searchString.includes('wrap');
     }
-    return searchString.includes(discipline.toLowerCase());
+    if (dLower.includes('evening') || dLower.includes('knit') || dLower.includes('accessory') || dLower.includes('accessories')) {
+      return searchString.includes('knit') || searchString.includes('wool') || searchString.includes('shawl') || searchString.includes('wrap') || searchString.includes('accessories') || searchString.includes('scarf');
+    }
+
+    // Split words in discipline (e.g. "Dresses & Tunics" -> "dresses", "tunics")
+    const words = dLower.split(/[\s&,/]+/).filter(w => w.length > 2);
+    if (words.length > 0) {
+      return words.some(w => searchString.includes(w));
+    }
+
+    return searchString.includes(dLower);
   };
 
   const categoriesList = [
     { id: 'all', name: 'All Objects', label: 'All Garments' },
-    { id: 'womens', name: "Women's Apparel", label: "Women's Collection" },
-    { id: 'mens', name: "Men's Clothing", label: "Men's Collection" },
+    { id: 'womens', name: "Women's Wardrobe", label: "Women's Collection" },
+    { id: 'mens', name: "Men's Tailoring", label: "Men's Collection" },
     { id: 'textiles', name: 'Textiles & Fiber', label: 'Textiles & Swatches' },
   ];
 

@@ -285,6 +285,76 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
     setTestimonialIndex((prev) => (prev - 1 + testimonialsList.length) % testimonialsList.length);
   };
 
+  // Extract categories dynamically from database products
+  const categoriesFromDb = React.useMemo(() => {
+    const dbCatMap = new Map();
+
+    if (products && products.length > 0) {
+      products.forEach((p) => {
+        const catName = p.raw?.category || p.category || p.type;
+        if (catName && !dbCatMap.has(catName)) {
+          dbCatMap.set(catName, {
+            id: `cat_${catName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+            title: catName,
+            subtitle: p.subtitle || p.description?.slice(0, 60) || `Explore ${catName} collection`,
+            categoryFilter: catName,
+            img: p.img || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=90',
+            badge: catName.toUpperCase(),
+          });
+        }
+      });
+    }
+
+    const uniqueList = Array.from(dbCatMap.values());
+
+    const defaults = [
+      {
+        id: 'cat-womens',
+        title: "Women's Wardrobe",
+        subtitle: 'Organic flax tunics, silken cocoon dresses & relaxed drapes',
+        categoryFilter: "Women's Wardrobe",
+        img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=90',
+        badge: 'WOMEN',
+      },
+      {
+        id: 'cat-mens',
+        title: "Men's Tailoring",
+        subtitle: 'Unstructured Noragi coats, pleated trousers & architectural jackets',
+        categoryFilter: "Men's Tailoring",
+        img: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=90',
+        badge: 'MEN',
+      },
+      {
+        id: 'cat-textiles',
+        title: "Textiles & Fiber",
+        subtitle: 'Hand-spun alpaca wraps, raw flax textiles & botanical knits',
+        categoryFilter: "Textiles & Fiber",
+        img: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=90',
+        badge: 'TEXTILES',
+      },
+      {
+        id: 'cat-accessories',
+        title: "Artisanal Accessories",
+        subtitle: 'Hand-crafted wraps, botanical scarves & heirloom accessories',
+        categoryFilter: "Artisanal Accessories",
+        img: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1200&q=90',
+        badge: 'ACCESSORIES',
+      },
+    ];
+
+    if (uniqueList.length === 0) return defaults;
+    if (uniqueList.length >= 4) return uniqueList.slice(0, 4);
+
+    const merged = [...uniqueList];
+    defaults.forEach((def) => {
+      if (merged.length < 4 && !merged.some((m) => m.title.toLowerCase() === def.title.toLowerCase())) {
+        merged.push(def);
+      }
+    });
+
+    return merged.slice(0, 4);
+  }, [products]);
+
   useEffect(() => {
     fetchDbProducts();
   }, []);
@@ -608,6 +678,84 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 1.5 SHOP BY OCCASION / MAIN CATEGORIES */}
+      <section className="w-full bg-surface py-space-3xl border-b border-surface-variant/30 reveal-on-scroll">
+        <div className="max-w-[1380px] mx-auto px-margin">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-space-xl gap-4">
+            <div>
+              <span className="font-label-uppercase text-label-uppercase text-secondary tracking-[0.2em] font-bold block mb-1">
+                CURATED SILHOUETTES
+              </span>
+              <h2 className="font-headline-lg text-headline-lg lg:text-[40px] text-on-surface font-normal">
+                Shop By Occasion
+              </h2>
+            </div>
+            <p className="font-body-md text-on-surface-variant max-w-md">
+              Discover hand-loomed apparel tailored for every moment — from relaxed daily drapes to sharp office elegance and weekend leisure.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {categoriesFromDb.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => {
+                  setActiveFilter(cat.categoryFilter);
+                  const el = document.getElementById('editions-grid');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  if (onExploreShop) onExploreShop(cat.categoryFilter);
+                }}
+                className="group relative cursor-pointer overflow-hidden rounded-2xl bg-surface-container-low border border-surface-variant/50 shadow-xs hover:shadow-xl transition-all duration-500 flex flex-col justify-between"
+              >
+                {/* Image Container with Zoom */}
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-container-high">
+                  <img
+                    src={cat.img}
+                    alt={cat.title}
+                    className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-108"
+                  />
+                  {/* Subtle Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/10 to-transparent opacity-50 group-hover:opacity-30 transition-opacity duration-500"></div>
+
+                  {/* Top Badge */}
+                  <span className="absolute top-4 left-4 z-10 px-3 py-1 bg-surface/90 backdrop-blur text-on-surface font-label-uppercase text-[10px] tracking-widest font-bold rounded shadow-xs">
+                    {cat.badge}
+                  </span>
+
+                  {/* Banner overlay inside bottom of image */}
+                  <div className="absolute bottom-3 left-3 right-3 z-10 p-3.5 rounded-xl bg-surface/90 backdrop-blur-md border border-surface-variant/30 transform group-hover:-translate-y-1 transition-transform duration-300">
+                    <p className="font-body-sm text-[11px] text-on-surface-variant mb-0.5 line-clamp-1">
+                      {cat.subtitle}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-headline-sm text-base text-on-surface font-semibold group-hover:text-secondary transition-colors">
+                        {cat.title}
+                      </h3>
+                      <span className="font-label-uppercase text-xs font-bold text-secondary flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                        Shop Now <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub-label Bar Below */}
+                <div className="px-4 py-3 bg-surface-container-low flex items-center justify-between border-t border-surface-variant/40">
+                  <span className="font-label-caps text-xs text-on-surface font-semibold uppercase tracking-wider flex items-center gap-1.5 group-hover:text-secondary transition-colors">
+                    <span>{cat.title}</span>
+                    <span className="material-symbols-outlined text-[14px] group-hover:translate-x-1 transition-transform">
+                      arrow_forward
+                    </span>
+                  </span>
+                  <span className="font-label-caps text-[10px] text-on-surface-variant uppercase font-medium">
+                    Explore
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -53,20 +53,38 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   useEffect(() => {
     let isMounted = true;
     const checkPurchaseEligibility = async () => {
-      let orders = [];
+      let currentUserOrders = [];
+
+      // 1. Load orders placed in current browser session from localStorage
       try {
         const localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
-        if (Array.isArray(localOrds)) orders = [...localOrds];
+        if (Array.isArray(localOrds)) {
+          currentUserOrders = [...localOrds];
+        }
       } catch (e) {}
 
+      // 2. Fetch orders from Express Backend API & filter ONLY for current user's email / name
       try {
         const res = await fetch('http://localhost:5001/api/orders');
         if (res.ok) {
           const dbOrds = await res.json();
           if (Array.isArray(dbOrds) && dbOrds.length > 0) {
-            dbOrds.forEach((dbO) => {
-              if (!orders.some((o) => (o.orderId && o.orderId === dbO.orderId) || (o.id && o.id === dbO.id))) {
-                orders.push(dbO);
+            const userEmail = (loggedUser?.email || '').toLowerCase().trim();
+            const userName = (loggedUser?.name || '').toLowerCase().trim();
+
+            const userDbOrds = dbOrds.filter((dbO) => {
+              const pEmail = (dbO.patronEmail || '').toLowerCase().trim();
+              const pName = (dbO.patronName || '').toLowerCase().trim();
+
+              const emailMatch = userEmail && pEmail && userEmail === pEmail;
+              const nameMatch = userName && pName && userName === pName;
+
+              return emailMatch || nameMatch;
+            });
+
+            userDbOrds.forEach((dbO) => {
+              if (!currentUserOrders.some((o) => (o.orderId && o.orderId === dbO.orderId) || (o.id && o.id === dbO.id))) {
+                currentUserOrders.push(dbO);
               }
             });
           }
@@ -74,19 +92,20 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
       } catch (e) {}
 
       if (!isMounted) return;
-      setUserOrders(orders);
+      setUserOrders(currentUserOrders);
 
       const targetId = String(selectedProductId || product?.id || product?._id || '');
       const targetTitle = (product?.title || '').toLowerCase().trim();
 
-      const matched = orders.some((ord) => {
+      // Strict check: Does current user's order list contain this specific item?
+      const matched = currentUserOrders.some((ord) => {
         if (!ord.items || !Array.isArray(ord.items)) return false;
         return ord.items.some((item) => {
           const itemId = String(item.id || item.productId || item._id || '');
           const itemTitle = (item.title || '').toLowerCase().trim();
 
-          const idMatch = itemId && targetId && (itemId === targetId || targetId.includes(itemId) || itemId.includes(targetId));
-          const titleMatch = itemTitle && targetTitle && (itemTitle.includes(targetTitle) || targetTitle.includes(itemTitle));
+          const idMatch = itemId && targetId && (itemId === targetId || targetId === itemId);
+          const titleMatch = itemTitle && targetTitle && itemTitle === targetTitle;
 
           return idMatch || titleMatch;
         });
@@ -99,7 +118,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     return () => {
       isMounted = false;
     };
-  }, [selectedProductId, product]);
+  }, [selectedProductId, product, loggedUser?.email, loggedUser?.name]);
 
   // Accordions State
   const [openAccordions, setOpenAccordions] = useState({
@@ -110,71 +129,105 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   });
 
   useEffect(() => {
-    // Load reviews for current product
-    try {
+    let isMounted = true;
+    const fetchProductReviews = async () => {
       let combined = [];
-      const savedRev = localStorage.getItem(`atelierstore_reviews_${selectedProductId}`);
-      if (savedRev) {
-        combined = JSON.parse(savedRev);
-      }
-      
-      const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
-      const matchedUserRevs = allUserRevs.filter(r => 
-        String(r.productId) === String(selectedProductId) || 
-        (r.productTitle && product?.title && r.productTitle.toLowerCase().includes(product.title.toLowerCase())) ||
-        (r.productId && typeof r.productId === 'string' && selectedProductId && typeof selectedProductId === 'string' && r.productId.includes(selectedProductId))
-      );
+      const currentId = String(selectedProductId || product?.id || product?._id || '');
+      const currentTitle = (product?.title || '').toLowerCase().trim();
 
-      matchedUserRevs.forEach(m => {
-        if (!combined.some(c => c.id === m.id)) {
-          combined.unshift(m);
+      // 1. Load product-specific reviews from localStorage
+      try {
+        const savedRev = localStorage.getItem(`atelierstore_reviews_${selectedProductId}`);
+        if (savedRev) {
+          const parsed = JSON.parse(savedRev);
+          if (Array.isArray(parsed)) combined = [...parsed];
         }
-      });
+      } catch (e) {}
 
-      if (combined.length > 0) {
-        setReviews(combined);
-      } else {
-        // Initial Curated Reviews
-        setReviews([
-          {
-            id: 'rev-1',
-            rating: 5,
-            name: 'Astrid Lindqvist',
-            location: 'Stockholm, Sweden',
-            date: 'September 12, 2026',
-            title: 'Exquisite tactile weight & drape',
-            body: 'The unbleached Normandy flax has a remarkable structural heft yet breathes effortlessly in warm weather. Truly an heirloom piece that will age with dignity.',
-            verified: true,
-          },
-          {
-            id: 'rev-2',
-            rating: 5,
-            name: 'Kenji Takahashi',
-            location: 'Kyoto, Japan',
-            date: 'August 28, 2026',
-            title: 'Authentic 1948 shuttle loom weave',
-            body: 'Having inspected the selvage seam detail, the tension and microscopic channels in the flax thread are unmistakably crafted on vintage slow-shuttle looms.',
-            verified: true,
-          },
-        ]);
+      // 2. Load all user reviews from localStorage & filter by productId/productTitle
+      try {
+        const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
+        if (Array.isArray(allUserRevs)) {
+          const matched = allUserRevs.filter((r) => {
+            const rId = String(r.productId || r.id || '');
+            const rTitle = (r.productTitle || '').toLowerCase().trim();
+            const idMatch = currentId && rId && (rId === currentId || currentId.includes(rId) || rId.includes(currentId));
+            const titleMatch = currentTitle && rTitle && (currentTitle.includes(rTitle) || rTitle.includes(currentTitle));
+            return idMatch || titleMatch;
+          });
+
+          matched.forEach((m) => {
+            if (!combined.some((c) => String(c.id) === String(m.id))) {
+              combined.unshift(m);
+            }
+          });
+        }
+      } catch (e) {}
+
+      // 3. Fetch reviews from Express Backend MongoDB API & filter strictly for this garment
+      try {
+        const res = await fetch('http://localhost:5001/api/reviews');
+        if (res.ok) {
+          const dbRevs = await res.json();
+          if (Array.isArray(dbRevs)) {
+            const matchedDb = dbRevs.filter((r) => {
+              const rId = String(r.productId || '');
+              const rTitle = (r.productTitle || '').toLowerCase().trim();
+              const idMatch = currentId && rId && (rId === currentId || currentId.includes(rId) || rId.includes(currentId));
+              const titleMatch = currentTitle && rTitle && (currentTitle.includes(rTitle) || rTitle.includes(currentTitle));
+              return idMatch || titleMatch;
+            });
+
+            matchedDb.forEach((m) => {
+              const normRev = {
+                id: m._id || m.id || `rev-${Date.now()}`,
+                rating: Number(m.rating) || 5,
+                name: m.userName || m.name || 'Verified Patron',
+                location: m.userLocation || m.location || 'Verified Patron',
+                date: m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : (m.date || 'Recently'),
+                title: m.title || 'Patron Garment Evaluation',
+                body: m.body || '',
+                verified: true,
+                avatar: m.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.userName || 'P')}&background=1c1917&color=f5f5f4&bold=true`,
+                productId: m.productId || currentId,
+                productTitle: m.productTitle || product?.title || 'Archival Garment',
+                approved: m.approved !== false
+              };
+
+              const existingIdx = combined.findIndex((c) => String(c.id) === String(normRev.id) || (c.body === normRev.body && c.name === normRev.name));
+              if (existingIdx === -1) {
+                combined.unshift(normRev);
+              } else {
+                combined[existingIdx] = { ...combined[existingIdx], ...normRev };
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.log('Error fetching DB reviews:', e);
       }
-    } catch (e) {
-      console.error('Error loading reviews:', e);
-    }
+
+      if (isMounted) {
+        setReviews(combined);
+      }
+    };
+
+    fetchProductReviews();
+    return () => {
+      isMounted = false;
+    };
   }, [selectedProductId, product]);
 
   const handleAddReview = (e) => {
     e.preventDefault();
 
-    if (!hasPurchased) {
-      alert('Only verified patrons who have purchased this garment can leave a review.');
-      return;
-    }
-
     if (!newReviewerName.trim() || !newReviewBody.trim()) {
       alert('Please enter your name and review message.');
       return;
     }
+
+    const currentProdId = String(selectedProductId || product?.id || product?._id || 'p1');
+    const currentProdTitle = product?.title || 'Archival Garment';
 
     const clientAvatar = loggedUser?.avatar || (
       loggedUser?.name || newReviewerName.trim()
@@ -184,15 +237,15 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
     const newRevObj = {
       id: `rev-${Date.now()}`,
-      productId: selectedProductId || product?.id || 'p1',
-      productTitle: product?.title || 'Archival Garment',
+      productId: currentProdId,
+      productTitle: currentProdTitle,
       rating: Number(newRating) || 5,
       name: newReviewerName.trim(),
       userName: newReviewerName.trim(),
       location: loggedUser?.address?.city ? `${loggedUser.address.city}, ${loggedUser.address.country || 'Sri Lanka'}` : 'Verified Collector',
       userLocation: loggedUser?.address?.city ? `${loggedUser.address.city}, ${loggedUser.address.country || 'Sri Lanka'}` : 'Verified Collector',
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      title: newReviewTitle.trim() || 'Remarkable Archival Garment',
+      title: newReviewTitle.trim() || `Garment Evaluation for ${currentProdTitle}`,
       body: newReviewBody.trim(),
       verified: true,
       avatar: clientAvatar,
@@ -203,7 +256,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     const updated = [newRevObj, ...reviews];
     setReviews(updated);
     try {
-      localStorage.setItem(`atelierstore_reviews_${selectedProductId}`, JSON.stringify(updated));
+      localStorage.setItem(`atelierstore_reviews_${currentProdId}`, JSON.stringify(updated));
       const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
       localStorage.setItem('atelierstore_all_user_reviews', JSON.stringify([newRevObj, ...allUserRevs]));
     } catch (err) {}
@@ -978,15 +1031,21 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-amber-500 text-xl font-bold">
               <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-              <span className="text-on-surface font-headline-sm text-lg ml-2">4.9 / 5.0</span>
+              <span className="text-on-surface font-headline-sm text-lg ml-2">
+                {reviews.length > 0
+                  ? (reviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0) / reviews.length).toFixed(1)
+                  : '0.0'} / 5.0
+              </span>
             </div>
-            <span className="font-label-caps text-xs text-on-surface-variant">({reviews.length} Verified Evaluations)</span>
+            <span className="font-label-caps text-xs text-on-surface-variant">
+              ({reviews.length} {reviews.length === 1 ? 'Verified Evaluation' : 'Verified Evaluations'})
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-2xl items-start">
+        <div className="w-full">
           {/* Reviews List */}
-          <div className="lg:col-span-7 space-y-space-md">
+          <div className="w-full space-y-space-md">
             {reviewSuccess && (
               <div className="p-4 rounded-xl bg-emerald-100 text-emerald-900 font-label-caps text-xs font-bold flex items-center gap-2 border border-emerald-300 animate-fade-in">
                 <span className="material-symbols-outlined text-lg">check_circle</span>
@@ -994,100 +1053,49 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
               </div>
             )}
 
-            {reviews.map((rev) => (
-              <div key={rev.id} className="p-space-lg rounded-xl bg-surface-container-low border border-surface-variant space-y-2 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-subheading-md text-sm text-on-surface font-bold">{rev.name}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-caps text-[10px] font-bold uppercase">
-                      ✓ Verified Patron
-                    </span>
+            {reviews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reviews.map((rev) => (
+                  <div key={rev.id} className="p-space-lg rounded-xl bg-surface-container-low border border-surface-variant space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {rev.avatar && (
+                          <img src={rev.avatar} alt={rev.name} className="w-6 h-6 rounded-full object-cover border border-surface-variant" />
+                        )}
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">{rev.name}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-caps text-[10px] font-bold uppercase">
+                          ✓ Verified Patron
+                        </span>
+                      </div>
+                      <span className="font-body-sm text-[11px] text-on-surface-variant">{rev.date}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-amber-500 text-sm font-bold">
+                      {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
+                        <span key={i}>★</span>
+                      ))}
+                      <span className="font-subheading-md text-xs text-on-surface font-bold ml-2">{rev.title}</span>
+                    </div>
+
+                    <p className="font-body-md text-xs text-on-surface-variant leading-relaxed">
+                      "{rev.body}"
+                    </p>
                   </div>
-                  <span className="font-body-sm text-[11px] text-on-surface-variant">{rev.date}</span>
-                </div>
-
-                <div className="flex items-center gap-1 text-amber-500 text-sm font-bold">
-                  {Array.from({ length: rev.rating || 5 }).map((_, i) => (
-                    <span key={i}>★</span>
-                  ))}
-                  <span className="font-subheading-md text-xs text-on-surface font-bold ml-2">{rev.title}</span>
-                </div>
-
-                <p className="font-body-md text-xs text-on-surface-variant leading-relaxed">
-                  "{rev.body}"
-                </p>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* Submit Review Form */}
-          <div className="lg:col-span-5 bg-surface-container-low p-space-xl rounded-xl border border-surface-variant space-y-space-md shadow-xs">
-            <div className="border-b border-surface-variant pb-3">
-              <span className="font-label-caps text-[10px] uppercase text-secondary font-bold tracking-wider">Patron Voice</span>
-              <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">+ Submit Garment Evaluation</h4>
-            </div>
-
-            <form onSubmit={handleAddReview} className="space-y-3">
-              <div>
-                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Rating *</label>
-                <div className="flex items-center gap-2">
-                  {[5, 4, 3, 2, 1].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setNewRating(star)}
-                      className={`px-3 py-1.5 rounded-lg font-label-caps text-xs font-bold cursor-pointer transition-colors ${
-                        newRating === star ? 'bg-amber-500 text-white font-bold' : 'bg-surface-container border border-surface-variant text-on-surface-variant'
-                      }`}
-                    >
-                      {star} ★
-                    </button>
-                  ))}
+            ) : (
+              <div className="p-space-xl rounded-xl bg-surface-container-low border border-surface-variant/70 text-center space-y-3 py-12">
+                <div className="w-12 h-12 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center mx-auto">
+                  <span className="material-symbols-outlined text-2xl">rate_review</span>
+                </div>
+                <div>
+                  <h5 className="font-headline-sm text-base text-on-surface font-bold">No Evaluations for This Piece Yet</h5>
+                  <p className="font-body-sm text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
+                    There are no reviews recorded for <strong>{product?.title || 'this garment'}</strong> yet.
+                  </p>
                 </div>
               </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Patron Name *</label>
-                <input
-                  required
-                  type="text"
-                  value={newReviewerName}
-                  onChange={(e) => setNewReviewerName(e.target.value)}
-                  placeholder="e.g. Clara Vanderbilt"
-                  className="w-full h-10 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Review Title</label>
-                <input
-                  type="text"
-                  value={newReviewTitle}
-                  onChange={(e) => setNewReviewTitle(e.target.value)}
-                  placeholder="e.g. Exceptional hand-woven texture"
-                  className="w-full h-10 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
-                />
-              </div>
-
-              <div>
-                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Written Evaluation *</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={newReviewBody}
-                  onChange={(e) => setNewReviewBody(e.target.value)}
-                  placeholder="Describe your tactile experience, drape, and proportion..."
-                  className="w-full p-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full h-11 bg-primary text-on-primary hover:bg-secondary font-label-caps text-xs uppercase font-bold rounded-xl transition-all cursor-pointer shadow-xs"
-              >
-                Submit Patron Evaluation
-              </button>
-            </form>
+            )}
           </div>
         </div>
       </section>

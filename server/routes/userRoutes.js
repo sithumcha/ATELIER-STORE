@@ -8,26 +8,31 @@ const router = express.Router();
 // 1. User Registration
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, avatar, tier, address } = req.body;
 
-    const userExists = await User.findOne({ email });
+    const userExists = await User.findOne({ email: email?.toLowerCase()?.trim() });
     if (userExists) {
       return res.status(400).json({ message: 'This email is already registered' });
     }
 
     const user = await User.create({
       name: name || 'New Collector',
-      email,
-      password,
+      email: email?.toLowerCase()?.trim(),
+      password: password || '123456',
+      avatar: avatar || undefined,
+      tier: tier || 'Verified Patron',
+      address: address || {},
     });
 
     res.status(201).json({
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         tier: user.tier,
         avatar: user.avatar,
+        address: user.address,
       },
       token: generateToken(user._id),
       message: 'Registration successful!',
@@ -41,16 +46,18 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email?.toLowerCase()?.trim() });
 
     if (user && (await user.matchPassword(password))) {
       res.json({
         user: {
           id: user._id,
+          _id: user._id,
           name: user.name,
           email: user.email,
           tier: user.tier,
           avatar: user.avatar,
+          address: user.address,
         },
         token: generateToken(user._id),
         message: 'Login successful!',
@@ -63,7 +70,72 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 3. User Profile (Protected Route)
+// 3. Update Profile (PUT /api/users/update-profile or /api/users/profile)
+const handleUpdateProfile = async (req, res) => {
+  try {
+    const { id, email, name, avatar, tier, address } = req.body;
+    let user = null;
+
+    if (id && id.match(/^[0-9a-fA-F]{24}$/)) {
+      user = await User.findById(id);
+    }
+    if (!user && email) {
+      user = await User.findOne({ email: email.toLowerCase().trim() });
+    }
+
+    if (user) {
+      if (name) user.name = name;
+      if (email) user.email = email.toLowerCase().trim();
+      if (avatar) user.avatar = avatar;
+      if (tier) user.tier = tier;
+      if (address) user.address = { ...user.address, ...address };
+
+      await user.save();
+      return res.json({
+        message: 'Profile updated in MongoDB successfully',
+        user: {
+          id: user._id,
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          tier: user.tier,
+          avatar: user.avatar,
+          address: user.address,
+        },
+      });
+    } else {
+      // Create user if not in DB yet
+      const newUser = await User.create({
+        name: name || 'Verified Patron',
+        email: email ? email.toLowerCase().trim() : 'patron@atelierstore.com',
+        password: 'password123',
+        avatar: avatar || undefined,
+        tier: tier || 'Verified Patron',
+        address: address || {},
+      });
+
+      return res.status(201).json({
+        message: 'Profile saved to MongoDB database successfully',
+        user: {
+          id: newUser._id,
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          tier: newUser.tier,
+          avatar: newUser.avatar,
+          address: newUser.address,
+        },
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update user profile', error: error.message });
+  }
+};
+
+router.put('/update-profile', handleUpdateProfile);
+router.put('/profile', handleUpdateProfile);
+
+// 4. User Profile (Protected Route)
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
@@ -77,7 +149,7 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
-// 4. All Users (Admin Registry)
+// 5. All Users (Admin Registry)
 router.get('/', async (req, res) => {
   try {
     const users = await User.find({}).select('-password');
@@ -87,7 +159,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 5. Delete User
+// 6. Delete User
 router.delete('/:id', async (req, res) => {
   try {
     const deleted = await User.findByIdAndDelete(req.params.id);

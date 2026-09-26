@@ -133,21 +133,74 @@ export default function App() {
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
-  // Cart Items State (Persisted in localStorage across page refreshes)
+  // Synchronize active user details (avatar, name, address) from MongoDB database
+  useEffect(() => {
+    if (user && user.email) {
+      fetch('http://localhost:5001/api/users')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((dbUsers) => {
+          if (Array.isArray(dbUsers)) {
+            const found = dbUsers.find((u) => u.email?.toLowerCase() === user.email?.toLowerCase());
+            if (found) {
+              const updated = {
+                ...user,
+                id: found._id || found.id || user.id,
+                name: found.name || user.name,
+                avatar: found.avatar || user.avatar,
+                tier: found.tier || user.tier,
+                address: found.address || user.address,
+              };
+              if (JSON.stringify(updated) !== JSON.stringify(user)) {
+                setUser(updated);
+                localStorage.setItem('atelierstore_user', JSON.stringify(updated));
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user?.email]);
+
+  // Helper keys for per-user Cart & Wishlist persistence
+  const getCartStorageKey = (u) => {
+    if (u && u.email) {
+      return `atelierstore_cart_${u.email.toLowerCase().trim()}`;
+    }
+    return 'atelierstore_cart_guest';
+  };
+
+  const getWishlistStorageKey = (u) => {
+    if (u && u.email) {
+      return `atelierstore_wishlist_${u.email.toLowerCase().trim()}`;
+    }
+    return 'atelierstore_wishlist_guest';
+  };
+
+  // Cart Items State (Persisted in localStorage per user)
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const savedCart = localStorage.getItem('atelierstore_cart');
-      return savedCart ? JSON.parse(savedCart) : [];
+      const savedUser = localStorage.getItem('atelierstore_user');
+      const u = savedUser ? JSON.parse(savedUser) : null;
+      const key = u && u.email ? `atelierstore_cart_${u.email.toLowerCase().trim()}` : 'atelierstore_cart_guest';
+      const savedCart = localStorage.getItem(key);
+      if (savedCart) return JSON.parse(savedCart);
+      const legacyCart = localStorage.getItem('atelierstore_cart');
+      return (!u && legacyCart) ? JSON.parse(legacyCart) : [];
     } catch (e) {
       return [];
     }
   });
 
-  // Wishlist Items State (Persisted in localStorage across page refreshes)
+  // Wishlist Items State (Persisted in localStorage per user)
   const [wishlistItems, setWishlistItems] = useState(() => {
     try {
-      const savedWishlist = localStorage.getItem('atelierstore_wishlist');
-      return savedWishlist ? JSON.parse(savedWishlist) : [];
+      const savedUser = localStorage.getItem('atelierstore_user');
+      const u = savedUser ? JSON.parse(savedUser) : null;
+      const key = u && u.email ? `atelierstore_wishlist_${u.email.toLowerCase().trim()}` : 'atelierstore_wishlist_guest';
+      const savedWishlist = localStorage.getItem(key);
+      if (savedWishlist) return JSON.parse(savedWishlist);
+      const legacyWishlist = localStorage.getItem('atelierstore_wishlist');
+      return (!u && legacyWishlist) ? JSON.parse(legacyWishlist) : [];
     } catch (e) {
       return [];
     }
@@ -157,23 +210,45 @@ export default function App() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Sync Cart Items to localStorage
+  // Load active user's Cart and Wishlist whenever user changes (login / logout)
+  useEffect(() => {
+    const cartKey = getCartStorageKey(user);
+    const wishlistKey = getWishlistStorageKey(user);
+
+    try {
+      const savedCart = localStorage.getItem(cartKey);
+      setCartItems(savedCart ? JSON.parse(savedCart) : []);
+    } catch (e) {
+      setCartItems([]);
+    }
+
+    try {
+      const savedWishlist = localStorage.getItem(wishlistKey);
+      setWishlistItems(savedWishlist ? JSON.parse(savedWishlist) : []);
+    } catch (e) {
+      setWishlistItems([]);
+    }
+  }, [user]);
+
+  // Sync Cart Items to localStorage for active user
   useEffect(() => {
     try {
-      localStorage.setItem('atelierstore_cart', JSON.stringify(cartItems));
+      const cartKey = getCartStorageKey(user);
+      localStorage.setItem(cartKey, JSON.stringify(cartItems));
     } catch (e) {
       console.error('Error saving cart to localStorage:', e);
     }
-  }, [cartItems]);
+  }, [cartItems, user]);
 
-  // Sync Wishlist Items to localStorage
+  // Sync Wishlist Items to localStorage for active user
   useEffect(() => {
     try {
-      localStorage.setItem('atelierstore_wishlist', JSON.stringify(wishlistItems));
+      const wishlistKey = getWishlistStorageKey(user);
+      localStorage.setItem(wishlistKey, JSON.stringify(wishlistItems));
     } catch (e) {
       console.error('Error saving wishlist to localStorage:', e);
     }
-  }, [wishlistItems]);
+  }, [wishlistItems, user]);
 
   // Sync user state to localStorage
   const handleAuthSuccess = (userData) => {
