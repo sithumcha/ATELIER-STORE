@@ -26,6 +26,12 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
   const [priceMax, setPriceMax] = useState(150000);
   const [activePreset, setActivePreset] = useState('all');
 
+  // Advanced Filters State
+  const [selectedColorFilter, setSelectedColorFilter] = useState('all');
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState('all');
+  const [selectedMaterialFilter, setSelectedMaterialFilter] = useState('all');
+  const [inStockOnly, setInStockOnly] = useState(false);
+
   const [selectedDiscipline, setSelectedDiscipline] = useState(() => {
     if (initialCategory) return initialCategory;
     if (activeTab === 'apparel' || activeTab === 'womens-wardrobe') return 'Women\'s Apparel';
@@ -95,6 +101,10 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     setPriceMin(0);
     setPriceMax(150000);
     setActivePreset('all');
+    setSelectedColorFilter('all');
+    setSelectedSizeFilter('all');
+    setSelectedMaterialFilter('all');
+    setInStockOnly(false);
     if (onClearSearch) onClearSearch();
   };
 
@@ -171,6 +181,24 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     { id: 'above-80k', label: 'Rs. 80,000+', min: 80000, max: 200000 },
   ];
 
+  const colorPresets = [
+    { id: 'all', label: 'All Hues', hex: null },
+    { id: 'ecru', label: 'Undyed Ecru', hex: '#E8E2D5' },
+    { id: 'charcoal', label: 'Sumi Charcoal', hex: '#1F1B18' },
+    { id: 'sage', label: 'Wabi Sage Green', hex: '#4A5844' },
+    { id: 'persimmon', label: 'Kakishibu Persimmon', hex: '#94492C' },
+  ];
+
+  const sizePresets = ['all', 'S', 'M', 'L', 'XL', 'II'];
+
+  const materialPresets = [
+    { id: 'all', label: 'All Materials' },
+    { id: 'flax', label: 'Normandy Flax' },
+    { id: 'silk', label: 'Organic Silk' },
+    { id: 'wool', label: 'Structure Wool' },
+    { id: 'cotton', label: 'Heavy Cotton' },
+  ];
+
   const getCategoryCount = (discipline) => {
     return products.filter((p) => matchesDiscipline(p, discipline)).length;
   };
@@ -186,7 +214,31 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     const matchesPrice = p.numericPrice >= priceMin && p.numericPrice <= priceMax;
     const matchesDisc = matchesDiscipline(p, selectedDiscipline);
     const matchesQuery = matchesSearch(p);
-    return matchesPrice && matchesDisc && matchesQuery;
+
+    let matchesColor = true;
+    if (selectedColorFilter !== 'all') {
+      const haystack = (JSON.stringify(p.colors || '') + ' ' + (p.title || '') + ' ' + (p.subtitle || '')).toLowerCase();
+      matchesColor = haystack.includes(selectedColorFilter.toLowerCase());
+    }
+
+    let matchesSize = true;
+    if (selectedSizeFilter !== 'all') {
+      const haystack = (JSON.stringify(p.sizes || '') + ' ' + (p.title || '') + ' ' + (p.subtitle || '')).toLowerCase();
+      matchesSize = haystack.includes(selectedSizeFilter.toLowerCase());
+    }
+
+    let matchesMaterial = true;
+    if (selectedMaterialFilter !== 'all') {
+      const haystack = ((p.category || '') + ' ' + (p.title || '') + ' ' + (p.subtitle || '')).toLowerCase();
+      matchesMaterial = haystack.includes(selectedMaterialFilter.toLowerCase());
+    }
+
+    let matchesStock = true;
+    if (inStockOnly) {
+      matchesStock = (p.stock === undefined || p.stock === null) ? true : Number(p.stock) > 0;
+    }
+
+    return matchesPrice && matchesDisc && matchesQuery && matchesColor && matchesSize && matchesMaterial && matchesStock;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -195,7 +247,16 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     return 0;
   });
 
-  const isFiltered = selectedDiscipline !== 'All Objects' || priceMin > 0 || priceMax < 150000 || activePreset !== 'all' || Boolean(searchQuery);
+  const isFiltered =
+    selectedDiscipline !== 'All Objects' ||
+    priceMin > 0 ||
+    priceMax < 150000 ||
+    activePreset !== 'all' ||
+    selectedColorFilter !== 'all' ||
+    selectedSizeFilter !== 'all' ||
+    selectedMaterialFilter !== 'all' ||
+    inStockOnly ||
+    Boolean(searchQuery);
 
   return (
     <div className="w-full bg-surface">
@@ -428,6 +489,79 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Color Swatch Filter */}
+            <div>
+              <div className="flex items-center justify-between mb-2 border-b border-surface-variant pb-2">
+                <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface font-semibold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base text-secondary">palette</span>
+                  <span>Colorway Palette</span>
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {colorPresets.map((col) => {
+                  const isSel = selectedColorFilter === (col.id === 'all' ? 'all' : col.label);
+                  return (
+                    <button
+                      key={col.id}
+                      type="button"
+                      onClick={() => setSelectedColorFilter(col.id === 'all' ? 'all' : col.label)}
+                      className={`px-2.5 py-1 rounded-full font-label-caps text-[10px] uppercase flex items-center gap-1.5 cursor-pointer border transition-all ${
+                        isSel ? 'bg-primary text-on-primary border-primary font-bold shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 text-on-surface-variant hover:border-secondary'
+                      }`}
+                    >
+                      {col.hex && (
+                        <span className="w-2.5 h-2.5 rounded-full border border-black/20" style={{ backgroundColor: col.hex }} />
+                      )}
+                      <span>{col.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Size Filter */}
+            <div>
+              <div className="flex items-center justify-between mb-2 border-b border-surface-variant pb-2">
+                <h3 className="font-label-caps text-label-caps uppercase tracking-wider text-on-surface font-semibold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base text-secondary">straighten</span>
+                  <span>Proportion / Size</span>
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {sizePresets.map((sz) => {
+                  const isSel = selectedSizeFilter === sz;
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => setSelectedSizeFilter(sz)}
+                      className={`w-9 h-9 rounded-lg font-label-caps text-xs uppercase font-bold flex items-center justify-center cursor-pointer border transition-all ${
+                        isSel ? 'bg-primary text-on-primary border-primary shadow-xs' : 'bg-surface-container-lowest border-surface-variant/60 text-on-surface-variant hover:border-secondary'
+                      }`}
+                    >
+                      {sz === 'all' ? 'ALL' : sz}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* In-Stock Toggle */}
+            <div>
+              <label className="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest border border-surface-variant cursor-pointer">
+                <span className="font-label-caps text-xs font-bold text-on-surface uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base text-emerald-600">check_circle</span>
+                  <span>In-Stock Pieces Only</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={(e) => setInStockOnly(e.target.checked)}
+                  className="accent-secondary h-4 w-4 cursor-pointer"
+                />
+              </label>
             </div>
 
           </aside>

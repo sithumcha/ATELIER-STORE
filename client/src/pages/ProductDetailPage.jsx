@@ -23,6 +23,14 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   const [recommendedProducts, setRecommendedProducts] = useState([]);
 
 
+  // Verified Patron Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newReviewerName, setNewReviewerName] = useState('');
+  const [newReviewTitle, setNewReviewTitle] = useState('');
+  const [newReviewBody, setNewReviewBody] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
   // Accordions State
   const [openAccordions, setOpenAccordions] = useState({
     provenance: true,
@@ -30,6 +38,74 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     care: false,
     passport: false,
   });
+
+  useEffect(() => {
+    // Load reviews for current product
+    try {
+      const savedRev = localStorage.getItem(`atelierstore_reviews_${selectedProductId}`);
+      if (savedRev) {
+        setReviews(JSON.parse(savedRev));
+      } else {
+        // Initial Curated Reviews
+        setReviews([
+          {
+            id: 'rev-1',
+            rating: 5,
+            name: 'Astrid Lindqvist',
+            location: 'Stockholm, Sweden',
+            date: 'September 12, 2026',
+            title: 'Exquisite tactile weight & drape',
+            body: 'The unbleached Normandy flax has a remarkable structural heft yet breathes effortlessly in warm weather. Truly an heirloom piece that will age with dignity.',
+            verified: true,
+          },
+          {
+            id: 'rev-2',
+            rating: 5,
+            name: 'Kenji Takahashi',
+            location: 'Kyoto, Japan',
+            date: 'August 28, 2026',
+            title: 'Authentic 1948 shuttle loom weave',
+            body: 'Having inspected the selvage seam detail, the tension and microscopic channels in the flax thread are unmistakably crafted on vintage slow-shuttle looms.',
+            verified: true,
+          },
+        ]);
+      }
+    } catch (e) {
+      console.error('Error loading reviews:', e);
+    }
+  }, [selectedProductId]);
+
+  const handleAddReview = (e) => {
+    e.preventDefault();
+    if (!newReviewerName.trim() || !newReviewBody.trim()) {
+      alert('Please enter your name and review message.');
+      return;
+    }
+
+    const newRevObj = {
+      id: `rev-${Date.now()}`,
+      rating: Number(newRating) || 5,
+      name: newReviewerName.trim(),
+      location: 'Verified Collector',
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      title: newReviewTitle.trim() || 'Remarkable Archival Garment',
+      body: newReviewBody.trim(),
+      verified: true,
+    };
+
+    const updated = [newRevObj, ...reviews];
+    setReviews(updated);
+    try {
+      localStorage.setItem(`atelierstore_reviews_${selectedProductId}`, JSON.stringify(updated));
+    } catch (err) {}
+
+    setNewReviewerName('');
+    setNewReviewTitle('');
+    setNewReviewBody('');
+    setNewRating(5);
+    setReviewSuccess(true);
+    setTimeout(() => setReviewSuccess(false), 3500);
+  };
 
   const toggleAccordion = (key) => {
     setOpenAccordions((prev) => ({
@@ -767,6 +843,134 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Verified Patron Reviews Section */}
+      <section className="w-full max-w-[1380px] mx-auto px-margin py-space-2xl border-b border-surface-variant">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-space-xl gap-space-sm border-b border-surface-variant pb-space-md">
+          <div>
+            <span className="font-label-caps text-label-caps text-secondary tracking-widest block font-bold">
+              VERIFIED PATRON EVALUATIONS
+            </span>
+            <h3 className="font-serif text-3xl text-on-surface font-normal mt-1">
+              Patron Monograph Reviews &amp; Ratings
+            </h3>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-amber-500 text-xl font-bold">
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+              <span className="text-on-surface font-headline-sm text-lg ml-2">4.9 / 5.0</span>
+            </div>
+            <span className="font-label-caps text-xs text-on-surface-variant">({reviews.length} Verified Evaluations)</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-2xl items-start">
+          {/* Reviews List */}
+          <div className="lg:col-span-7 space-y-space-md">
+            {reviewSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-100 text-emerald-900 font-label-caps text-xs font-bold flex items-center gap-2 border border-emerald-300 animate-fade-in">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                <span>Thank you! Your verified patron review has been recorded.</span>
+              </div>
+            )}
+
+            {reviews.map((rev) => (
+              <div key={rev.id} className="p-space-lg rounded-xl bg-surface-container-low border border-surface-variant space-y-2 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-subheading-md text-sm text-on-surface font-bold">{rev.name}</span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-caps text-[10px] font-bold uppercase">
+                      ✓ Verified Patron
+                    </span>
+                  </div>
+                  <span className="font-body-sm text-[11px] text-on-surface-variant">{rev.date}</span>
+                </div>
+
+                <div className="flex items-center gap-1 text-amber-500 text-sm font-bold">
+                  {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                    <span key={i}>★</span>
+                  ))}
+                  <span className="font-subheading-md text-xs text-on-surface font-bold ml-2">{rev.title}</span>
+                </div>
+
+                <p className="font-body-md text-xs text-on-surface-variant leading-relaxed">
+                  "{rev.body}"
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Submit Review Form */}
+          <div className="lg:col-span-5 bg-surface-container-low p-space-xl rounded-xl border border-surface-variant space-y-space-md shadow-xs">
+            <div className="border-b border-surface-variant pb-3">
+              <span className="font-label-caps text-[10px] uppercase text-secondary font-bold tracking-wider">Patron Voice</span>
+              <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">+ Submit Garment Evaluation</h4>
+            </div>
+
+            <form onSubmit={handleAddReview} className="space-y-3">
+              <div>
+                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Rating *</label>
+                <div className="flex items-center gap-2">
+                  {[5, 4, 3, 2, 1].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setNewRating(star)}
+                      className={`px-3 py-1.5 rounded-lg font-label-caps text-xs font-bold cursor-pointer transition-colors ${
+                        newRating === star ? 'bg-amber-500 text-white font-bold' : 'bg-surface-container border border-surface-variant text-on-surface-variant'
+                      }`}
+                    >
+                      {star} ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Patron Name *</label>
+                <input
+                  required
+                  type="text"
+                  value={newReviewerName}
+                  onChange={(e) => setNewReviewerName(e.target.value)}
+                  placeholder="e.g. Clara Vanderbilt"
+                  className="w-full h-10 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Review Title</label>
+                <input
+                  type="text"
+                  value={newReviewTitle}
+                  onChange={(e) => setNewReviewTitle(e.target.value)}
+                  placeholder="e.g. Exceptional hand-woven texture"
+                  className="w-full h-10 px-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1 font-bold text-on-surface">Written Evaluation *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newReviewBody}
+                  onChange={(e) => setNewReviewBody(e.target.value)}
+                  placeholder="Describe your tactile experience, drape, and proportion..."
+                  className="w-full p-3 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-surface-variant/60 focus:outline-none focus:border-secondary"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full h-11 bg-primary text-on-primary hover:bg-secondary font-label-caps text-xs uppercase font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                Submit Patron Evaluation
+              </button>
+            </form>
           </div>
         </div>
       </section>

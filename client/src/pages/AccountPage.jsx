@@ -161,6 +161,91 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
     setLoadingOrders(false);
   };
 
+  const handlePrintInvoice = (order) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const itemsHtml = (order.items || []).map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.title}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.qty || 1}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.price}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Atelier Tax Invoice - ${order.id}</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #1c1917; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1c1917; padding-bottom: 20px; }
+            .title { font-size: 26px; font-weight: bold; letter-spacing: 0.1em; }
+            .badge { background: #c27803; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+            th { text-align: left; background: #f5f5f4; padding: 12px; font-size: 11px; text-transform: uppercase; }
+            .total-box { margin-top: 30px; text-align: right; font-size: 18px; font-weight: bold; color: #1c1917; }
+            .footer { margin-top: 50px; font-size: 11px; color: #78716c; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="title">ATELIER STORE</div>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #78716c;">Kyoto & Stockholm Preservation Depots</p>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge">OFFICIAL INVOICE</span>
+              <p style="margin: 8px 0 0 0; font-weight: bold;">Order #${order.id}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #78716c;">Date: ${order.date}</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+            <div>
+              <p style="font-size: 11px; text-transform: uppercase; color: #78716c; margin-bottom: 4px;">Patron Account:</p>
+              <p style="font-weight: bold; margin: 0;">${user?.name || 'Clara Vanderbilt'}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px;">${user?.email || 'patron@atelierstore.com'}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-size: 11px; text-transform: uppercase; color: #78716c; margin-bottom: 4px;">Fulfillment Courier:</p>
+              <p style="font-weight: bold; margin: 0;">${order.courier}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px;">Status: ${order.status}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Archival Item Description</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: right;">Settlement Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <div class="total-box">
+            <p>Total Order Settlement: ${order.total}</p>
+          </div>
+
+          <div class="footer">
+            <p>🔒 256-Bit SSL Encrypted Vault Transaction • Hand-crafted Archival Garment Authenticated</p>
+            <p>Atelier Editions (Pvt) Ltd • Kyoto & Stockholm Consignment Registry</p>
+          </div>
+
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleSaveProfile = (e) => {
     e.preventDefault();
     const updatedUser = {
@@ -407,11 +492,23 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                         }`}
                       />
                     </div>
-                    <div className="flex justify-between font-label-caps text-[10px] text-on-surface-variant mt-2">
+                    <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant mt-2">
                       <span>Kyoto Dispatch</span>
                       <span className="font-bold text-secondary">Customs Cleared</span>
                       <span>Delivery</span>
                     </div>
+                  </div>
+
+                  {/* Print / Download Invoice Action */}
+                  <div className="pt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handlePrintInvoice(order)}
+                      className="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-surface-variant shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                      <span>Download / Print Tax Invoice</span>
+                    </button>
                   </div>
                 </div>
               ))
