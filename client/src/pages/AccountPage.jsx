@@ -253,15 +253,26 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
     setLoadingOrders(false);
   };
 
+  const getOrderStepIndex = (statusStr = '') => {
+    const s = String(statusStr).toLowerCase();
+    if (s.includes('deliver')) return 4;
+    if (s.includes('dispatch') || s.includes('transit') || s.includes('courier')) return 3;
+    if (s.includes('prepare') || s.includes('looming') || s.includes('crafting') || s.includes('dyeing')) return 2;
+    return 1;
+  };
+
   const handlePrintInvoice = (order) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const itemsHtml = (order.items || []).map(item => `
+    const itemsHtml = (order.items || []).map((item, idx) => `
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.title}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.qty || 1}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.price}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e7e5e4; font-weight: 500;">
+          <div style="font-size: 14px; color: #1c1917;">${item.title}</div>
+          <div style="font-size: 11px; color: #78716c; margin-top: 2px;">Item SKU: ATL-2026-00${idx + 1} • Handcrafted Silk/Linen</div>
+        </td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e7e5e4; text-align: center; font-size: 13px;">${item.qty || 1}</td>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #e7e5e4; text-align: right; font-weight: 600; font-size: 14px;">${item.price}</td>
       </tr>
     `).join('');
 
@@ -269,48 +280,52 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Atelier Tax Invoice - ${order.id}</title>
+          <title>ATELIER STORE — Tax Invoice #${order.id}</title>
           <style>
-            body { font-family: sans-serif; padding: 40px; color: #1c1917; }
+            @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+            body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 40px; color: #1c1917; background: #fff; max-width: 800px; margin: 0 auto; }
             .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1c1917; padding-bottom: 20px; }
-            .title { font-size: 26px; font-weight: bold; letter-spacing: 0.1em; }
-            .badge { background: #c27803; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+            .title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 600; letter-spacing: 0.15em; color: #1c1917; }
+            .badge { background: #c27803; color: white; padding: 5px 14px; border-radius: 9999px; font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; }
             table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-            th { text-align: left; background: #f5f5f4; padding: 12px; font-size: 11px; text-transform: uppercase; }
-            .total-box { margin-top: 30px; text-align: right; font-size: 18px; font-weight: bold; color: #1c1917; }
-            .footer { margin-top: 50px; font-size: 11px; color: #78716c; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+            th { text-align: left; background: #f5f5f4; padding: 12px 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #78716c; }
+            .total-box { margin-top: 30px; padding: 20px; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; text-align: right; }
+            .footer { margin-top: 50px; font-size: 11px; color: #78716c; text-align: center; border-top: 1px solid #e7e5e4; padding-top: 20px; }
+            @media print { body { padding: 0; } }
           </style>
         </head>
         <body>
           <div class="header">
             <div>
               <div class="title">ATELIER STORE</div>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #78716c;">Kyoto & Stockholm Preservation Depots</p>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #78716c; letter-spacing: 0.05em;">Kyoto & Stockholm Preservation Depots</p>
             </div>
             <div style="text-align: right;">
-              <span class="badge">OFFICIAL INVOICE</span>
-              <p style="margin: 8px 0 0 0; font-weight: bold;">Order #${order.id}</p>
-              <p style="margin: 2px 0 0 0; font-size: 12px; color: #78716c;">Date: ${order.date}</p>
+              <span class="badge">OFFICIAL TAX INVOICE</span>
+              <p style="margin: 10px 0 0 0; font-weight: 700; font-size: 16px;">Acquisition #${order.id}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #78716c;">Issued: ${order.date}</p>
             </div>
           </div>
 
-          <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+          <div style="margin-top: 30px; display: flex; justify-content: space-between; gap: 20px;">
             <div>
-              <p style="font-size: 11px; text-transform: uppercase; color: #78716c; margin-bottom: 4px;">Patron Account:</p>
-              <p style="font-weight: bold; margin: 0;">${user?.name || 'Clara Vanderbilt'}</p>
-              <p style="margin: 2px 0 0 0; font-size: 12px;">${user?.email || 'patron@atelierstore.com'}</p>
+              <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #78716c; margin-bottom: 6px;">Billed Patron Account:</p>
+              <p style="font-weight: 700; font-size: 15px; margin: 0;">${user?.name || 'Clara Vanderbilt'}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #44403c;">${user?.email || 'patron@atelierstore.com'}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #78716c;">${user?.address?.city || 'Colombo'}, ${user?.address?.country || 'Sri Lanka'}</p>
             </div>
             <div style="text-align: right;">
-              <p style="font-size: 11px; text-transform: uppercase; color: #78716c; margin-bottom: 4px;">Fulfillment Courier:</p>
-              <p style="font-weight: bold; margin: 0;">${order.courier}</p>
-              <p style="margin: 2px 0 0 0; font-size: 12px;">Status: ${order.status}</p>
+              <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #78716c; margin-bottom: 6px;">Fulfillment & Logistics:</p>
+              <p style="font-weight: 700; font-size: 14px; margin: 0; color: #c27803;">${order.courier || 'DHL Insured Vault Courier'}</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #44403c;">Status: <strong>${order.status}</strong></p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; color: #78716c;">Estimated Delivery: 3-5 Business Days</p>
             </div>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th>Archival Item Description</th>
+                <th>Archival Garment Description</th>
                 <th style="text-align: center;">Quantity</th>
                 <th style="text-align: right;">Settlement Amount</th>
               </tr>
@@ -321,12 +336,13 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
           </table>
 
           <div class="total-box">
-            <p>Total Order Settlement: ${order.total}</p>
+            <p style="margin: 0; font-size: 12px; color: #78716c;">Subtotal + Insured Diplomatic Freight Included</p>
+            <p style="margin: 6px 0 0 0; font-size: 22px; font-weight: 700; color: #1c1917;">Total Settlement: ${order.total}</p>
           </div>
 
           <div class="footer">
-            <p>🔒 256-Bit SSL Encrypted Vault Transaction • Hand-crafted Archival Garment Authenticated</p>
-            <p>Atelier Editions (Pvt) Ltd • Kyoto & Stockholm Consignment Registry</p>
+            <p style="margin-bottom: 6px; font-weight: 600;">🔒 256-Bit SSL Encrypted Vault Transaction • Hand-crafted Archival Garment Authenticated</p>
+            <p style="margin: 0;">Atelier Editions (Pvt) Ltd • Kyoto Flagship Suite & Stockholm Consignment Registry</p>
           </div>
 
           <script>
@@ -538,7 +554,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                       isDelivered ? 'border-emerald-300/80 bg-emerald-50/10' : 'border-surface-variant'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-md">
                       <div>
                         <span className="font-label-caps text-xs text-on-surface-variant uppercase block">
                           Acquisition #{order.id}
@@ -547,13 +563,21 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                           {order.date}
                         </span>
                       </div>
-                      <div className="flex items-center gap-space-md">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handlePrintInvoice(order)}
+                          className="px-3 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-surface-variant rounded font-label-caps text-[10px] uppercase font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                          title="Print official tax receipt & invoice PDF"
+                        >
+                          <span className="material-symbols-outlined text-sm">print</span>
+                          Print Invoice PDF
+                        </button>
                         <span
                           className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
                             isDelivered
                               ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
-                              : order.status === 'In Transit'
-                              ? 'bg-secondary/20 text-secondary font-semibold'
+                              : order.status === 'In Transit' || order.status?.includes('Dispatched')
+                              ? 'bg-sky-100 text-sky-900 border border-sky-300 font-semibold'
                               : 'bg-surface-container-high text-on-surface-variant font-semibold'
                           }`}
                         >
@@ -564,6 +588,68 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                         </span>
                       </div>
                     </div>
+
+                    {/* Live Order Status Stepper Timeline */}
+                    {(() => {
+                      const currentStep = getOrderStepIndex(order.status);
+                      const steps = [
+                        { title: 'Order Placed', desc: 'Logged & Confirmed', icon: 'receipt_long' },
+                        { title: 'Hand-Looming', desc: 'Botanical Crafting', icon: 'palette' },
+                        { title: 'Dispatched DHL', desc: 'Diplomatic Courier', icon: 'local_shipping' },
+                        { title: 'Delivered', desc: 'Patron Received', icon: 'task_alt' },
+                      ];
+
+                      return (
+                        <div className="mb-space-lg p-3 bg-surface-container-lowest rounded-xl border border-surface-variant/50">
+                          <div className="flex items-center justify-between mb-3 px-1">
+                            <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                              Live Fulfillment Timeline
+                            </span>
+                            <span className="font-label-caps text-[10px] text-secondary font-bold">
+                              Step {currentStep} of 4 · {order.status}
+                            </span>
+                          </div>
+
+                          <div className="relative flex items-center justify-between px-2 py-1">
+                            <div className="absolute top-1/2 left-4 right-4 h-1 bg-surface-container-high -translate-y-1/2 z-0 rounded-full"></div>
+                            <div
+                              className="absolute top-1/2 left-4 h-1 bg-secondary -translate-y-1/2 z-0 rounded-full transition-all duration-700 ease-out"
+                              style={{ width: `calc(${((currentStep - 1) / 3) * 100}% - 2rem)` }}
+                            ></div>
+
+                            {steps.map((st, i) => {
+                              const stepNum = i + 1;
+                              const isDone = stepNum <= currentStep;
+                              const isCurrent = stepNum === currentStep;
+
+                              return (
+                                <div key={i} className="relative z-10 flex flex-col items-center">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-xs ${
+                                      isCurrent
+                                        ? 'bg-secondary text-on-secondary ring-4 ring-secondary/20 scale-110 font-bold'
+                                        : isDone
+                                        ? 'bg-primary text-on-primary'
+                                        : 'bg-surface-container-high text-outline-variant border border-surface-variant'
+                                    }`}
+                                  >
+                                    <span className="material-symbols-outlined text-sm">{st.icon}</span>
+                                  </div>
+                                  <span
+                                    className={`font-label-caps text-[9px] mt-1.5 text-center whitespace-nowrap ${
+                                      isCurrent ? 'text-secondary font-bold' : isDone ? 'text-on-surface font-semibold' : 'text-outline-variant'
+                                    }`}
+                                  >
+                                    {st.title}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {isDelivered && (
                       <div className="mb-space-md p-3 rounded-lg bg-emerald-500/10 border border-emerald-300/60 text-emerald-900 font-label-caps text-xs flex items-center justify-between">

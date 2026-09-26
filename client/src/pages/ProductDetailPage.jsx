@@ -30,6 +30,76 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   const [newReviewTitle, setNewReviewTitle] = useState('');
   const [newReviewBody, setNewReviewBody] = useState('');
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  
+  // Order Verification State for Reviews
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [userOrders, setUserOrders] = useState([]);
+
+  const loggedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('atelierstore_user') || 'null');
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  useEffect(() => {
+    if (loggedUser?.name && !newReviewerName) {
+      setNewReviewerName(loggedUser.name);
+    }
+  }, [loggedUser?.name]);
+
+  // Check if current client has purchased this product
+  useEffect(() => {
+    let isMounted = true;
+    const checkPurchaseEligibility = async () => {
+      let orders = [];
+      try {
+        const localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+        if (Array.isArray(localOrds)) orders = [...localOrds];
+      } catch (e) {}
+
+      try {
+        const res = await fetch('http://localhost:5001/api/orders');
+        if (res.ok) {
+          const dbOrds = await res.json();
+          if (Array.isArray(dbOrds) && dbOrds.length > 0) {
+            dbOrds.forEach((dbO) => {
+              if (!orders.some((o) => (o.orderId && o.orderId === dbO.orderId) || (o.id && o.id === dbO.id))) {
+                orders.push(dbO);
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
+      if (!isMounted) return;
+      setUserOrders(orders);
+
+      const targetId = String(selectedProductId || product?.id || product?._id || '');
+      const targetTitle = (product?.title || '').toLowerCase().trim();
+
+      const matched = orders.some((ord) => {
+        if (!ord.items || !Array.isArray(ord.items)) return false;
+        return ord.items.some((item) => {
+          const itemId = String(item.id || item.productId || item._id || '');
+          const itemTitle = (item.title || '').toLowerCase().trim();
+
+          const idMatch = itemId && targetId && (itemId === targetId || targetId.includes(itemId) || itemId.includes(targetId));
+          const titleMatch = itemTitle && targetTitle && (itemTitle.includes(targetTitle) || targetTitle.includes(itemTitle));
+
+          return idMatch || titleMatch;
+        });
+      });
+
+      setHasPurchased(matched);
+    };
+
+    checkPurchaseEligibility();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedProductId, product]);
 
   // Accordions State
   const [openAccordions, setOpenAccordions] = useState({
@@ -95,34 +165,63 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
   const handleAddReview = (e) => {
     e.preventDefault();
+
+    if (!hasPurchased) {
+      alert('Only verified patrons who have purchased this garment can leave a review.');
+      return;
+    }
+
     if (!newReviewerName.trim() || !newReviewBody.trim()) {
       alert('Please enter your name and review message.');
       return;
     }
 
+    const clientAvatar = loggedUser?.avatar || (
+      loggedUser?.name || newReviewerName.trim()
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(newReviewerName.trim())}&background=1c1917&color=f5f5f4&bold=true`
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+    );
+
     const newRevObj = {
       id: `rev-${Date.now()}`,
+      productId: selectedProductId || product?.id || 'p1',
+      productTitle: product?.title || 'Archival Garment',
       rating: Number(newRating) || 5,
       name: newReviewerName.trim(),
-      location: 'Verified Collector',
+      userName: newReviewerName.trim(),
+      location: loggedUser?.address?.city ? `${loggedUser.address.city}, ${loggedUser.address.country || 'Sri Lanka'}` : 'Verified Collector',
+      userLocation: loggedUser?.address?.city ? `${loggedUser.address.city}, ${loggedUser.address.country || 'Sri Lanka'}` : 'Verified Collector',
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       title: newReviewTitle.trim() || 'Remarkable Archival Garment',
       body: newReviewBody.trim(),
       verified: true,
+      avatar: clientAvatar,
+      status: 'Pending',
+      approved: false,
     };
 
     const updated = [newRevObj, ...reviews];
     setReviews(updated);
     try {
       localStorage.setItem(`atelierstore_reviews_${selectedProductId}`, JSON.stringify(updated));
+      const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
+      localStorage.setItem('atelierstore_all_user_reviews', JSON.stringify([newRevObj, ...allUserRevs]));
     } catch (err) {}
 
-    setNewReviewerName('');
+    try {
+      fetch('http://localhost:5001/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRevObj),
+      }).catch((e) => console.log('Backend review POST skip:', e));
+    } catch (e) {}
+
+    setNewReviewerName(loggedUser?.name || '');
     setNewReviewTitle('');
     setNewReviewBody('');
     setNewRating(5);
     setReviewSuccess(true);
-    setTimeout(() => setReviewSuccess(false), 3500);
+    setTimeout(() => setReviewSuccess(false), 4500);
   };
 
   const toggleAccordion = (key) => {

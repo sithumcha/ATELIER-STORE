@@ -30,6 +30,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
   const [selectedColorFilter, setSelectedColorFilter] = useState('all');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState('all');
   const [selectedMaterialFilter, setSelectedMaterialFilter] = useState('all');
+  const [selectedGsmFilter, setSelectedGsmFilter] = useState('all');
   const [inStockOnly, setInStockOnly] = useState(false);
 
   const [selectedDiscipline, setSelectedDiscipline] = useState(() => {
@@ -104,6 +105,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     setSelectedColorFilter('all');
     setSelectedSizeFilter('all');
     setSelectedMaterialFilter('all');
+    setSelectedGsmFilter('all');
     setInStockOnly(false);
     if (onClearSearch) onClearSearch();
   };
@@ -233,12 +235,24 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
       matchesMaterial = haystack.includes(selectedMaterialFilter.toLowerCase());
     }
 
+    let matchesGsm = true;
+    if (selectedGsmFilter !== 'all') {
+      const gsmHaystack = ((p.category || '') + ' ' + (p.title || '') + ' ' + (p.subtitle || '')).toLowerCase();
+      if (selectedGsmFilter === 'light') {
+        matchesGsm = gsmHaystack.includes('200') || gsmHaystack.includes('210') || gsmHaystack.includes('240') || gsmHaystack.includes('280') || gsmHaystack.includes('silk') || gsmHaystack.includes('light');
+      } else if (selectedGsmFilter === 'mid') {
+        matchesGsm = gsmHaystack.includes('300') || gsmHaystack.includes('320') || gsmHaystack.includes('350') || gsmHaystack.includes('380') || gsmHaystack.includes('linen') || gsmHaystack.includes('flax');
+      } else if (selectedGsmFilter === 'heavy') {
+        matchesGsm = gsmHaystack.includes('400') || gsmHaystack.includes('500') || gsmHaystack.includes('520') || gsmHaystack.includes('680') || gsmHaystack.includes('wool') || gsmHaystack.includes('coat') || gsmHaystack.includes('duster');
+      }
+    }
+
     let matchesStock = true;
     if (inStockOnly) {
       matchesStock = (p.stock === undefined || p.stock === null) ? true : Number(p.stock) > 0;
     }
 
-    return matchesPrice && matchesDisc && matchesQuery && matchesColor && matchesSize && matchesMaterial && matchesStock;
+    return matchesPrice && matchesDisc && matchesQuery && matchesColor && matchesSize && matchesMaterial && matchesGsm && matchesStock;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -309,6 +323,36 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
               );
             })}
           </div>
+
+          {/* Fabric GSM Weight Filter Bar */}
+          <div className="mt-space-md pt-space-sm border-t border-surface-variant/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-label-caps text-[11px] text-on-surface-variant uppercase tracking-wider font-semibold">
+              Filter By Fabric Weight (GSM):
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {[
+                { id: 'all', label: 'All Weights' },
+                { id: 'light', label: '🪶 Lightweight (200-280 GSM)' },
+                { id: 'mid', label: '🌾 Midweight (300-380 GSM)' },
+                { id: 'heavy', label: '🧥 Heavyweight (400+ GSM)' },
+              ].map((gsm) => {
+                const isSelected = selectedGsmFilter === gsm.id;
+                return (
+                  <button
+                    key={gsm.id}
+                    onClick={() => setSelectedGsmFilter(gsm.id)}
+                    className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase cursor-pointer transition-all shrink-0 ${
+                      isSelected
+                        ? 'bg-secondary text-on-secondary font-bold shadow-xs'
+                        : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    {gsm.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Active Filter Bar & Controls */}
@@ -326,6 +370,18 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                 <span>Search: "{searchQuery}"</span>
                 <button
                   onClick={onClearSearch}
+                  className="hover:text-primary cursor-pointer ml-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </span>
+            )}
+
+            {selectedGsmFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-secondary text-on-secondary font-label-caps text-[11px] uppercase font-bold shadow-xs">
+                <span>GSM: {selectedGsmFilter.toUpperCase()}</span>
+                <button
+                  onClick={() => setSelectedGsmFilter('all')}
                   className="hover:text-primary cursor-pointer ml-1"
                 >
                   <span className="material-symbols-outlined text-[14px]">close</span>
@@ -632,11 +688,17 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                           e.stopPropagation();
                           handleQuickAdd(p);
                         }}
-                        className="absolute bottom-3 inset-x-3 h-11 rounded-lg bg-primary text-on-primary font-label-md text-label-md tracking-wider uppercase backdrop-blur-md opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hover:bg-secondary flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                        className={`absolute bottom-3 inset-x-3 h-11 rounded-xl font-label-caps text-xs tracking-wider uppercase backdrop-blur-md opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg cursor-pointer font-bold ${
+                          addedNotice[p.id]
+                            ? 'bg-emerald-700 text-white shadow-emerald-900/20'
+                            : 'bg-primary text-on-primary hover:bg-secondary'
+                        }`}
                         type="button"
                       >
-                        <span className="material-symbols-outlined text-base">add_shopping_cart</span>
-                        <span>Quick Add +</span>
+                        <span className="material-symbols-outlined text-base">
+                          {addedNotice[p.id] ? 'check_circle' : 'add_shopping_cart'}
+                        </span>
+                        <span>{addedNotice[p.id] ? 'Added to Bag ✓' : 'Quick Add +'}</span>
                       </button>
                     </div>
 
@@ -656,9 +718,23 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                         <span className="font-price-editorial text-price-editorial text-primary font-bold">
                           {p.price}
                         </span>
-                        <span className="font-label-caps text-[10px] text-secondary font-semibold group-hover:underline">
-                          View Specs →
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickAdd(p);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg font-label-caps text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all shadow-xs cursor-pointer active:scale-95 ${
+                            addedNotice[p.id]
+                              ? 'bg-emerald-700 text-white'
+                              : 'bg-primary text-on-primary hover:bg-secondary hover:shadow-md'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            {addedNotice[p.id] ? 'check_circle' : 'shopping_bag'}
+                          </span>
+                          <span>{addedNotice[p.id] ? 'Added ✓' : 'Add to Bag'}</span>
+                        </button>
                       </div>
                     </div>
                   </div>

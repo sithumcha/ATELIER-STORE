@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 const INITIAL_DISCOUNTS = [
-  { id: 'disc-1', code: 'ATELIER10', percentage: 10, title: '10% Welcome Patron Discount', active: true, createdAt: '2026-09-01' },
-  { id: 'disc-2', code: 'LUXURY20', percentage: 20, title: '20% VIP Archival Privilege', active: true, createdAt: '2026-09-10' },
-  { id: 'disc-3', code: 'SUMMER25', percentage: 25, title: '25% Solstice Special Edition', active: true, createdAt: '2026-09-15' },
-  { id: 'disc-4', code: 'WELCOME15', percentage: 15, title: '15% First Order Courtesy', active: true, createdAt: '2026-09-20' },
+  { id: 'disc-1', code: 'EQUINOX10', percentage: 10, title: '10% Spring Equinox Collection Privilege', active: true, createdAt: '2026-09-01' },
+  { id: 'disc-2', code: 'ATELIER2026', percentage: 20, title: '20% Atelier Vault Member Privilege', active: true, createdAt: '2026-09-10' },
+  { id: 'disc-3', code: 'ATELIER10', percentage: 10, title: '10% Welcome Patron Courtesy', active: true, createdAt: '2026-09-15' },
+  { id: 'disc-4', code: 'LUXURY20', percentage: 20, title: '20% VIP Archival Privilege', active: true, createdAt: '2026-09-20' },
 ];
 
 export default function AdminDiscounts() {

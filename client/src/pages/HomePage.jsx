@@ -815,26 +815,42 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                       alt={p.title}
                       src={p.img}
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-surface/95 backdrop-blur p-space-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-between">
-                      <div className="flex items-center gap-1 font-label-uppercase text-[10px] text-on-surface">
+                    <div className="absolute inset-x-0 bottom-0 bg-surface/95 backdrop-blur-md p-2.5 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-between gap-2 border-t border-surface-variant/30 shadow-md z-10">
+                      <div className="flex items-center gap-1 font-label-caps text-xs">
                         {p.sizes.map((sz) => (
                           <span
                             key={sz}
-                            onClick={() => handleSelectSize(p.id, sz)}
-                            className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${(selectedSizes[p.id] || p.sizes[0]) === sz
-                              ? 'bg-primary text-on-primary'
-                              : 'bg-surface-container hover:bg-primary hover:text-on-primary'
-                              }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectSize(p.id, sz);
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                              (selectedSizes[p.id] || p.sizes[0]) === sz
+                                ? 'bg-primary text-on-primary shadow-2xs scale-105'
+                                : 'bg-surface-container-high text-on-surface hover:bg-primary/20 hover:text-primary'
+                            }`}
                           >
                             {sz}
                           </span>
                         ))}
                       </div>
                       <button
-                        onClick={() => handleAddGarmentToCart(p)}
-                        className="font-label-uppercase text-[10px] text-secondary font-semibold hover:underline cursor-pointer"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddGarmentToCart(p);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg font-label-caps text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-200 shadow-sm cursor-pointer active:scale-95 ${
+                          isAdded
+                            ? 'bg-emerald-700 text-white shadow-emerald-900/20'
+                            : 'bg-primary text-on-primary hover:bg-secondary hover:shadow-md'
+                        }`}
+                        title="Quick Add to Bag"
                       >
-                        Quick Add +
+                        <span className="material-symbols-outlined text-[15px]">
+                          {isAdded ? 'check_circle' : 'shopping_bag'}
+                        </span>
+                        <span>{isAdded ? 'Added ✓' : 'Quick Add +'}</span>
                       </button>
                     </div>
                   </div>
@@ -853,18 +869,28 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                         Color: {p.color}
                       </p>
                     </div>
-                    <div className="pt-space-md flex items-center justify-between">
-                      <span className="font-title-md text-title-md text-on-surface font-bold">
-                        Rs. {Math.round(p.price).toLocaleString('en-LK')}
-                      </span>
+                    <div className="pt-space-md flex items-center justify-between gap-2 border-t border-surface-variant/30 mt-3">
+                      <div>
+                        <span className="font-title-md text-title-md text-on-surface font-bold block">
+                          Rs. {Math.round(p.price).toLocaleString('en-LK')}
+                        </span>
+                      </div>
                       <button
-                        onClick={() => handleAddGarmentToCart(p)}
-                        className={`px-space-sm py-1 rounded font-label-uppercase text-[10px] transition-colors cursor-pointer ${isAdded
-                          ? 'bg-secondary text-on-secondary'
-                          : 'bg-surface-container text-on-surface hover:bg-primary hover:text-on-primary'
-                          }`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddGarmentToCart(p);
+                        }}
+                        className={`px-3.5 py-2 rounded-xl font-label-caps text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 cursor-pointer shadow-sm active:scale-95 ${
+                          isAdded
+                            ? 'bg-emerald-700 text-white shadow-emerald-900/20 scale-105'
+                            : 'bg-primary text-on-primary hover:bg-secondary hover:shadow-md'
+                        }`}
                       >
-                        {isAdded ? 'Added ✓' : 'Select Size & Bag'}
+                        <span className="material-symbols-outlined text-[16px]">
+                          {isAdded ? 'check_circle' : 'add_shopping_cart'}
+                        </span>
+                        <span>{isAdded ? 'Added ✓' : 'Add to Bag'}</span>
                       </button>
                     </div>
                   </div>

@@ -83,10 +83,10 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
 
     // Load dynamic promo codes configured by Admin in localStorage
     let activeDiscounts = [
+      { code: 'EQUINOX10', percentage: 10, active: true },
+      { code: 'ATELIER2026', percentage: 20, active: true },
       { code: 'ATELIER10', percentage: 10, active: true },
       { code: 'LUXURY20', percentage: 20, active: true },
-      { code: 'WELCOME15', percentage: 15, active: true },
-      { code: 'SUMMER25', percentage: 25, active: true },
     ];
 
     try {
