@@ -24,6 +24,98 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   const [newCity, setNewCity] = useState('');
   const [newCountry, setNewCountry] = useState('');
 
+  // Delivered Item Review State
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewNotice, setReviewNotice] = useState('');
+  const [submittedReviews, setSubmittedReviews] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('atelierstore_submitted_order_reviews') || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const handleOpenReviewModal = (order, item) => {
+    setReviewModalItem({
+      orderId: order.id,
+      item: item,
+      title: item.title,
+      id: item.id || item.title,
+    });
+    setReviewRating(5);
+    setReviewTitle('');
+    setReviewBody('');
+  };
+
+  const handleSubmitOrderReview = (e) => {
+    e.preventDefault();
+    if (!reviewModalItem || !reviewBody.trim()) {
+      alert('Please enter your review message.');
+      return;
+    }
+
+    const itemObj = reviewModalItem.item;
+    const targetId = itemObj.id || reviewModalItem.id;
+    const reviewKey = `${reviewModalItem.orderId}_${targetId}`;
+
+    const clientAvatar = user?.avatar || editAvatar || (
+      user?.name
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1c1917&color=f5f5f4&bold=true`
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+    );
+
+    const newRev = {
+      id: `rev-${Date.now()}`,
+      rating: Number(reviewRating) || 5,
+      name: user?.name || 'Verified Patron',
+      userName: user?.name || 'Verified Patron',
+      location: `${user?.address?.city || 'Colombo'}, ${user?.address?.country || 'Sri Lanka'}`,
+      userLocation: `${user?.address?.city || 'Colombo'}, ${user?.address?.country || 'Sri Lanka'}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      title: reviewTitle.trim() || 'Delivered Garment Evaluation',
+      body: reviewBody.trim(),
+      verified: true,
+      productId: targetId,
+      productTitle: itemObj.title || 'Archival Garment',
+      orderId: String(reviewModalItem.orderId || ''),
+      status: 'Pending',
+      approved: false,
+      avatar: clientAvatar
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem(`atelierstore_reviews_${targetId}`) || '[]');
+      localStorage.setItem(`atelierstore_reviews_${targetId}`, JSON.stringify([newRev, ...existing]));
+    } catch (err) {}
+
+    try {
+      const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
+      localStorage.setItem('atelierstore_all_user_reviews', JSON.stringify([newRev, ...allUserRevs]));
+    } catch (err) {}
+
+    // Async POST to Express MongoDB API
+    try {
+      fetch('http://localhost:5001/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRev),
+      }).catch((e) => console.log('Backend review sync skipped:', e));
+    } catch (e) {}
+
+    const updatedSubmitted = { ...submittedReviews, [reviewKey]: true };
+    setSubmittedReviews(updatedSubmitted);
+    try {
+      localStorage.setItem('atelierstore_submitted_order_reviews', JSON.stringify(updatedSubmitted));
+    } catch (err) {}
+
+    setReviewNotice(`✓ Review for "${itemObj.title}" submitted to Admin for Approval! Once approved, it will be published in public testimonials.`);
+    setReviewModalItem(null);
+    setTimeout(() => setReviewNotice(''), 4500);
+  };
+
   // Extra Addresses database (Dynamically loaded from user profile)
   const [addresses, setAddresses] = useState(() => {
     if (user?.address && (user?.address?.street || user?.address?.city)) {
@@ -332,8 +424,8 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-space-xl border-b border-surface-variant mb-space-2xl gap-space-lg bg-surface-container-low p-space-xl rounded-xl border">
           <div className="flex items-center gap-space-lg">
             <img
-              src={user.avatar || editAvatar}
-              alt={user.name}
+              src={user?.avatar || editAvatar || (user?.name ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1c1917&color=f5f5f4&bold=true` : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80')}
+              alt={user?.name || 'Patron'}
               className="w-20 h-20 rounded-full object-cover border-2 border-secondary shadow-sm"
             />
             <div>
@@ -405,6 +497,13 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
         {/* TAB 1: Orders & Tracking */}
         {activeTab === 'orders' && (
           <div className="space-y-space-xl">
+            {reviewNotice && (
+              <div className="p-4 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 font-label-caps text-xs font-bold flex items-center gap-2 animate-fade-in shadow-xs">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                <span>{reviewNotice}</span>
+              </div>
+            )}
+
             {loadingOrders ? (
               <div className="py-12 text-center text-on-surface-variant">
                 <span className="material-symbols-outlined text-[36px] animate-spin block mb-2 opacity-50">sync</span>
@@ -430,88 +529,133 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                 </button>
               </div>
             ) : (
-              placedOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-surface-container-low rounded-xl p-space-xl border border-surface-variant shadow-sm"
-                >
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-lg">
-                    <div>
-                      <span className="font-label-caps text-xs text-on-surface-variant uppercase block">
-                        Acquisition #{order.id}
-                      </span>
-                      <span className="font-body-sm text-body-sm text-on-surface font-medium">
-                        {order.date}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-space-md">
-                      <span
-                        className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
-                          order.status === 'In Transit'
-                            ? 'bg-secondary/20 text-secondary font-semibold'
-                            : 'bg-surface-container-high text-on-surface-variant font-semibold'
-                        }`}
-                      >
-                        ● {order.status}
-                      </span>
-                      <span className="font-price-editorial text-price-editorial text-on-surface font-bold">
-                        {order.total}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div className="space-y-space-md mb-space-lg">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-space-md">
-                        <img
-                          src={item.img}
-                          alt={item.title}
-                          className="w-14 h-16 object-cover rounded bg-surface-container border"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-subheading-md text-on-surface font-medium">{item.title}</h4>
-                          <p className="font-body-sm text-xs text-on-surface-variant">
-                            Qty: {item.qty} · {item.price}
-                          </p>
-                        </div>
+              placedOrders.map((order) => {
+                const isDelivered = (order.status || '').toLowerCase().includes('deliver');
+                return (
+                  <div
+                    key={order.id}
+                    className={`bg-surface-container-low rounded-xl p-space-xl border shadow-sm ${
+                      isDelivered ? 'border-emerald-300/80 bg-emerald-50/10' : 'border-surface-variant'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-space-md border-b border-surface-variant gap-2 mb-space-lg">
+                      <div>
+                        <span className="font-label-caps text-xs text-on-surface-variant uppercase block">
+                          Acquisition #{order.id}
+                        </span>
+                        <span className="font-body-sm text-body-sm text-on-surface font-medium">
+                          {order.date}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex items-center gap-space-md">
+                        <span
+                          className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
+                            isDelivered
+                              ? 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300'
+                              : order.status === 'In Transit'
+                              ? 'bg-secondary/20 text-secondary font-semibold'
+                              : 'bg-surface-container-high text-on-surface-variant font-semibold'
+                          }`}
+                        >
+                          ● {order.status}
+                        </span>
+                        <span className="font-price-editorial text-price-editorial text-on-surface font-bold">
+                          {order.total}
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Courier Progress Meter */}
-                  <div className="bg-surface-container-lowest p-space-md rounded-lg border border-surface-variant">
-                    <div className="flex items-center justify-between font-label-caps text-xs text-on-surface mb-2">
-                      <span>Courier: {order.courier}</span>
-                      <span>Est. Arrival: {order.estimatedDelivery}</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                      <div
-                        className={`h-full bg-secondary rounded-full transition-all duration-500 ${
-                          order.status === 'Delivered' ? 'w-full' : order.status === 'In Transit' ? 'w-2/3' : 'w-1/3'
-                        }`}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant mt-2">
-                      <span>Kyoto Dispatch</span>
-                      <span className="font-bold text-secondary">Customs Cleared</span>
-                      <span>Delivery</span>
-                    </div>
-                  </div>
+                    {isDelivered && (
+                      <div className="mb-space-md p-3 rounded-lg bg-emerald-500/10 border border-emerald-300/60 text-emerald-900 font-label-caps text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-emerald-700 text-base">verified</span>
+                          <span className="font-bold">Order Delivered! You can now write reviews for your items below.</span>
+                        </div>
+                        <span className="text-[10px] uppercase font-semibold text-emerald-800">Verified Patron Review Unlocked</span>
+                      </div>
+                    )}
 
-                  {/* Print / Download Invoice Action */}
-                  <div className="pt-3 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handlePrintInvoice(order)}
-                      className="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-surface-variant shadow-xs"
-                    >
-                      <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                      <span>Download / Print Tax Invoice</span>
-                    </button>
+                    {/* Items */}
+                    <div className="space-y-space-md mb-space-lg">
+                      {order.items.map((item, idx) => {
+                        const targetId = item.id || item.title;
+                        const reviewKey = `${order.id}_${targetId}`;
+                        const isAlreadyReviewed = submittedReviews[reviewKey];
+
+                        return (
+                          <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md p-3 bg-surface-container-lowest rounded-lg border border-surface-variant/40">
+                            <div className="flex items-center gap-space-md">
+                              <img
+                                src={item.img}
+                                alt={item.title}
+                                className="w-14 h-16 object-cover rounded bg-surface-container border"
+                              />
+                              <div>
+                                <h4 className="font-subheading-md text-on-surface font-medium">{item.title}</h4>
+                                <p className="font-body-sm text-xs text-on-surface-variant">
+                                  Qty: {item.qty} · {item.price}
+                                </p>
+                              </div>
+                            </div>
+
+                            {isDelivered && (
+                              <div className="shrink-0 pt-2 sm:pt-0">
+                                {isAlreadyReviewed ? (
+                                  <span className="px-3.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-label-caps text-[11px] font-bold inline-flex items-center gap-1 border border-emerald-300">
+                                    <span className="material-symbols-outlined text-sm text-emerald-700">verified</span>
+                                    <span>Reviewed ✓</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReviewModal(order, item)}
+                                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-label-caps text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xs transition-all cursor-pointer hover:scale-102"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">star</span>
+                                    <span>Write Review</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Courier Progress Meter */}
+                    <div className="bg-surface-container-lowest p-space-md rounded-lg border border-surface-variant">
+                      <div className="flex items-center justify-between font-label-caps text-xs text-on-surface mb-2">
+                        <span>Courier: {order.courier}</span>
+                        <span>Est. Arrival: {order.estimatedDelivery}</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-secondary rounded-full transition-all duration-500 ${
+                            isDelivered ? 'w-full bg-emerald-600' : order.status === 'In Transit' ? 'w-2/3' : 'w-1/3'
+                          }`}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant mt-2">
+                        <span>Kyoto Dispatch</span>
+                        <span className="font-bold text-secondary">Customs Cleared</span>
+                        <span className={isDelivered ? 'font-bold text-emerald-700' : ''}>Delivered</span>
+                      </div>
+                    </div>
+
+                    {/* Print / Download Invoice Action */}
+                    <div className="pt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handlePrintInvoice(order)}
+                        className="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-caps text-xs uppercase font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-surface-variant shadow-xs"
+                      >
+                        <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                        <span>Download / Print Tax Invoice</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -704,6 +848,17 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
               </div>
 
               <div>
+                <label className="font-label-caps text-xs block mb-1">Profile Avatar / Photo URL</label>
+                <input
+                  type="text"
+                  placeholder="https://images.unsplash.com/..."
+                  value={editAvatar}
+                  onChange={(e) => setEditAvatar(e.target.value)}
+                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                />
+              </div>
+
+              <div>
                 <label className="font-label-caps text-xs block mb-1">Street Address</label>
                 <input
                   type="text"
@@ -834,6 +989,92 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delivered Item Review Modal */}
+      {reviewModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-margin-mobile bg-primary/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-surface-container-lowest max-w-lg w-full rounded-2xl p-space-xl shadow-2xl relative border border-outline-variant/30">
+            <button
+              onClick={() => setReviewModalItem(null)}
+              className="absolute top-4 right-4 p-1 text-on-surface-variant hover:text-on-surface cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <div className="space-y-space-md">
+              <div>
+                <span className="font-label-uppercase text-label-uppercase text-secondary tracking-widest uppercase font-bold">
+                  VERIFIED PATRON EVALUATION
+                </span>
+                <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1 font-bold">
+                  Review Delivered Garment
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                  Acquisition #{reviewModalItem.orderId} • <span className="text-on-surface font-semibold">{reviewModalItem.item.title}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmitOrderReview} className="space-y-space-sm">
+                <div>
+                  <label className="block font-label-uppercase text-[11px] text-on-surface mb-1 font-bold">Overall Star Rating *</label>
+                  <div className="flex items-center gap-2">
+                    {[5, 4, 3, 2, 1].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRating(star)}
+                        className={`px-3.5 py-1.5 rounded-lg font-label-caps text-xs font-bold cursor-pointer transition-all ${
+                          reviewRating === star ? 'bg-amber-500 text-white font-bold scale-105 shadow-xs' : 'bg-surface-container border border-surface-variant text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        {star} ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-label-uppercase text-[11px] text-on-surface mb-1 font-bold">Review Title</label>
+                  <input
+                    type="text"
+                    value={reviewTitle}
+                    onChange={(e) => setReviewTitle(e.target.value)}
+                    placeholder="e.g. Exceptional drape and authentic shuttle weave"
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded p-space-sm font-body-sm text-on-surface focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-label-uppercase text-[11px] text-on-surface mb-1 font-bold">Written Evaluation / Experience *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={reviewBody}
+                    onChange={(e) => setReviewBody(e.target.value)}
+                    placeholder="Share your experience regarding texture, fit, drape, and packaging..."
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded p-space-sm font-body-sm text-on-surface focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-space-md flex items-center justify-end gap-space-sm">
+                  <button
+                    type="button"
+                    onClick={() => setReviewModalItem(null)}
+                    className="px-space-md py-2.5 rounded text-on-surface-variant hover:bg-surface-container font-label-uppercase text-[11px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-space-lg py-2.5 rounded bg-primary text-on-primary hover:bg-secondary font-label-uppercase text-[11px] font-bold shadow-sm cursor-pointer"
+                  >
+                    Submit Patron Review
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

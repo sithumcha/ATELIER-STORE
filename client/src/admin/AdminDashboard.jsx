@@ -7,7 +7,7 @@ import AdminPatrons from './AdminPatrons';
 import AdminInquiries from './AdminInquiries';
 import AddProductPage from './AddProductPage';
 import AdminDiscounts from './AdminDiscounts';
-
+import AdminReviews from './AdminReviews';
 
 export default function AdminDashboard({ onGoToPublicStore }) {
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -307,6 +307,10 @@ export default function AdminDashboard({ onGoToPublicStore }) {
             />
           ) : activeNav === 'discounts' ? (
             <AdminDiscounts />
+          ) : activeNav === 'reviews' ? (
+            <div className="w-full max-w-[1360px] mx-auto px-space-md sm:px-space-xl py-space-xl">
+              <AdminReviews />
+            </div>
           ) : activeNav === 'customers' ? (
             <AdminPatrons />
           ) : activeNav === 'artisans' || activeNav === 'journal' || activeNav === 'architectural' || activeNav === 'inquiries' ? (

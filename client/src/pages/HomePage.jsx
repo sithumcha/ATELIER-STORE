@@ -1,28 +1,44 @@
 import React, { useState, useEffect } from 'react';
 
+function TypewriterText({ text, speed = 12, delay = 0, className = '', cursor = false }) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStarted(true);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        setDisplayedText(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [started, text, speed]);
+
+  return (
+    <span className={className}>
+      {displayedText}
+      {cursor && started && displayedText.length < text.length && (
+        <span className="inline-block w-[2px] h-[0.9em] bg-secondary animate-pulse ml-0.5 align-middle"></span>
+      )}
+    </span>
+  );
+}
+
 const HOMEPAGE_GARMENTS = [
-  {
-    id: 'a1',
-    badge: 'LIMITED 35 PIECES',
-    category: '100% Normandy Flax • 410 GSM',
-    title: 'Solitude Raw Linen Kimono Duster',
-    color: 'Undyed Ecru',
-    price: 42000,
-    type: 'Outerwear',
-    sizes: ['I', 'II', 'III', 'IV'],
-    img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1600&q=90',
-  },
-  {
-    id: 'a2',
-    badge: 'MASTER WEAVER • AIZOME',
-    category: 'Handloomed Cotton • 360 GSM',
-    title: 'Botanical Indigo Noragi Jacket',
-    color: 'Deep Indigo',
-    price: 36000,
-    type: 'Outerwear',
-    sizes: ['I', 'II', 'III'],
-    img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?auto=format&fit=crop&w=1600&q=90',
-  },
+
+
   {
     id: 'a3',
     badge: 'STUDIO STAPLE',
@@ -162,27 +178,111 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
   const [selectedSizes, setSelectedSizes] = useState({});
   const [addedNotice, setAddedNotice] = useState({});
   const [isFittingModalOpen, setIsFittingModalOpen] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => {
+    try {
+      const cached = localStorage.getItem('atelierstore_db_products_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) { }
+    return [];
+  });
+  const [loadingDb, setLoadingDb] = useState(() => products.length === 0);
 
   // Testimonials Circular Rotating Carousel State
+  const [testimonialsList, setTestimonialsList] = useState(PATRON_TESTIMONIALS);
   const [testimonialIndex, setTestimonialIndex] = useState(0);
   const [isTestimonialHovered, setIsTestimonialHovered] = useState(false);
+
+  useEffect(() => {
+    fetchApprovedReviews();
+  }, []);
+
+  const fetchApprovedReviews = async () => {
+    let approvedRevs = [];
+    try {
+      const localRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
+      approvedRevs = localRevs.filter((r) => r.approved || r.status === 'Approved');
+    } catch (e) {}
+
+    try {
+      const res = await fetch('http://localhost:5001/api/reviews/approved');
+      if (res.ok) {
+        const dbApproved = await res.json();
+        if (Array.isArray(dbApproved) && dbApproved.length > 0) {
+          const mergedMap = new Map();
+          [...approvedRevs, ...dbApproved].forEach((r) => {
+            const key = r._id || r.id;
+            mergedMap.set(key, r);
+          });
+          approvedRevs = Array.from(mergedMap.values());
+        }
+      }
+    } catch (err) {}
+
+    if (approvedRevs.length > 0) {
+      const userTestimonials = approvedRevs.map((rev) => ({
+        id: rev._id || rev.id || 'rev_' + Math.random(),
+        name: rev.userName || rev.name || 'Patron Collector',
+        location: rev.userLocation || rev.location || 'Kyoto / Global',
+        verified: '★ Approved Patron Evaluation',
+        avatar: rev.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+        quote: rev.body?.startsWith('“') ? rev.body : `“${rev.body}”`,
+        garment: rev.productTitle || 'Archival Garment',
+      }));
+
+      setTestimonialsList([...userTestimonials, ...PATRON_TESTIMONIALS]);
+    }
+  };
 
   // Auto-rotate testimonials circularly every 4 seconds
   useEffect(() => {
     if (isTestimonialHovered) return;
     const timer = setInterval(() => {
-      setTestimonialIndex((prev) => (prev + 1) % PATRON_TESTIMONIALS.length);
+      setTestimonialIndex((prev) => (prev + 1) % testimonialsList.length);
     }, 4000);
     return () => clearInterval(timer);
-  }, [isTestimonialHovered]);
+  }, [isTestimonialHovered, testimonialsList]);
+
+  // Scroll reveal IntersectionObserver for smooth scroll-down animations
+  useEffect(() => {
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+        }
+      });
+    };
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px 0px -40px 0px',
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const elements = document.querySelectorAll('.reveal-on-scroll, .reveal-font-on-scroll, .reveal-scale-on-scroll');
+
+    elements.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= window.innerHeight * 0.88) {
+        el.classList.add('revealed');
+      }
+      observer.observe(el);
+    });
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, [products, activeFilter]);
 
   const handleNextTestimonial = () => {
-    setTestimonialIndex((prev) => (prev + 1) % PATRON_TESTIMONIALS.length);
+    setTestimonialIndex((prev) => (prev + 1) % testimonialsList.length);
   };
 
   const handlePrevTestimonial = () => {
-    setTestimonialIndex((prev) => (prev - 1 + PATRON_TESTIMONIALS.length) % PATRON_TESTIMONIALS.length);
+    setTestimonialIndex((prev) => (prev - 1 + testimonialsList.length) % testimonialsList.length);
   };
 
   useEffect(() => {
@@ -199,13 +299,15 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
             let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 42000;
             if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
-            let displayImg = HOMEPAGE_GARMENTS[idx % HOMEPAGE_GARMENTS.length].img;
+            let displayImg = null;
             if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
               displayImg = p.images[0];
             } else if (p.img) {
               displayImg = p.img;
             } else if (p.image) {
               displayImg = p.image;
+            } else {
+              displayImg = HOMEPAGE_GARMENTS[idx % HOMEPAGE_GARMENTS.length].img;
             }
 
             return {
@@ -224,10 +326,15 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
             };
           });
           setProducts(formatted);
+          try {
+            localStorage.setItem('atelierstore_db_products_cache', JSON.stringify(formatted));
+          } catch (err) { }
         }
       }
     } catch (err) {
       console.log('Database fetch fallback to homepage garments:', err);
+    } finally {
+      setLoadingDb(false);
     }
   };
 
@@ -281,13 +388,13 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
   return (
     <div className="w-full bg-surface font-body-md text-body-md text-on-surface antialiased">
       {/* Top Notification Accent Bar */}
-      <section className="w-full bg-surface-container-high py-space-xs text-center border-b border-outline-variant/30">
-        <div className="max-w-[1380px] mx-auto px-margin flex items-center justify-center gap-space-md">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary"></span>
-          <p className="font-label-uppercase text-label-uppercase tracking-[0.2em] text-on-surface">
+      <section className="w-full bg-surface-container-high py-space-xs text-center border-b border-outline-variant/30 reveal-on-scroll">
+        <div className="max-w-[1380px] mx-auto px-margin flex items-center justify-center gap-space-md animate-top-banner-text">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary top-accent-pulse"></span>
+          <p className="font-label-uppercase text-label-uppercase tracking-[0.2em] text-on-surface font-semibold">
             EDITION 09 / SPRING EQUINOX — THE SILENT DRAPERY COLLECTION NOW UNVEILED
           </p>
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary top-accent-pulse"></span>
         </div>
       </section>
 
@@ -297,31 +404,31 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Hero Narrative Left */}
             <div className="lg:col-span-7 flex flex-col justify-center space-y-space-md pr-0 lg:pr-space-lg">
-              <div className="inline-flex items-center gap-space-xs px-space-sm py-space-xs bg-surface-container rounded self-start">
-                <span className="material-symbols-outlined text-[14px] text-secondary">eco</span>
-                <span className="font-label-uppercase text-label-uppercase text-on-surface tracking-widest">
-                  EDITION 09 • SPRING EQUINOX COLLECTION
+              <div className="inline-flex items-center gap-space-xs px-space-sm py-space-xs bg-surface-container rounded self-start reveal-on-scroll">
+                <span className="material-symbols-outlined text-[14px] text-secondary animate-pulse">eco</span>
+                <span className="font-label-uppercase text-label-uppercase text-on-surface tracking-widest font-semibold">
+                  <TypewriterText text="EDITION 09 • SPRING EQUINOX COLLECTION" speed={25} delay={100} cursor={true} />
                 </span>
               </div>
-              <h1 className="font-headline-lg text-headline-lg lg:text-[48px] lg:leading-[56px] text-on-surface tracking-tight font-normal">
-                Garments of Breath &amp; Fiber — Handcrafted Raiment for Still Living.
+              <h1 className="font-headline-lg text-headline-lg lg:text-[48px] lg:leading-[56px] tracking-tight font-normal reveal-font-on-scroll hero-title-anim animate-hero-font-shimmer min-h-[110px] lg:min-h-[120px]">
+                <TypewriterText text="Garments of Breath & Fiber — Handcrafted Raiment for Still Living." speed={30} delay={400} cursor={true} />
               </h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl leading-relaxed">
-                Tactile garments crafted from slow-loomed raw linen, unbleached mulberry silk, and botanical indigo. Designed for timeless form, relaxed silhouette, and poetic ease across seasons.
+              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl leading-relaxed reveal-on-scroll min-h-[70px]">
+                <TypewriterText text="Tactile garments crafted from slow-loomed raw linen, unbleached mulberry silk, and botanical indigo. Designed for timeless form, relaxed silhouette, and poetic ease across seasons." speed={18} delay={1200} cursor={false} />
               </p>
-              <div className="flex flex-wrap items-center gap-space-md pt-space-sm">
+              <div className="flex flex-wrap items-center gap-space-md pt-space-sm reveal-on-scroll">
                 <a
                   className="inline-flex items-center gap-space-xs px-space-lg py-space-md bg-primary text-on-primary font-label-uppercase text-label-uppercase rounded transition-all hover:bg-on-surface-variant shadow-sm hover:translate-x-0.5 cursor-pointer"
                   href="#editions-grid"
                 >
-                  <span>Explore Garments &amp; Collections</span>
+                  <span><TypewriterText text="Explore Garments & Collections" speed={20} delay={2200} cursor={false} /></span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </a>
                 <a
                   className="inline-flex items-center gap-space-xs px-space-lg py-space-md bg-surface-container text-on-surface font-label-uppercase text-label-uppercase rounded transition-all hover:bg-surface-container-high cursor-pointer"
                   href="#atelier-philosophy"
                 >
-                  <span>The Weavers' Provenance</span>
+                  <span><TypewriterText text="The Weavers' Provenance" speed={20} delay={2500} cursor={false} /></span>
                   <span className="material-symbols-outlined text-[16px]">north_east</span>
                 </a>
               </div>
@@ -329,30 +436,53 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               <div className="pt-space-md flex flex-wrap items-center gap-space-md text-on-surface-variant text-body-sm font-body-sm">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px] text-secondary">history_edu</span>
-                  <span>18-60 Cut Limited Batches</span>
+                  <span><TypewriterText text="18-60 Cut Limited Batches" speed={20} delay={2800} cursor={false} /></span>
                 </div>
                 <span className="text-outline-variant">•</span>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px] text-secondary">palette</span>
-                  <span>100% Plant &amp; Mud Dyed</span>
+                  <span><TypewriterText text="100% Plant & Mud Dyed" speed={20} delay={3100} cursor={false} /></span>
                 </div>
                 <span className="text-outline-variant">•</span>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px] text-secondary">handyman</span>
-                  <span>Free Lifetime Sashiko Repair</span>
+                  <span><TypewriterText text="Free Lifetime Sashiko Repair" speed={20} delay={3400} cursor={false} /></span>
                 </div>
               </div>
             </div>
 
             {/* Hero Featured Card Right */}
             {(() => {
-              const heroGarment = (products && products.length > 0) ? products[0] : HOMEPAGE_GARMENTS[0];
+              if (loadingDb && (!products || products.length === 0)) {
+                return (
+                  <div className="lg:col-span-5 relative mt-space-lg lg:mt-0 reveal-scale-on-scroll">
+                    <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-md border border-surface-variant animate-pulse">
+                      <div className="aspect-[3/4] w-full bg-surface-container-high rounded-lg flex items-center justify-center relative overflow-hidden">
+                        <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 animate-spin">
+                          cyclone
+                        </span>
+                        <span className="absolute bottom-4 font-label-uppercase text-[10px] text-on-surface-variant tracking-widest uppercase font-semibold">
+                          Fetching Archival Garment...
+                        </span>
+                      </div>
+                      <div className="mt-space-sm pt-space-xs flex items-center justify-between">
+                        <div className="h-4 bg-surface-container-high rounded w-1/2"></div>
+                        <div className="h-4 bg-surface-container-high rounded w-1/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              const heroGarment = (products && products.length > 0) ? products[0] : null;
+              if (!heroGarment) return null;
+
               const heroIdStr = String(heroGarment.id || heroGarment._id || '');
               const isHeroFav = wishlistIds.some((id) => String(id) === heroIdStr || String(id) === String(heroGarment._id));
               const numPrice = typeof heroGarment.price === 'number' ? heroGarment.price : (heroGarment.numericPrice || 48000);
 
               return (
-                <div className="lg:col-span-5 relative mt-space-lg lg:mt-0">
+                <div className="lg:col-span-5 relative mt-space-lg lg:mt-0 reveal-scale-on-scroll">
                   <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-md transition-all hover:shadow-xl relative group card-shimmer">
                     {/* Badge overlay */}
                     <div className="absolute top-6 left-6 z-10 flex flex-col gap-1">
@@ -367,9 +497,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                     <button
                       aria-label="Save to wishlist"
                       onClick={() => onToggleWishlist && onToggleWishlist(heroGarment)}
-                      className={`absolute top-6 right-6 z-10 w-9 h-9 rounded-full bg-surface/85 backdrop-blur flex items-center justify-center transition-all shadow-sm wishlist-btn cursor-pointer ${
-                        isHeroFav ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
-                      }`}
+                      className={`absolute top-6 right-6 z-10 w-9 h-9 rounded-full bg-surface/85 backdrop-blur flex items-center justify-center transition-all shadow-sm wishlist-btn cursor-pointer ${isHeroFav ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
+                        }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">
                         {isHeroFav ? 'favorite' : 'favorite_border'}
@@ -427,7 +556,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
           {/* Hero Trust Pillars Strip */}
           <div className="mt-space-2xl grid grid-cols-2 lg:grid-cols-4 gap-space-md pt-space-lg bg-surface-container-low rounded-xl p-space-lg">
-            <div className="flex items-start gap-space-sm">
+            <div className="flex items-start gap-space-sm reveal-on-scroll stagger-1">
               <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 pillar-icon-float">
                 <span className="material-symbols-outlined text-secondary text-[20px]">filter_vintage</span>
               </div>
@@ -440,7 +569,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-space-sm">
+            <div className="flex items-start gap-space-sm reveal-on-scroll stagger-2">
               <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 pillar-icon-float">
                 <span className="material-symbols-outlined text-secondary text-[20px]">opacity</span>
               </div>
@@ -453,7 +582,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-space-sm">
+            <div className="flex items-start gap-space-sm reveal-on-scroll stagger-3">
               <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 pillar-icon-float">
                 <span className="material-symbols-outlined text-secondary text-[20px]">precision_manufacturing</span>
               </div>
@@ -466,7 +595,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-space-sm">
+            <div className="flex items-start gap-space-sm reveal-on-scroll stagger-4">
               <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 pillar-icon-float">
                 <span className="material-symbols-outlined text-secondary text-[20px]">auto_fix_high</span>
               </div>
@@ -487,7 +616,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
       <section className="w-full bg-surface-container-lowest py-space-2xl">
         <div className="max-w-[1380px] mx-auto px-margin">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-space-xl gap-space-md">
-            <div>
+            <div className="reveal-font-on-scroll">
               <span className="font-label-uppercase text-label-uppercase text-secondary tracking-widest block">
                 CURATED ARCHITECTURE
               </span>
@@ -495,14 +624,14 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 Wardrobe Disciplines
               </h2>
             </div>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-md">
+            <p className="font-body-md text-body-md text-on-surface-variant max-w-md reveal-on-scroll">
               Archetypal silhouettes constructed from foundational fibers. Form created to drape freely without stiffness or synthetic tension.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-space-md">
             <div
               onClick={() => setActiveFilter('Outerwear')}
-              className="lg:col-span-7 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] flex flex-col justify-end p-space-lg shadow-sm cursor-pointer"
+              className="lg:col-span-7 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] flex flex-col justify-end p-space-lg shadow-sm cursor-pointer reveal-scale-on-scroll stagger-1"
             >
               <img
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -530,7 +659,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
             <div
               onClick={() => setActiveFilter('Dresses & Tunics')}
-              className="lg:col-span-5 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] md:aspect-auto flex flex-col justify-end p-space-lg shadow-sm cursor-pointer"
+              className="lg:col-span-5 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] md:aspect-auto flex flex-col justify-end p-space-lg shadow-sm cursor-pointer reveal-scale-on-scroll stagger-2"
             >
               <img
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -558,7 +687,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
             <div
               onClick={() => setActiveFilter('Knitwear')}
-              className="lg:col-span-5 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] md:aspect-auto flex flex-col justify-end p-space-lg shadow-sm cursor-pointer"
+              className="lg:col-span-5 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] md:aspect-auto flex flex-col justify-end p-space-lg shadow-sm cursor-pointer reveal-scale-on-scroll stagger-3"
             >
               <img
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -586,7 +715,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
             <div
               onClick={() => setActiveFilter('Trousers')}
-              className="lg:col-span-7 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] flex flex-col justify-end p-space-lg shadow-sm cursor-pointer"
+              className="lg:col-span-7 relative group overflow-hidden rounded-xl bg-surface-container aspect-[16/10] flex flex-col justify-end p-space-lg shadow-sm cursor-pointer reveal-scale-on-scroll stagger-4"
             >
               <img
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -620,7 +749,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
         <div className="max-w-[1380px] mx-auto px-margin">
           <div className="flex flex-col space-y-space-md mb-space-xl">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-sm">
-              <div>
+              <div className="reveal-font-on-scroll">
                 <span className="font-label-uppercase text-label-uppercase text-secondary tracking-widest uppercase">
                   CATALOGUE RAISONNÉ
                 </span>
@@ -628,11 +757,11 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                   Numbered Editions / Ready for Fitting
                 </h2>
               </div>
-              <span className="font-body-sm text-body-sm text-on-surface-variant">
+              <span className="font-body-sm text-body-sm text-on-surface-variant reveal-on-scroll">
                 Showing {filteredProducts.length} Selected Archetypes • Kyoto &amp; Stockholm Repositories
               </span>
             </div>
-            <div className="flex items-center gap-space-xs overflow-x-auto pb-space-xs pt-space-xs scrollbar-none">
+            <div className="flex items-center gap-space-xs overflow-x-auto pb-space-xs pt-space-xs scrollbar-none reveal-on-scroll">
               {[
                 { key: 'All Silhouettes', label: `All Silhouettes (${products.length})` },
                 { key: 'Outerwear', label: `Outerwear (${getCategoryCount('Outerwear')})` },
@@ -644,11 +773,10 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                 <button
                   key={fObj.key}
                   onClick={() => setActiveFilter(fObj.key)}
-                  className={`px-space-md py-space-xs rounded-full font-label-uppercase text-label-uppercase shrink-0 transition-colors cursor-pointer ${
-                    activeFilter === fObj.key || activeFilter.includes(fObj.key)
-                      ? 'bg-primary text-on-primary font-bold'
-                      : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
-                  }`}
+                  className={`px-space-md py-space-xs rounded-full font-label-uppercase text-label-uppercase shrink-0 transition-colors cursor-pointer ${activeFilter === fObj.key || activeFilter.includes(fObj.key)
+                    ? 'bg-primary text-on-primary font-bold'
+                    : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+                    }`}
                 >
                   {fObj.label}
                 </button>
@@ -657,14 +785,15 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {filteredProducts.map((p) => {
+            {filteredProducts.map((p, idx) => {
               const pIdStr = String(p.id || p._id || '');
               const isFavorited = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
               const isAdded = addedNotice[p.id];
+              const staggerClass = `stagger-${(idx % 4) + 1}`;
               return (
                 <div
                   key={p.id}
-                  className="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all card-shimmer"
+                  className={`group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all card-shimmer reveal-on-scroll ${staggerClass}`}
                 >
                   <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
                     <span className="absolute top-3 left-3 z-10 px-space-xs py-0.5 bg-surface/90 backdrop-blur font-label-uppercase text-[10px] text-on-surface tracking-wider rounded">
@@ -673,9 +802,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                     <button
                       aria-label="Add to wishlist"
                       onClick={() => onToggleWishlist && onToggleWishlist(p)}
-                      className={`wishlist-btn absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-surface/80 backdrop-blur flex items-center justify-center transition-all cursor-pointer ${
-                        isFavorited ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
-                      }`}
+                      className={`wishlist-btn absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-surface/80 backdrop-blur flex items-center justify-center transition-all cursor-pointer ${isFavorited ? 'text-red-600 bg-surface scale-110 shadow-md' : 'text-on-surface hover:text-red-600'
+                        }`}
                     >
                       <span className="material-symbols-outlined text-[16px]">
                         {isFavorited ? 'favorite' : 'favorite_border'}
@@ -693,11 +821,10 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                           <span
                             key={sz}
                             onClick={() => handleSelectSize(p.id, sz)}
-                            className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
-                              (selectedSizes[p.id] || p.sizes[0]) === sz
-                                ? 'bg-primary text-on-primary'
-                                : 'bg-surface-container hover:bg-primary hover:text-on-primary'
-                            }`}
+                            className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${(selectedSizes[p.id] || p.sizes[0]) === sz
+                              ? 'bg-primary text-on-primary'
+                              : 'bg-surface-container hover:bg-primary hover:text-on-primary'
+                              }`}
                           >
                             {sz}
                           </span>
@@ -732,11 +859,10 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                       </span>
                       <button
                         onClick={() => handleAddGarmentToCart(p)}
-                        className={`px-space-sm py-1 rounded font-label-uppercase text-[10px] transition-colors cursor-pointer ${
-                          isAdded
-                            ? 'bg-secondary text-on-secondary'
-                            : 'bg-surface-container text-on-surface hover:bg-primary hover:text-on-primary'
-                        }`}
+                        className={`px-space-sm py-1 rounded font-label-uppercase text-[10px] transition-colors cursor-pointer ${isAdded
+                          ? 'bg-secondary text-on-secondary'
+                          : 'bg-surface-container text-on-surface hover:bg-primary hover:text-on-primary'
+                          }`}
                       >
                         {isAdded ? 'Added ✓' : 'Select Size & Bag'}
                       </button>
@@ -753,13 +879,13 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
       <section className="w-full bg-surface-container-low py-space-2xl" id="atelier-philosophy">
         <div className="max-w-[1380px] mx-auto px-margin">
           <div className="max-w-3xl mx-auto text-center space-y-space-md mb-space-2xl">
-            <span className="font-label-uppercase text-label-uppercase text-secondary tracking-widest uppercase">
+            <span className="font-label-uppercase text-label-uppercase text-secondary tracking-widest uppercase reveal-on-scroll">
               THE SLOW WEAVING MANIFESTO
             </span>
-            <blockquote className="font-quote-display text-quote-display md:text-[32px] md:leading-[44px] text-on-surface italic font-normal">
+            <blockquote className="font-quote-display text-quote-display md:text-[32px] md:leading-[44px] text-on-surface italic font-normal reveal-font-on-scroll">
               “We reject the disposable rush of fashion. A garment should age alongside you, softening with every wash and deepening in character.”
             </blockquote>
-            <div className="flex items-center justify-center gap-space-sm">
+            <div className="flex items-center justify-center gap-space-sm reveal-on-scroll">
               <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-uppercase text-[11px]">
                 AE
               </div>
@@ -771,7 +897,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm">
+            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm reveal-scale-on-scroll stagger-1">
               <div className="space-y-space-sm">
                 <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-secondary pillar-icon-float">
                   <span className="material-symbols-outlined text-[24px]">compost</span>
@@ -795,7 +921,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               </div>
             </div>
 
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm">
+            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm reveal-scale-on-scroll stagger-2">
               <div className="space-y-space-sm">
                 <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-secondary pillar-icon-float">
                   <span className="material-symbols-outlined text-[24px]">straighten</span>
@@ -816,7 +942,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               </div>
             </div>
 
-            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm">
+            <div className="bg-surface-container-lowest p-space-xl rounded-xl flex flex-col justify-between shadow-sm reveal-scale-on-scroll stagger-3">
               <div className="space-y-space-sm">
                 <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-secondary pillar-icon-float">
                   <span className="material-symbols-outlined text-[24px]">change_circle</span>
@@ -843,8 +969,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
       {/* 4.5 CIRCULAR ROTATING PATRON TESTIMONIALS CAROUSEL */}
       <section className="w-full bg-surface-container-low/70 py-space-2xl border-t border-b border-surface-variant/40 overflow-hidden relative">
         <div className="max-w-[1380px] mx-auto px-margin">
-          
-          <div className="text-center max-w-2xl mx-auto mb-space-xl">
+
+          <div className="text-center max-w-2xl mx-auto mb-space-xl reveal-font-on-scroll">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label-caps text-[11px] uppercase tracking-widest mb-3">
               <span className="material-symbols-outlined text-sm">stars</span>
               <span>PATRON DISCOURSES &amp; REVIEWS</span>
@@ -859,7 +985,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
           {/* Interactive Rotating Carousel Container */}
           <div
-            className="max-w-4xl mx-auto relative bg-surface-container-lowest rounded-3xl p-8 md:p-12 shadow-xl border border-surface-variant/80 overflow-hidden group"
+            className="max-w-4xl mx-auto relative bg-surface-container-lowest rounded-3xl p-8 md:p-12 shadow-xl border border-surface-variant/80 overflow-hidden group reveal-scale-on-scroll"
             onMouseEnter={() => setIsTestimonialHovered(true)}
             onMouseLeave={() => setIsTestimonialHovered(false)}
           >
@@ -874,11 +1000,11 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
             {/* Active Testimonial Card Content with Animated Transition */}
             {(() => {
-              const currentT = PATRON_TESTIMONIALS[testimonialIndex];
+              const currentT = testimonialsList[testimonialIndex] || testimonialsList[0];
 
               return (
                 <div key={currentT.id} className="relative z-10 flex flex-col md:flex-row items-center gap-8 animate-fade-in">
-                  
+
                   {/* Patron Avatar with Circular Orbit Frame */}
                   <div className="relative shrink-0">
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full p-1 bg-gradient-to-tr from-secondary via-primary to-secondary shadow-lg">
@@ -936,7 +1062,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
             {/* Circular Carousel Controls & Indicators */}
             <div className="mt-8 pt-6 border-t border-surface-variant/50 flex items-center justify-between">
-              
+
               {/* Left Previous Button */}
               <button
                 type="button"
@@ -949,17 +1075,16 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
               {/* Circular Dots & Index Indicator */}
               <div className="flex items-center gap-2">
-                {PATRON_TESTIMONIALS.map((t, idx) => (
+                {testimonialsList.map((t, idx) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setTestimonialIndex(idx)}
                     aria-label={`Go to testimonial ${idx + 1}`}
-                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                      testimonialIndex === idx
-                        ? 'w-8 bg-secondary shadow-xs'
-                        : 'w-2.5 bg-surface-container-high hover:bg-outline'
-                    }`}
+                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${testimonialIndex === idx
+                      ? 'w-8 bg-secondary shadow-xs'
+                      : 'w-2.5 bg-surface-container-high hover:bg-outline'
+                      }`}
                   />
                 ))}
               </div>
@@ -989,25 +1114,25 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
       </section>
 
       {/* 5. VIP FITTING & CONCIERGE BANNER */}
-      <section className="w-full bg-primary-container text-on-primary py-space-2xl">
+      <section className="w-full bg-primary-container text-on-primary py-space-2xl reveal-scale-on-scroll">
         <div className="max-w-[1380px] mx-auto px-margin">
           <div className="bg-surface-container-highest/10 rounded-2xl p-space-xl lg:p-space-2xl backdrop-blur relative overflow-hidden">
             <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-secondary/15 blur-3xl pointer-events-none"></div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
               <div className="lg:col-span-8 space-y-space-md">
-                <div className="inline-flex items-center gap-space-xs px-space-sm py-0.5 bg-on-primary/10 rounded">
+                <div className="inline-flex items-center gap-space-xs px-space-sm py-0.5 bg-on-primary/10 rounded reveal-on-scroll">
                   <span className="w-2 h-2 rounded-full bg-secondary-fixed"></span>
                   <span className="font-label-uppercase text-[10px] tracking-widest text-on-primary-fixed uppercase">
                     By Personal Appointment Only
                   </span>
                 </div>
-                <h2 className="font-headline-lg text-headline-lg font-normal tracking-tight text-on-primary">
+                <h2 className="font-headline-lg text-headline-lg font-normal tracking-tight text-on-primary reveal-font-on-scroll">
                   Reserve a Private Fitting Consultation — Kyoto, Stockholm, or Le Marais.
                 </h2>
-                <p className="font-body-lg text-body-lg text-on-primary-container max-w-2xl leading-relaxed">
+                <p className="font-body-lg text-body-lg text-on-primary-container max-w-2xl leading-relaxed reveal-on-scroll">
                   Experience the drape of unbleached fabrics firsthand. Meet with our resident pattern master for personalized bodily measurements, or book an immersive 1-on-1 Virtual Fabric Concierge session dispatched directly to your home.
                 </p>
-                <div className="flex flex-wrap items-center gap-space-md pt-space-xs">
+                <div className="flex flex-wrap items-center gap-space-md pt-space-xs reveal-on-scroll">
                   <button
                     onClick={() => setIsFittingModalOpen(true)}
                     className="px-space-lg py-space-md bg-surface text-on-surface font-label-uppercase text-label-uppercase rounded transition-all hover:bg-surface-container shadow hover:translate-x-0.5 flex items-center gap-2 cursor-pointer"
@@ -1024,7 +1149,7 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                   </button>
                 </div>
               </div>
-              <div className="lg:col-span-4 bg-surface-container-high/10 rounded-xl p-space-lg border border-on-primary/10 space-y-space-md mt-space-lg lg:mt-0">
+              <div className="lg:col-span-4 bg-surface-container-high/10 rounded-xl p-space-lg border border-on-primary/10 space-y-space-md mt-space-lg lg:mt-0 reveal-on-scroll stagger-2">
                 <h4 className="font-label-uppercase text-label-uppercase tracking-wider text-secondary-fixed">
                   Atelier Availability
                 </h4>

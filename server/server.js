@@ -8,6 +8,7 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import inquiryRoutes from './routes/inquiryRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 import path from 'path';
 import upload from './middleware/uploadMiddleware.js';
@@ -50,6 +51,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/inquiries', inquiryRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Server listen kireema
 const PORT = process.env.PORT || 5001;

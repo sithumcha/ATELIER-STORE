@@ -17,7 +17,14 @@ router.get('/', async (req, res) => {
 // 2. Single Product wisthara laba ganeema (GET /api/products/:id)
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+    let product = null;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      product = await Product.findById(id);
+    }
+    if (!product) {
+      product = await Product.findOne({ id: id });
+    }
     if (product) {
       res.json(product);
     } else {
@@ -53,7 +60,14 @@ router.post('/', async (req, res) => {
 // 4. Product wisthara update kireema (PUT /api/products/:id)
 router.put('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+    let product = null;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      product = await Product.findById(id);
+    }
+    if (!product) {
+      product = await Product.findOne({ id: id });
+    }
     if (product) {
       if (req.body.price !== undefined) {
         req.body.price = typeof req.body.price === 'number'
@@ -79,8 +93,15 @@ router.put('/:id', async (req, res) => {
 // 5. Product ekak ain kireema (DELETE /api/products/:id)
 router.delete('/:id', async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (product) {
+    const { id } = req.params;
+    let deleted = null;
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      deleted = await Product.findByIdAndDelete(id);
+    }
+    if (!deleted) {
+      deleted = await Product.findOneAndDelete({ id: id });
+    }
+    if (deleted) {
       res.json({ message: 'Product deleted successfully' });
     } else {
       res.status(404).json({ message: 'Product to delete not found' });

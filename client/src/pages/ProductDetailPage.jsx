@@ -42,9 +42,27 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   useEffect(() => {
     // Load reviews for current product
     try {
+      let combined = [];
       const savedRev = localStorage.getItem(`atelierstore_reviews_${selectedProductId}`);
       if (savedRev) {
-        setReviews(JSON.parse(savedRev));
+        combined = JSON.parse(savedRev);
+      }
+      
+      const allUserRevs = JSON.parse(localStorage.getItem('atelierstore_all_user_reviews') || '[]');
+      const matchedUserRevs = allUserRevs.filter(r => 
+        String(r.productId) === String(selectedProductId) || 
+        (r.productTitle && product?.title && r.productTitle.toLowerCase().includes(product.title.toLowerCase())) ||
+        (r.productId && typeof r.productId === 'string' && selectedProductId && typeof selectedProductId === 'string' && r.productId.includes(selectedProductId))
+      );
+
+      matchedUserRevs.forEach(m => {
+        if (!combined.some(c => c.id === m.id)) {
+          combined.unshift(m);
+        }
+      });
+
+      if (combined.length > 0) {
+        setReviews(combined);
       } else {
         // Initial Curated Reviews
         setReviews([
@@ -73,7 +91,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     } catch (e) {
       console.error('Error loading reviews:', e);
     }
-  }, [selectedProductId]);
+  }, [selectedProductId, product]);
 
   const handleAddReview = (e) => {
     e.preventDefault();

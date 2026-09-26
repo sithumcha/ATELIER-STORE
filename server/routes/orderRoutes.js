@@ -14,7 +14,38 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. Aluth Order ekak daaneema (POST /api/orders)
+// 2. Patron Email ekata adala Orders laba ganeema (GET /api/orders/user/:email)
+router.get('/user/:email', async (req, res) => {
+  try {
+    const email = req.params.email.toLowerCase();
+    const orders = await Order.find({
+      patronEmail: new RegExp('^' + email + '$', 'i')
+    }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch user orders', error: error.message });
+  }
+});
+
+// 3. Single Order wisthara laba ganeema (GET /api/orders/:id)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let order = await Order.findOne({ orderId: id });
+    if (!order && id.match(/^[0-9a-fA-F]{24}$/)) {
+      order = await Order.findById(id);
+    }
+    if (order) {
+      res.json(order);
+    } else {
+      res.status(404).json({ message: 'Order not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch order details', error: error.message });
+  }
+});
+
+// 4. Aluth Order ekak daaneema (POST /api/orders)
 router.post('/', async (req, res) => {
   try {
     const { orderId, patronName, patronEmail, items, destination, total, status } = req.body;
@@ -36,7 +67,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 3. Order status eka update kireema (PUT /api/orders/:id/status)
+// 5. Order status eka update kireema (PUT /api/orders/:id/status)
 router.put('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +87,7 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
-// 4. Order ekak ain kireema (DELETE /api/orders/:id)
+// 6. Order ekak ain kireema (DELETE /api/orders/:id)
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;

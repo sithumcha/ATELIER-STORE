@@ -48,6 +48,7 @@ export default function AdminSidebar({ activeNav, setActiveNav, onGoToPublicStor
               { id: 'editions', label: 'Product Editions', icon: 'category' },
               { id: 'add-product', label: '+ Add New Edition', icon: 'add_circle' },
               { id: 'discounts', label: 'Discount Codes', icon: 'percent' },
+              { id: 'reviews', label: 'Reviews & Testimonials', icon: 'rate_review' },
               { id: 'customers', label: 'Customers & Patrons', icon: 'group' },
               { id: 'inquiries', label: 'Dispatches & Inquiries', icon: 'mail' },
             ].map((item) => (
