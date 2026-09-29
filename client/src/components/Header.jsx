@@ -390,7 +390,6 @@ export default function Header({
                       const displayImg = p.images?.[0] || p.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80';
                       const pId = p._id || p.id;
                       let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price || '24500').replace(/[^0-9.]/g, '')) || 24500;
-                      if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
                       return (
                         <div

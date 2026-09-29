@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import WishlistModal from './components/WishlistModal';
+import { getProductOffer } from './utils/offerUtils';
 
 // Modular Page Views from src/pages/
 import HomePage from './pages/HomePage';
@@ -273,14 +274,11 @@ export default function App() {
 
   // Add product to cart handler
   const handleAddToCart = (product) => {
-    let rawPrice = product.price;
+    const offer = getProductOffer(product);
+    let rawPrice = offer.hasActiveOffer ? offer.discountedPrice : product.price;
     let numericPrice = typeof rawPrice === 'number'
       ? rawPrice
       : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
-
-    if (numericPrice > 0 && numericPrice < 1000) {
-      numericPrice = numericPrice * 100;
-    }
 
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -338,10 +336,6 @@ export default function App() {
     let numericPrice = typeof rawPrice === 'number'
       ? rawPrice
       : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
-
-    if (numericPrice > 0 && numericPrice < 1000) {
-      numericPrice = numericPrice * 100;
-    }
 
     const prodId = product._id || product.id || 'wish_' + Date.now();
     const titleStr = product.title || product.name || 'Atelier Garment';

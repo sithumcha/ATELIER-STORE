@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { getProductOffer, formatRsPrice } from '../utils/offerUtils';
 
 // Price helper function for Sri Lankan Rupees (Rs.)
 const formatRs = (val) => {
   if (val === undefined || val === null) return 'Rs. 0';
   let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  if (num > 0 && num < 1000) {
-    num = num * 100;
-  }
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
@@ -300,7 +298,6 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
           if (otherItems.length > 0) {
             const formattedRecs = otherItems.slice(0, 3).map((p, idx) => {
               let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 28000;
-              if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
               let displayImg = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
               if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
                 displayImg = p.images[0];
@@ -366,7 +363,6 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   const formatAndSetGarment = (data) => {
     let rawPrice = data.price;
     let numericPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 28000;
-    if (numericPrice > 0 && numericPrice < 1000) numericPrice = numericPrice * 100;
 
     let imgs = [];
     if (data.images && Array.isArray(data.images) && data.images.length > 0) {
@@ -378,6 +374,15 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     } else {
       imgs = ['https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80'];
     }
+
+    imgs = imgs.map((u) => {
+      if (!u || typeof u !== 'string') return 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80';
+      if (!u.startsWith('http') && !u.startsWith('data:')) {
+        if (u.startsWith('/uploads/')) return `http://localhost:5001${u}`;
+        if (u.startsWith('uploads/')) return `http://localhost:5001/${u}`;
+      }
+      return u;
+    });
 
     const parsedSizes = Array.isArray(data.sizes) && data.sizes.length > 0
       ? data.sizes.map((s, idx) => typeof s === 'string' ? { id: `sz_${idx}`, roman: s, label: s, fit: 'Regular Fit', stock: 5 } : ({
@@ -479,10 +484,13 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
   const handleAcquireClick = () => {
     if (onAddToCart && product) {
+      const offer = getProductOffer(product);
+      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+
       onAddToCart({
         id: `${product.id}-${selectedSize}-${selectedColor}`,
         title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
-        price: product.numericPrice,
+        price: effectivePrice,
         img: product.images[selectedImageIndex] || product.img,
         size: selectedSize,
         color: selectedColor,
@@ -496,10 +504,13 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
   const handleBuyNowClick = () => {
     if (product) {
+      const offer = getProductOffer(product);
+      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+
       const directItem = {
         id: `${product.id}-${selectedSize}-${selectedColor}`,
         title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
-        price: product.numericPrice,
+        price: effectivePrice,
         img: (product.images && product.images[selectedImageIndex]) || product.img,
         size: selectedSize,
         color: selectedColor,
@@ -659,14 +670,47 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
                 {product.title}
               </h1>
 
-              <div className="flex items-baseline gap-space-md pt-2 border-b border-surface-variant pb-3">
-                <span className="font-headline-lg text-headline-lg text-primary font-bold">
-                  {product.price}
-                </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Tax inclusive · Insured Courier Dispatch
-                </span>
-              </div>
+              {(() => {
+                const offer = getProductOffer(product);
+                if (offer.hasActiveOffer) {
+                  return (
+                    <div className="space-y-2 border-b border-surface-variant pb-3 pt-2">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-headline-lg text-headline-lg text-rose-700 font-bold">
+                          {formatRsPrice(offer.discountedPrice)}
+                        </span>
+                        <span className="line-through text-lg text-outline font-mono">
+                          {formatRsPrice(offer.rawPrice)}
+                        </span>
+                        <span className="px-3 py-1 rounded bg-rose-600 text-white font-label-caps text-xs font-bold uppercase shadow-sm flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-sm">local_offer</span>
+                          {offer.offerPercentage}% OFF
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 flex items-center justify-between text-xs font-label-caps shadow-xs">
+                        <span className="font-bold flex items-center gap-1.5 text-rose-900">
+                          <span className="material-symbols-outlined text-base text-rose-700">timer</span>
+                          {offer.offerTitle}
+                        </span>
+                        <span className="bg-rose-700 text-white px-2.5 py-0.5 rounded font-mono font-bold shadow-xs">
+                          ⏳ Ends in {offer.timeRemainingStr}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex items-baseline gap-space-md pt-2 border-b border-surface-variant pb-3">
+                    <span className="font-headline-lg text-headline-lg text-primary font-bold">
+                      {product.price}
+                    </span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant">
+                      Tax inclusive · Insured Courier Dispatch
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Sensory Description Extract */}

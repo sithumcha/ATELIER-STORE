@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getProductOffer, formatRsPrice } from '../utils/offerUtils';
 
 function TypewriterText({ text, speed = 12, delay = 0, className = '', cursor = false }) {
   const [displayedText, setDisplayedText] = useState('');
@@ -365,19 +366,26 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
+          const formatImgUrl = (urlStr) => {
+            if (!urlStr) return '';
+            if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) return urlStr;
+            if (urlStr.startsWith('/uploads/')) return `http://localhost:5001${urlStr}`;
+            if (urlStr.startsWith('uploads/')) return `http://localhost:5001/${urlStr}`;
+            return `http://localhost:5001/${urlStr}`;
+          };
+
           const formatted = data.map((p, idx) => {
             let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 42000;
-            if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
-            let displayImg = null;
-            if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
-              displayImg = p.images[0];
-            } else if (p.img) {
-              displayImg = p.img;
-            } else if (p.image) {
-              displayImg = p.image;
-            } else {
+            const rawImages = Array.isArray(p.images) ? p.images.map(formatImgUrl).filter(Boolean) : [];
+            let displayImg = formatImgUrl(rawImages[0] || p.img || p.image);
+            let hoverImg = formatImgUrl(rawImages[1] || (p.colors && p.colors[1] && p.colors[1].img) || rawImages[0] || p.img);
+
+            if (!displayImg) {
               displayImg = HOMEPAGE_GARMENTS[idx % HOMEPAGE_GARMENTS.length].img;
+            }
+            if (!hoverImg) {
+              hoverImg = displayImg;
             }
 
             return {
@@ -392,6 +400,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               type: p.category?.includes('Outerwear') ? 'Outerwear' : p.category?.includes('Dress') ? 'Dresses & Tunics' : p.category?.includes('Trouser') ? 'Trousers' : p.category?.includes('Knit') ? 'Knitwear' : 'Outerwear',
               sizes: p.sizes ? p.sizes.map((s) => typeof s === 'string' ? s : s.label || s.roman) : ['S', 'M', 'L', 'XL'],
               img: displayImg,
+              hoverImg: hoverImg,
+              images: rawImages,
               raw: p,
             };
           });
@@ -550,19 +560,32 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               const heroIdStr = String(heroGarment.id || heroGarment._id || '');
               const isHeroFav = wishlistIds.some((id) => String(id) === heroIdStr || String(id) === String(heroGarment._id));
               const numPrice = typeof heroGarment.price === 'number' ? heroGarment.price : (heroGarment.numericPrice || 48000);
+              const heroOffer = getProductOffer(heroGarment);
 
               return (
                 <div className="lg:col-span-5 relative mt-space-lg lg:mt-0 reveal-scale-on-scroll">
                   <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-md transition-all hover:shadow-xl relative group card-shimmer">
                     {/* Badge overlay */}
-                    <div className="absolute top-6 left-6 z-10 flex flex-col gap-1">
-                      <span className="px-space-sm py-0.5 bg-surface/90 backdrop-blur text-on-surface font-label-uppercase text-[10px] tracking-widest rounded shadow-sm">
-                        {heroGarment.badge || 'HAND-NUMBERED CUT 18/60'}
-                      </span>
-                      <span className="px-space-sm py-0.5 bg-secondary text-on-secondary font-label-uppercase text-[9px] tracking-wider rounded self-start">
-                        EDITION PREVIEW
-                      </span>
-                    </div>
+                    {heroOffer.hasActiveOffer ? (
+                      <div className="absolute top-6 left-6 z-10 flex flex-col gap-1 items-start">
+                        <span className="px-3 py-1 bg-rose-600 text-white font-label-uppercase font-bold text-xs tracking-wider rounded shadow-md flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-xs">local_offer</span>
+                          {heroOffer.offerPercentage}% OFF
+                        </span>
+                        <span className="px-2 py-0.5 bg-black/80 text-amber-300 text-[10px] font-mono rounded shadow-xs">
+                          ⏳ {heroOffer.timeRemainingStr}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="absolute top-6 left-6 z-10 flex flex-col gap-1">
+                        <span className="px-space-sm py-0.5 bg-surface/90 backdrop-blur text-on-surface font-label-uppercase text-[10px] tracking-widest rounded shadow-sm">
+                          {heroGarment.badge || 'HAND-NUMBERED CUT 18/60'}
+                        </span>
+                        <span className="px-space-sm py-0.5 bg-secondary text-on-secondary font-label-uppercase text-[9px] tracking-wider rounded self-start">
+                          EDITION PREVIEW
+                        </span>
+                      </div>
+                    )}
                     {/* Wishlist quick toggle */}
                     <button
                       aria-label="Save to wishlist"
@@ -598,12 +621,25 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="font-title-md text-title-md text-on-surface font-bold">
-                            Rs. {Math.round(numPrice).toLocaleString('en-LK')}
-                          </span>
-                          <span className="block font-body-sm text-[10px] text-on-surface-variant">
-                            Tax &amp; Duty Incl.
-                          </span>
+                          {heroOffer.hasActiveOffer ? (
+                            <div className="flex flex-col items-end">
+                              <span className="font-title-md text-title-md text-rose-700 font-bold">
+                                {formatRsPrice(heroOffer.discountedPrice)}
+                              </span>
+                              <span className="line-through text-[11px] text-outline font-mono">
+                                {formatRsPrice(heroOffer.rawPrice)}
+                              </span>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-title-md text-title-md text-on-surface font-bold">
+                                Rs. {Math.round(numPrice).toLocaleString('en-LK')}
+                              </span>
+                              <span className="block font-body-sm text-[10px] text-on-surface-variant">
+                                Tax &amp; Duty Incl.
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -938,15 +974,29 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               const isFavorited = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
               const isAdded = addedNotice[p.id];
               const staggerClass = `stagger-${(idx % 4) + 1}`;
+              const offer = getProductOffer(p);
+
               return (
                 <div
                   key={p.id}
                   className={`group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all card-shimmer reveal-on-scroll ${staggerClass}`}
                 >
                   <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
-                    <span className="absolute top-3 left-3 z-10 px-space-xs py-0.5 bg-surface/90 backdrop-blur font-label-uppercase text-[10px] text-on-surface tracking-wider rounded">
-                      {p.badge}
-                    </span>
+                    {offer.hasActiveOffer ? (
+                      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 items-start">
+                        <span className="px-2.5 py-0.5 bg-rose-600 text-white font-label-uppercase font-bold text-[10px] tracking-wider rounded shadow-md flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-xs">local_offer</span>
+                          {offer.offerPercentage}% OFF
+                        </span>
+                        <span className="px-2 py-0.5 bg-black/80 text-amber-300 text-[9px] font-mono rounded shadow-xs">
+                          ⏳ {offer.timeRemainingStr}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="absolute top-3 left-3 z-10 px-space-xs py-0.5 bg-surface/90 backdrop-blur font-label-uppercase text-[10px] text-on-surface tracking-wider rounded">
+                        {p.badge}
+                      </span>
+                    )}
                     <button
                       aria-label="Add to wishlist"
                       onClick={() => onToggleWishlist && onToggleWishlist(p)}
@@ -959,9 +1009,21 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                     </button>
                     <img
                       onClick={() => onSelectProduct && onSelectProduct(p.id)}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+                      className="w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:opacity-0 group-hover:scale-108 cursor-pointer"
                       alt={p.title}
                       src={p.img}
+                    />
+
+                    {/* Secondary Hover Image Swap Angle from MongoDB */}
+                    <img
+                      onClick={() => onSelectProduct && onSelectProduct(p.id)}
+                      className="w-full h-full object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out group-hover:scale-105 cursor-pointer"
+                      alt={`${p.title} alternate angle`}
+                      src={p.hoverImg || p.img}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = p.img;
+                      }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-surface/95 backdrop-blur-md p-2.5 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-between gap-2 border-t border-surface-variant/30 shadow-md z-10">
                       <div className="flex items-center gap-1 font-label-caps text-xs">
@@ -1019,9 +1081,20 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
                     </div>
                     <div className="pt-space-md flex items-center justify-between gap-2 border-t border-surface-variant/30 mt-3">
                       <div>
-                        <span className="font-title-md text-title-md text-on-surface font-bold block">
-                          Rs. {Math.round(p.price).toLocaleString('en-LK')}
-                        </span>
+                        {offer.hasActiveOffer ? (
+                          <div className="flex flex-col">
+                            <span className="font-title-md text-title-md text-rose-700 font-bold block">
+                              {formatRsPrice(offer.discountedPrice)}
+                            </span>
+                            <span className="line-through text-[11px] text-outline font-mono">
+                              {formatRsPrice(offer.rawPrice)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-title-md text-title-md text-on-surface font-bold block">
+                            Rs. {Math.round(p.price).toLocaleString('en-LK')}
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"

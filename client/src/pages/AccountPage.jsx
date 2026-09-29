@@ -24,6 +24,67 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   const [newCity, setNewCity] = useState('');
   const [newCountry, setNewCountry] = useState('');
 
+  // Concierge Support Inquiry State
+  const [inquirySubject, setInquirySubject] = useState('General Support Inquiry');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
+
+  const handleSubmitInquiry = async (e) => {
+    e.preventDefault();
+    if (!inquiryMessage.trim()) {
+      alert('Please enter your message details before submitting.');
+      return;
+    }
+
+    setInquirySubmitting(true);
+    const senderName = user?.name || editName || 'Clara Vanderbilt';
+    const senderEmail = user?.email || editEmail || 'clara.vanderbilt@atelier.co';
+
+    const newInquiryPayload = {
+      id: `inq-${Date.now()}`,
+      name: senderName,
+      email: senderEmail,
+      subject: inquirySubject,
+      message: inquiryMessage,
+      status: 'Pending Review',
+      createdAt: new Date().toISOString(),
+    };
+
+    // 1. Save locally in localStorage for immediate sync with Admin Panel
+    try {
+      const existingInqs = JSON.parse(localStorage.getItem('atelierstore_inquiries') || '[]');
+      const updated = [newInquiryPayload, ...existingInqs];
+      localStorage.setItem('atelierstore_inquiries', JSON.stringify(updated));
+    } catch (err) {
+      console.log('LocalStorage inquiry save error:', err);
+    }
+
+    // 2. Send POST request to backend API /api/inquiries
+    try {
+      await fetch('http://localhost:5001/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: senderName,
+          email: senderEmail,
+          subject: inquirySubject,
+          message: inquiryMessage,
+        }),
+      });
+    } catch (err) {
+      console.log('Backend inquiry send error:', err);
+    }
+
+    setInquirySubmitting(false);
+    setInquirySuccess(true);
+    setInquiryMessage('');
+
+    setTimeout(() => {
+      setInquirySuccess(false);
+    }, 4000);
+  };
+
   // Delivered Item Review State
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewRating, setReviewRating] = useState(5);
@@ -149,116 +210,175 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
     if (showSpinner) setLoadingOrders(true);
     let localOrds = [];
     try {
-      localOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const uOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const gOrds = JSON.parse(localStorage.getItem('atelierstore_orders') || '[]');
+      localOrds = [...(Array.isArray(uOrds) ? uOrds : []), ...(Array.isArray(gOrds) ? gOrds : [])];
     } catch (e) {}
 
-    const userEmail = user?.email?.toLowerCase()?.trim();
-    const userName = user?.name?.toLowerCase()?.trim();
+    // Fetch products from database to resolve real product image URLs
+    let dbProductsList = [];
+    try {
+      const pRes = await fetch('http://localhost:5001/api/products');
+      if (pRes.ok) {
+        dbProductsList = await pRes.json();
+      }
+    } catch (e) {}
 
-    if (!userEmail && !userName) {
-      setPlacedOrders([]);
-      setLoadingOrders(false);
-      return;
-    }
+    const resolveItemImage = (it) => {
+      let rawImg = it.img || it.image || '';
+      // If rawImg exists and is NOT the fallback dummy hanger image, format & return it
+      if (rawImg && !rawImg.includes('photo-1558769132-cb1aea458c5e')) {
+        if (!rawImg.startsWith('http') && !rawImg.startsWith('data:')) {
+          if (rawImg.startsWith('/uploads/')) return `http://localhost:5001${rawImg}`;
+          if (rawImg.startsWith('uploads/')) return `http://localhost:5001/${rawImg}`;
+          if (!rawImg.startsWith('/')) return `http://localhost:5001/${rawImg}`;
+        }
+        return rawImg;
+      }
+
+      // If img is missing or is fallback dummy, look up real product in dbProductsList
+      if (Array.isArray(dbProductsList) && dbProductsList.length > 0) {
+        const itemId = String(it.id || it.productId || '');
+        const itemTitle = String(it.title || '').toLowerCase().trim();
+
+        // 1. Match by Mongo ID prefix (e.g. "6ab4f3adf1d3ae03fafd5c92" in "6ab4f3adf1d3ae03fafd5c92-S-Undyed Natural Ecru")
+        let matchedProduct = dbProductsList.find((p) => {
+          const pId = String(p._id || p.id || '');
+          return pId && itemId.includes(pId);
+        });
+
+        // 2. Match by title if ID match not found
+        if (!matchedProduct && itemTitle) {
+          matchedProduct = dbProductsList.find((p) => {
+            const pTitle = String(p.title || p.name || '').toLowerCase().trim();
+            return pTitle && (itemTitle.includes(pTitle) || pTitle.includes(itemTitle));
+          });
+        }
+
+        if (matchedProduct) {
+          let foundImg = matchedProduct.img || (matchedProduct.images && matchedProduct.images[0]) || '';
+          if (Array.isArray(matchedProduct.colors) && matchedProduct.colors.length > 0) {
+            const colorMatch = matchedProduct.colors.find((c) => c.name && itemTitle.includes(c.name.toLowerCase()));
+            if (colorMatch && colorMatch.img) {
+              foundImg = colorMatch.img;
+            }
+          }
+
+          if (foundImg) {
+            if (!foundImg.startsWith('http') && !foundImg.startsWith('data:')) {
+              if (foundImg.startsWith('/uploads/')) return `http://localhost:5001${foundImg}`;
+              if (foundImg.startsWith('uploads/')) return `http://localhost:5001/${foundImg}`;
+              if (!foundImg.startsWith('/')) return `http://localhost:5001/${foundImg}`;
+            }
+            return foundImg;
+          }
+        }
+      }
+
+      return 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+    };
+
+    const userEmail = user?.email?.toLowerCase()?.trim() || '';
+    const userName = user?.name?.toLowerCase()?.trim() || '';
 
     const matchesUser = (item) => {
-      if (userEmail === 'admin@atelierstore.com') return true;
-      if (item.patronEmail && item.patronEmail.toLowerCase().trim() === userEmail) return true;
-      if (userName && item.patronName && item.patronName.toLowerCase().trim() === userName) return true;
+      // If admin or single user dev mode, match all orders
+      if (userEmail === 'admin@atelierstore.com' || userEmail === 'admin@atelier.co') return true;
+      if (!userEmail && !userName) return true;
+
+      const itemEmail = (item.patronEmail || item.email || item.customerEmail || '').toLowerCase().trim();
+      const itemName = (item.patronName || item.name || item.customerName || '').toLowerCase().trim();
+
+      if (userEmail && itemEmail && (itemEmail === userEmail || itemEmail.includes(userEmail) || userEmail.includes(itemEmail))) return true;
+      if (userName && itemName && (itemName === userName || itemName.includes(userName) || userName.includes(itemName))) return true;
+
+      if (userName) {
+        const firstName = userName.split(' ')[0];
+        if (firstName && firstName.length > 1 && itemName.includes(firstName)) return true;
+      }
+
       return false;
     };
 
-    const filteredLocal = localOrds.filter(matchesUser);
+    const map = new Map();
 
+    // 1. Fetch from backend database (MongoDB /api/orders & /api/orders/user/:email)
     try {
-      const res = await fetch('http://localhost:5001/api/orders');
-      if (res.ok) {
-        const dbOrders = await res.json();
-        if (Array.isArray(dbOrders)) {
-          const filteredDb = dbOrders.filter(matchesUser);
-          const map = new Map();
-          
-          // DB Orders take precedence for live admin updates
-          filteredDb.forEach(item => {
-            const id = item.orderId || item.id || item._id;
-            if (id) {
-              let formattedPrice = 'Rs. 0';
-              if (typeof item.total === 'number') {
-                formattedPrice = `Rs. ${Math.round(item.total).toLocaleString('en-LK')}`;
-              } else if (typeof item.total === 'string') {
-                formattedPrice = item.total.includes('Rs') ? item.total : `Rs. ${item.total}`;
-              }
+      const urls = ['http://localhost:5001/api/orders'];
+      if (userEmail) {
+        urls.push(`http://localhost:5001/api/orders/user/${encodeURIComponent(userEmail)}`);
+      }
 
-              map.set(id, {
-                id: id,
-                date: item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent Order'),
-                total: formattedPrice,
-                status: item.status || 'Awaiting Dispatch',
-                courier: item.courier || 'Insured Courier',
-                estimatedDelivery: item.estimatedDelivery || '3-5 Business Days',
-                items: Array.isArray(item.items) && item.items.length > 0 ? item.items.map(it => {
-                  let itPrice = typeof it.price === 'number' ? it.price : parseFloat(String(it.price).replace(/[^0-9.]/g, '')) || 0;
-                  if (itPrice > 0 && itPrice < 1000) itPrice = itPrice * 100;
-                  return {
-                    title: it.title || 'Garment Item',
-                    qty: it.qty || 1,
-                    price: itPrice > 0 ? `Rs. ${Math.round(itPrice).toLocaleString('en-LK')}` : (typeof it.price === 'string' ? it.price : 'Rs. 0'),
-                    img: it.img || it.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
-                  };
-                }) : []
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            const dbOrders = await res.json();
+            if (Array.isArray(dbOrders)) {
+              dbOrders.filter(matchesUser).forEach((item) => {
+                const id = item.orderId || item.id || item._id;
+                if (id) {
+                  let formattedPrice = 'Rs. 0';
+                  if (typeof item.total === 'number') {
+                    formattedPrice = `Rs. ${Math.round(item.total).toLocaleString('en-LK')}`;
+                  } else if (typeof item.total === 'string') {
+                    formattedPrice = item.total.includes('Rs') ? item.total : `Rs. ${item.total}`;
+                  }
+
+                  map.set(id, {
+                    id: id,
+                    date: item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent Order'),
+                    total: formattedPrice,
+                    status: item.status || 'Awaiting Dispatch',
+                    courier: item.courier || 'Insured Courier',
+                    estimatedDelivery: item.estimatedDelivery || '3-5 Business Days',
+                    items: Array.isArray(item.items) && item.items.length > 0 ? item.items.map((it) => {
+                      let itPrice = typeof it.price === 'number' ? it.price : parseFloat(String(it.price).replace(/[^0-9.]/g, '')) || 0;
+                      return {
+                        id: it.id || it._id || it.title,
+                        title: it.title || 'Garment Item',
+                        qty: it.qty || it.quantity || 1,
+                        price: itPrice > 0 ? `Rs. ${Math.round(itPrice).toLocaleString('en-LK')}` : (typeof it.price === 'string' ? it.price : 'Rs. 0'),
+                        img: resolveItemImage(it),
+                      };
+                    }) : [],
+                  });
+                }
               });
             }
-          });
-
-          // Add any local-only items for this user not yet in DB
-          filteredLocal.forEach(item => {
-            const id = item.orderId || item.id;
-            if (id && !map.has(id)) {
-              let formattedPrice = typeof item.total === 'number' ? `Rs. ${Math.round(item.total).toLocaleString('en-LK')}` : item.total;
-              map.set(id, {
-                id: id,
-                date: item.date || 'Recent Order',
-                total: formattedPrice,
-                status: item.status || 'Awaiting Dispatch',
-                courier: 'Insured Courier',
-                estimatedDelivery: '3-5 Business Days',
-                items: Array.isArray(item.items) ? item.items.map(it => ({
-                  title: it.title,
-                  qty: it.qty || 1,
-                  price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
-                  img: it.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
-                })) : []
-              });
-            }
-          });
-
-          setPlacedOrders(Array.from(map.values()));
-          setLoadingOrders(false);
-          return;
+          }
+        } catch (fetchErr) {
+          console.log('Single API endpoint order fetch warning:', fetchErr);
         }
       }
     } catch (err) {
       console.log('Error fetching user orders from DB:', err);
     }
 
-    if (filteredLocal.length > 0) {
-      setPlacedOrders(filteredLocal.map(item => ({
-        id: item.orderId || item.id,
-        date: item.date || 'Recent Order',
-        total: typeof item.total === 'number' ? `Rs. ${Math.round(item.total).toLocaleString('en-LK')}` : item.total,
-        status: item.status || 'Awaiting Dispatch',
-        courier: 'Insured Courier',
-        estimatedDelivery: '3-5 Business Days',
-        items: Array.isArray(item.items) ? item.items.map(it => ({
-          title: it.title,
-          qty: it.qty || 1,
-          price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
-          img: it.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80'
-        })) : []
-      })));
-    } else {
-      setPlacedOrders([]);
-    }
+    // 2. Add local-only orders for this user not yet in DB
+    localOrds.filter(matchesUser).forEach((item) => {
+      const id = item.orderId || item.id;
+      if (id && !map.has(id)) {
+        let formattedPrice = typeof item.total === 'number' ? `Rs. ${Math.round(item.total).toLocaleString('en-LK')}` : item.total;
+        map.set(id, {
+          id: id,
+          date: item.date || 'Recent Order',
+          total: formattedPrice,
+          status: item.status || 'Awaiting Dispatch',
+          courier: 'Insured Courier',
+          estimatedDelivery: '3-5 Business Days',
+          items: Array.isArray(item.items) ? item.items.map((it) => ({
+            id: it.id || it._id || it.title,
+            title: it.title || 'Garment Item',
+            qty: it.qty || it.quantity || 1,
+            price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
+            img: resolveItemImage(it),
+          })) : [],
+        });
+      }
+    });
+
+    setPlacedOrders(Array.from(map.values()));
     setLoadingOrders(false);
   };
 
@@ -933,27 +1053,60 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
             <p className="font-body-md text-on-surface-variant mb-space-lg">
               Have a question regarding your order status, custom sizing, or product details? Send a message directly to our support team.
             </p>
-            <div className="space-y-4">
+
+            {inquirySuccess && (
+              <div className="mb-4 p-3.5 rounded bg-emerald-800 text-white font-body-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                <span>Your inquiry has been successfully dispatched to our support team &amp; admin panel!</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitInquiry} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded bg-surface-container-lowest border border-surface-variant/70">
+                <div className="min-w-0">
+                  <span className="font-label-caps text-[10px] text-secondary uppercase block mb-0.5">Sender Name</span>
+                  <span className="font-body-sm font-semibold text-on-surface block truncate">{user?.name || editName || 'Clara Vanderbilt'}</span>
+                </div>
+                <div className="min-w-0">
+                  <span className="font-label-caps text-[10px] text-secondary uppercase block mb-0.5">Sender Email</span>
+                  <span className="font-body-sm font-semibold text-on-surface block break-all">{user?.email || editEmail || 'clara.vanderbilt@atelier.co'}</span>
+                </div>
+              </div>
+
               <div>
                 <label className="font-label-caps text-xs block mb-1">Subject</label>
-                <select className="w-full h-11 px-3 rounded bg-surface-container-lowest border border-surface-variant text-on-surface font-body-sm">
-                  <option>Order Status Inquiry</option>
-                  <option>Custom Sizing Assistance</option>
-                  <option>General Support Inquiry</option>
+                <select
+                  value={inquirySubject}
+                  onChange={(e) => setInquirySubject(e.target.value)}
+                  className="w-full h-11 px-3 rounded bg-surface-container-lowest border border-surface-variant text-on-surface font-body-sm"
+                >
+                  <option value="General Support Inquiry">General Support Inquiry</option>
+                  <option value="Order Status Inquiry">Order Status Inquiry</option>
+                  <option value="Custom Sizing Assistance">Custom Sizing Assistance</option>
+                  <option value="Bespoke Fitting &amp; Tailoring">Bespoke Fitting &amp; Tailoring</option>
                 </select>
               </div>
+
               <div>
                 <label className="font-label-caps text-xs block mb-1">Message Detail</label>
                 <textarea
                   rows={4}
-                  className="w-full p-3 rounded bg-surface-container-lowest border border-surface-variant text-on-surface font-body-sm"
+                  value={inquiryMessage}
+                  onChange={(e) => setInquiryMessage(e.target.value)}
+                  className="w-full p-3 rounded bg-surface-container-lowest border border-surface-variant text-on-surface font-body-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Describe your request..."
+                  required
                 />
               </div>
-              <button className="h-11 px-6 rounded bg-primary text-on-primary font-label-md uppercase tracking-wider hover:bg-secondary transition-colors cursor-pointer">
-                Submit Support Inquiry
+
+              <button
+                type="submit"
+                disabled={inquirySubmitting}
+                className="h-11 px-6 rounded bg-primary text-on-primary font-label-md uppercase tracking-wider hover:bg-secondary transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {inquirySubmitting ? 'Sending Dispatch...' : 'Submit Support Inquiry'}
               </button>
-            </div>
+            </form>
           </div>
         )}
       </div>

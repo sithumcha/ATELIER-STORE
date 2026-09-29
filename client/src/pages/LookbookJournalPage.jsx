@@ -93,7 +93,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
               <img
                 className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                 alt="Solitude Raw Linen Duster in Natural Flax"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD58OwyBRGeLpAZqio0la6kmQPvlcnNre_dMcajVrA7oxkOPG_LSPUtJ_w1BCtckpq9X9MGxcUay3rv_zf5Y_eFkq4U-tQoUT7BBFJ2VSriU5qzW36_i9SMoKZETo7oJFo4YWEkFpruw-L2H8NUvh2gcqPWYByo_SCTTwiORBTSUQAU9eql_OsasneWj8JVl_cytFJPCYtu6gF254gXVLcyNR804g7lf-yLU3IK_V2s2-zSwUsdYvl0vg"
+                src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent flex flex-col justify-end p-space-lg text-on-primary">
@@ -124,7 +124,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                   alt="Stockholm Studio Noragi"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr9vgqRN1fDA5aOsIpRvx1yrBH9SyEgaHjmrMZIzCPGXjdQTmsq_DdWPfJYd1QjaXf5AhXhE8GKj-uao8hrbCdzEBOk0QwfSL968hhQaAwtaoVjenOpVZp-m8qyU8EOPByGQDL0BSqpozSOEiDYt0BiPEbCPhP1DPGe_6vLP8WxtS2ipYWwmUn8cVQtxt8Yueed3T0KS9N2mSTS4e4pdWlsWPIS5PXtaad2ly-JUUOJpyCqtnC_Y4z4g"
+                  src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent flex flex-col justify-end p-space-md text-on-primary">
@@ -163,7 +163,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
               <img
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 alt="Weave Specification Macro"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3uHpzhzM_cM4M6QEDuo7AWbXSpNDBbySELdN8H4KCCNIgdyoeiNFAJbgVceb474CpJfwP-AYegyQPT6OZVgFASNKf1ojxuopvBRG4iddrJ3p8hQKHPZ-KwqXFCQ3r4pRzLpFu71Cg1qEeaSJb39SCCfDSxoeXsR935iK4cK7MCIMqSw1qw1ehmwOP8vKNG5FpJpNL2VWD12S31f3qTWsm7rwJcfLT6RR38wf5QnTJtyf9uEI-yyl8wA"
+                src="https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80"
               />
             </div>
             <div className="p-space-md bg-surface-container-lowest flex items-center justify-between border-t border-outline-variant/20">
@@ -187,7 +187,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
               <img
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 alt="Solitude Drape Study"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEUAmPgNkBxRCuR-vA4ypW2PHCjP2BMrcAmZs06JTYoiRaEH5XStX92D17arfZrdgpLBMnyBvCxb2kmtNIfR4bLRZSDin3J44rq33CHknH6lkTXGMKnJJ8tx9F1SXdBIJWx5CYPMUg4wzonJ91213FJRFxZSI5ebaDOc9c6f7QvcKiYBr3HYCeEU3irkR-hggFq3ZQdnenZZfHxcP9PPpjJvOXdjZHzcZeIcmZXd-gCsP23qEwEqNQDA"
+                src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80"
               />
             </div>
             <div className="p-space-md bg-surface-container-lowest flex items-center justify-between border-t border-outline-variant/20">
@@ -266,7 +266,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Noragi Morphology Treatise"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIwBuWPScbZmgIKxanffRC3Zf7YFWAM6tcYMnVVOK8rBGaCAmieCBG59GNWSfuCAQuehULeX879pJVywqC33VBU_y9S1FhftOe6cAzfqtjPlCxQZ3Tseqb-Q7_0Tc9tUuSWd5S1xeCcOzZm-xAQFarTQ7VCGEVmBGZ8XOaXu6L5EfcPTWjoau_FvRGnuF6ByqC8nIA5K6FRGVgiy64UTgIiWGxlpMO64sc-PN7waEtR86itPIJWhDNeA"
+                  src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-lg space-y-space-sm">
@@ -300,7 +300,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Living Ferment Vats"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcGSh5sGlN4Pw0bnNfVneP-bNJqSZYKrVHm0yVQfKFijgflgbsdZQN2iFuN7giCynpEXbSkwn6N0Ysz4264z1HvNSOe-_E4gYqY_rWQzD5LjMeLBcz0wx1fjpf_zpo6bwTnMFsb1NoN8qxUVRk2QrGTxjFKI1Jf0hFkwHK2f4-3sc9YaRoLG2X18LZR-1g_nkCFGfq5hCUI3L2I57qPBsGtk-x7j7y8nUqay03jwmh92CoEY98UZeV3Q"
+                  src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-lg space-y-space-sm">
@@ -334,7 +334,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="In Praise of Shadow and Seam"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZQhVB9ll44xQ3rz6tsoI36PMNEI7Nl5tm2oUJERIgPW2li8AkAhwS56020N00igMsjiqmvnzaA6Bk7X-Nn24H5cMCL3KbRbBCG1VcFs_gagLN5yMEWPKso6ckHAjPPq0eXaXqHHQwb1P8wzBdyvIt0NrloyvWhZdF4rZzr7mZmpicr6D44fX08OTFXr7kzVHok7vDyHo52ozaun4d94uK-gW5pQLpOFy1K9OEwrjv84CdreIXU47Xhg"
+                  src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-lg space-y-space-sm">
@@ -368,7 +368,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Thermal Equilibrium Yak Wool"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCM7UFBCIpQVhhzGLYycsS1Ki9LOeA9HvvqCv94P2W60McWxLAMbE7LhcRHv22PilKlSIlfK9yUrIACL2di6s5yBiW74LD6Heb_9LdUnjyNmzrVsDOe0_TaSBPcZ8FwJFj-BQ4jT0EOSz93Jm1Seo6Y0YclCPX-O1qaG32E2fhvDjvuu7QPm-8ZZP8o7mc5PFZ0wrfGx-Nz9xbeqWgackltfXRo1FkmTw5a0ndgalivoFw8R9xk6rTHlw"
+                  src="https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-lg space-y-space-sm">
@@ -434,7 +434,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Kyoto Temple Residence"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvGokwm9tywiSwdkZwqB6wsi8mgK7q4T5EKMeIjhiXEnuv1cEAklL4AnI-fwWQGuptPqPki13W9D7GtHfRsT6myuHCU0ovJfB5lCGI0zT2Sx0mOYsX_pEsa-fkGfuwE7X5EJ4FH73i3hKQT6zgTboeT_3pNP4BtIFNKTMwP-1CYZV2gCGbHjeMZFH3r535_S0Dx5W-bvEuroGoeZiNfCziU6XD8AfQBP0ggXu18XjSUEAPdO5r24VFFA"
+                  src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-sm bg-surface-container-lowest">
@@ -451,7 +451,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Stockholm Civic Vault"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeU83kNQtbiVKGe7IhR3Dt8BuiO5bepvM5aZGLjTGIY9kPS_a84FaJKnltbBLSJwwoqdnYTcpyd0a6WGqGkVw6-w9kiJKVLgn7bw2lJaFjdiQNsyfddbf3qjyEx9DAY1av_pL1VZ8PwzM5xp6rK51IctmSMrNlKGKPAs1fbgy_b9r2Ow8XbJp-WgFBPkq1uOR-0i-TL2ibqJM1CxGiXJVGIkgnDidPdH9tPbk8_1gEbr1UUs1HFDsugg"
+                  src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-sm bg-surface-container-lowest">
@@ -468,7 +468,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Material Still Kyoto"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDuMWBSbLnzcUZcPjieXIL-ifCnXRrxyDkLmpHcxfk3MHMIDVtgNqV5RKHn5lOINtrFFmNNWrGrL1O4XtdonTqBr0hWXlOW7fRXUw1e7sV28FxjY2nE-Oj7TIl-K4FEbqTtVqwCxI2EDi0nlQgRr9tePH7uPTR62AvMaLBvrGBHgLWxzrzV8RvV2tUCx-IRsY3qfv8-w4O_rSpOxh2uFidpB_cMxOGqr5EFSgVU0qtBQPrmwzMKxYUWA"
+                  src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-sm bg-surface-container-lowest">
@@ -485,7 +485,7 @@ export default function LookbookJournalPage({ onSelectProduct }) {
                 <img
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   alt="Archipelago Djurgården"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcHVp1D9m3c19L_dhm_eZf0fArUd_jR5yvT3hR34xmQ8IDaO9Ru8El6X5mPKnEJIgIuPZR6LtkSoJdHDdWdonwGsxH2MeS0Mv_BpKzsjRV06exe0_H1rcVKrRBWoxq7nnva-7U7nnRo6kZFMQ34Xsw3xVYfFAkS2O_C4Yf4CvD0DSTg1ypIp19DblPHVrMFGg7QbbsixYSjcF9_NP6KOZz1mVft9AD7CZ5G0zhjE3kPxW3W5ptPQ3HtQ"
+                  src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80"
                 />
               </div>
               <div className="p-space-sm bg-surface-container-lowest">

@@ -10,7 +10,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
         id: 'swatch-deck',
         title: 'Atelier Archival Swatch Deck (12 Specimens)',
         price: 25,
-        img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDviMUbeX63ZRLy-76YDZTGBxAN4Ah9HTTYy-m6DT6dw7sBlkTFUuIIJclEpi8ZPJKPhxlPhrwEoK3S7VKVKL-6OXOlJTHk0urp7fHiSgf6l16yZV7f4JAhMrOBoIuOF0E2JPS73RUnwDUbv9mUxozOMv0G4i-zOVV6Ox0iQeIdttHBSCfFZw2rA-BN2Nt5yhKjqAV0lJzVburpaRw-qXPIPF_Vv5WaX6RS6IJkUOXRq1ewNrQwb_vH3A',
+        img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
       });
     }
     setDeckOrdered(true);
@@ -201,7 +201,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
                     <img
                       className="w-full h-full object-cover"
                       alt="Normandy Flax Macro Texture"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbvAUSabMPKExAGBFHYTOVrs8trmVd4SmrPQ2i9TJ4liVOv_Bf06y_wEXA7X9wCsceYLU2DPIFEMcF0sqtsXMEdGznsU5ljbTpN3AXDgbDWO8ZUDKALpLuLhd-QAo7BObFMpahsISWvEQ_Zj2ZLcYEc7pVKr7tPxwInl7fzyaWqkIPQNVxdVhwpSnr0SgFLFaOFa0Epy6XjE4f2j0238G9xfOBQCcSy5fRvoPkQ07aNLEO4NayEYQyPw"
+                      src="https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80"
                     />
                     <div className="absolute bottom-3 left-3 bg-surface/90 backdrop-blur px-2.5 py-1 rounded text-on-surface font-label-uppercase text-label-uppercase">
                       MICRO-SLUB TOPOGRAPHY • 400x ZOOM
@@ -298,7 +298,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
                     <img
                       className="w-full h-full object-cover"
                       alt="Kyoto Silk Skeins"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcJl1YrYHvj2yfaS1ZVLSp9OU8Q56KPu2LgSfzsJV5juaglUTPs_bAkc4GuUwJ7NoRIHUQ52SqVYdlccVqmqcMr3Nq_uDm7VZOHyHQGkanWTOJ_j26FmbdVp28eNSxlroM-5Mjy67EPVdhu-ajRWz4x38ghmptt3fLMD9QTp_72dqlVBy0ZMdJfDQmNE9_7C_lbzzvyu1-RgTPzqgAMem5jKa2FuI3CAlp8wZEi12TBzuoV-Zdwt-01w"
+                      src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80"
                     />
                     <div className="absolute bottom-3 left-3 bg-surface/90 backdrop-blur px-2.5 py-1 rounded text-on-surface font-label-uppercase text-label-uppercase">
                       REELED FILAMENT GRAIN • UNDYED
@@ -395,7 +395,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
                     <img
                       className="w-full h-full object-cover"
                       alt="Yak Fleece Tufts"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnoXD6xPVZlHvFhEldjd9KFscEAJek2crGBTYPVfiwvLcGPjECBd3Mk2e1wsMfYFk4nhCtaceEESUnMpgMoQrub_S_Lgdb6CmUX9MtDtqDVdDdLnRSYkAnzu_tMhwFGDBqhxbrIZlpiI2lVG9PNtRuzXsJiiKQXAsg_aYS6g-QVi0k0RMJFR9POwNWRtHfNsBbHE5QY20haR_-vW19zvTeom-vPUMhoIJAv3wvULyW4HEqGJwFzB4TfQ"
+                      src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80"
                     />
                     <div className="absolute bottom-3 left-3 bg-surface/90 backdrop-blur px-2.5 py-1 rounded text-on-surface font-label-uppercase text-label-uppercase">
                       RAW COMBED UNDERCOAT • GRADED
@@ -492,7 +492,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
                     <img
                       className="w-full h-full object-cover"
                       alt="Botanical Dye Vat Studio"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI5CrY63MPA2fuvMf_Xjm91vJvQ7LeNiykg689yLQIDArmdAutVjVd1SrZuUoEY69K66Lu0NGkY8dh5AURg_HSfbuk1mtLL-0tJlkVocsw8EVgOJFD0yGo73aZQVnXp4tv9guqnp_TxQnVpNrQtgtjnXtdYb_Zetj1b9blL5beTOmOhwgX72PDrgsA_pM3gX78Xa0O6mIJFbqiFBWuFdUaQe8fzlTX06qjvL1VAiGB2fkEjBFAaQo4Pw"
+                      src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80"
                     />
                     <div className="absolute bottom-3 left-3 bg-surface/90 backdrop-blur px-2.5 py-1 rounded text-on-surface font-label-uppercase text-label-uppercase">
                       SUKUMO FERMENTATION • VAT NO. 09
@@ -755,7 +755,7 @@ export default function TextilesFiberPage({ onAddToCart }) {
               <img
                 className="absolute inset-0 w-full h-full object-cover"
                 alt="Swatch Deck Box"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDviMUbeX63ZRLy-76YDZTGBxAN4Ah9HTTYy-m6DT6dw7sBlkTFUuIIJclEpi8ZPJKPhxlPhrwEoK3S7VKVKL-6OXOlJTHk0urp7fHiSgf6l16yZV7f4JAhMrOBoIuOF0E2JPS73RUnwDUbv9mUxozOMv0G4i-zOVV6Ox0iQeIdttHBSCfFZw2rA-BN2Nt5yhKjqAV0lJzVburpaRw-qXPIPF_Vv5WaX6RS6IJkUOXRq1ewNrQwb_vH3A"
+                src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80"
               />
               <div className="absolute top-4 left-4 bg-surface/90 backdrop-blur px-3 py-1 rounded shadow-sm">
                 <span className="font-label-uppercase text-label-uppercase text-on-surface tracking-wider">

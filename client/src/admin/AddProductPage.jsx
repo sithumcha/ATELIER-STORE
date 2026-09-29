@@ -312,12 +312,45 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
     }
   };
 
+  const uploadImageIfNeeded = async (imgVal) => {
+    if (!imgVal) return '';
+    // If it's already an http/https URL, return it
+    if (imgVal.startsWith('http://') || imgVal.startsWith('https://')) {
+      return imgVal;
+    }
+    // If it's a relative uploads path, format it
+    if (imgVal.startsWith('/uploads/') || imgVal.startsWith('uploads/')) {
+      return imgVal.startsWith('/') ? `http://localhost:5001${imgVal}` : `http://localhost:5001/${imgVal}`;
+    }
+    // If it's a data:image base64 string, upload it to /api/upload
+    if (imgVal.startsWith('data:image/')) {
+      try {
+        const res = await fetch(imgVal);
+        const blob = await res.blob();
+        const file = new File([blob], `product_${Date.now()}.png`, { type: blob.type || 'image/png' });
+        const formData = new FormData();
+        formData.append('image', file);
+        const uploadRes = await fetch('http://localhost:5001/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          return data.imageUrl || imgVal;
+        }
+      } catch (err) {
+        console.log('Upload error for base64 image:', err);
+      }
+    }
+    return imgVal;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      let mainImg = img1;
+      let mainImg = await uploadImageIfNeeded(img1);
       if (uploadMode === 'file' && imageFile) {
         const formData = new FormData();
         formData.append('image', imageFile);
@@ -335,7 +368,11 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
         }
       }
 
-      const imagesArray = [mainImg, img2, img3, img4].filter(Boolean);
+      const uploadedImg2 = await uploadImageIfNeeded(img2);
+      const uploadedImg3 = await uploadImageIfNeeded(img3);
+      const uploadedImg4 = await uploadImageIfNeeded(img4);
+
+      const imagesArray = [mainImg, uploadedImg2, uploadedImg3, uploadedImg4].filter(Boolean);
       const formattedColors = colors.map((c) => ({
         name: c.name || 'Organic Hue',
         hex: c.hex || '#E8E2D5',
@@ -415,17 +452,17 @@ export default function AddProductPage({ onBackToProducts, onProductAdded, editi
       if (res.ok) {
         const savedProduct = await res.json();
         alert(isEdit
-          ? `✨ Garment Edition "${savedProduct.title}" (Rs. ${savedProduct.price}) updated successfully!`
-          : `✨ New Garment Edition "${savedProduct.title}" (Rs. ${savedProduct.price}) added to vault successfully!`
+          ? `✨ Product "${savedProduct.title}" updated successfully!`
+          : `✨ New Product "${savedProduct.title}" added successfully!`
         );
         if (onProductAdded) onProductAdded(savedProduct);
       } else {
-        alert(`✨ Garment Edition "${payload.title}" saved successfully!`);
+        alert(`✨ Product "${payload.title}" saved successfully!`);
         if (onProductAdded) onProductAdded(payload);
       }
     } catch (error) {
-      console.log('Error submitting product to backend, saving locally:', error);
-      alert(`✨ Garment Edition "${title}" saved successfully!`);
+      console.log('Error submitting product to backend:', error);
+      alert(`✨ Product "${title}" saved successfully!`);
       if (onProductAdded) onProductAdded({ title, price, category });
     } finally {
       setIsSubmitting(false);

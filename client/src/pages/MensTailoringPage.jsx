@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { getProductOffer, formatRsPrice } from '../utils/offerUtils';
 
 // Price helper function for Sri Lankan Rupees (Rs.)
 const formatRs = (val) => {
   if (val === undefined || val === null) return 'Rs. 0';
   let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  if (num > 0 && num < 1000) num = num * 100;
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
@@ -59,7 +59,6 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
           const formatted = mensItems.map((p, idx) => {
             let rawP = p.price;
             let numPrice = typeof rawP === 'number' ? rawP : parseFloat(String(rawP).replace(/[^0-9.]/g, '')) || 32000;
-            if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
 
             let displayImg = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
             if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
@@ -86,10 +85,14 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
               description: p.description || p.summary || 'Architectural menswear garment crafted with patience.',
               numericPrice: numPrice,
               price: formatRs(numPrice),
+              offerPercentage: p.offerPercentage || 0,
+              offerExpiresAt: p.offerExpiresAt || null,
+              offerTitle: p.offerTitle || '',
               sizes: p.sizes ? p.sizes.map((s) => typeof s === 'string' ? s : s.label || s.roman) : ['S', 'M', 'L', 'XL'],
               colors: p.colors || [{ name: 'Sumi', hex: '#1F1B18' }],
               img: displayImg,
               hoverImg: hoverImg,
+              rawProduct: p,
             };
           });
           setProducts(formatted);
@@ -112,10 +115,13 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
     if (e) e.stopPropagation();
     const chosenSize = selectedSizes[garment.id] || 'M';
     if (onAddToCart) {
+      const offer = getProductOffer(garment);
+      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : garment.numericPrice;
+
       onAddToCart({
         id: garment.id,
         title: `${garment.title} (Size: ${chosenSize})`,
-        price: garment.numericPrice,
+        price: effectivePrice,
         img: garment.img,
       });
     }
@@ -409,6 +415,7 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
               const gIdStr = String(g.id || g._id || '');
               const isFav = wishlistIds.some((id) => String(id) === gIdStr || String(id) === String(g._id));
               const selectedSz = selectedSizes[g.id] || 'M';
+              const offer = getProductOffer(g);
 
               return (
                 <div
@@ -416,31 +423,41 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
                   onClick={() => onSelectProduct && onSelectProduct(g.id)}
                   className="group flex flex-col bg-surface-container-lowest rounded-2xl shadow-xs hover:shadow-2xl transition-all duration-500 border border-surface-variant/70 overflow-hidden cursor-pointer relative"
                 >
-                  {/* Image Presentation */}
-                  <div className="relative aspect-[3/4] w-full bg-surface-container-low overflow-hidden">
-                    <img
-                      src={g.img}
-                      alt={g.title}
-                      className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
-                      }}
-                    />
-
-                    {/* Secondary Hover Image Swap if available */}
-                    {g.hoverImg && (
+                    {/* Image Presentation with Smooth Hover Angle Swap Animation */}
+                    <div className="relative aspect-[3/4] w-full bg-surface-container-low overflow-hidden">
                       <img
-                        src={g.hoverImg}
-                        alt={`${g.title} detail`}
-                        className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out"
+                        src={g.img}
+                        alt={g.title}
+                        className="w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:opacity-0 group-hover:scale-108"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80';
+                        }}
                       />
-                    )}
 
-                    {/* Floating Badge */}
-                    <span className="absolute top-3 left-3 bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-label-caps font-bold tracking-wider text-on-surface uppercase shadow-xs">
-                      {g.badge}
-                    </span>
+                      {/* Secondary Hover Image Swap Angle */}
+                      <img
+                        src={g.hoverImg || 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=1000&q=80'}
+                        alt={`${g.title} detail angle`}
+                        className="w-full h-full object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out group-hover:scale-105 pointer-events-none"
+                      />
+
+                      {/* Floating Badge */}
+                      {offer.hasActiveOffer ? (
+                        <div className="absolute top-3 left-3 flex flex-col gap-1 items-start z-10">
+                          <span className="px-2.5 py-0.5 bg-rose-600 text-white font-label-caps font-bold text-[10px] tracking-wider rounded-full shadow-md flex items-center gap-1 animate-pulse">
+                            <span className="material-symbols-outlined text-xs">local_offer</span>
+                            {offer.offerPercentage}% OFF
+                          </span>
+                          <span className="px-2 py-0.5 bg-black/80 text-amber-300 text-[9px] font-mono rounded shadow-xs">
+                            ⏳ {offer.timeRemainingStr}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="absolute top-3 left-3 bg-surface/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-label-caps font-bold tracking-wider text-on-surface uppercase shadow-xs z-10 transition-transform duration-300 group-hover:scale-105">
+                          {g.badge || 'LIMITED EDITION'}
+                        </span>
+                      )}
 
                     {/* Wishlist Button */}
                     <button
@@ -536,9 +553,20 @@ export default function MensTailoringPage({ onAddToCart, onSelectProduct, onTogg
 
                       {/* Price & View Detail Action */}
                       <div className="flex items-center justify-between pt-1">
-                        <span className="font-serif text-lg font-bold text-primary">
-                          {g.price}
-                        </span>
+                        {offer.hasActiveOffer ? (
+                          <div className="flex flex-col">
+                            <span className="font-serif text-lg font-bold text-rose-700">
+                              {formatRsPrice(offer.discountedPrice)}
+                            </span>
+                            <span className="line-through text-[11px] text-outline font-mono">
+                              {formatRsPrice(offer.rawPrice)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-serif text-lg font-bold text-primary">
+                            {g.price}
+                          </span>
+                        )}
 
                         <span className="font-label-caps text-[11px] text-secondary font-bold uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
                           Add to Cart <span className="material-symbols-outlined text-xs">east</span>

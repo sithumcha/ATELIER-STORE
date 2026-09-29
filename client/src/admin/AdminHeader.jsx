@@ -47,7 +47,7 @@ export default function AdminHeader({ searchQuery, setSearchQuery, onOpenNewEdit
           <img
             alt="Head Curator"
             className="w-8 h-8 rounded-full object-cover border border-secondary"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVc9DU0FPf5cvkDbLsmajjIhrqxVzcprYSiMVl52H84IrGx-8KX7sAFTfDcCp_Jkh7ui-wjuxF_GCOTmZMC6FFSQ_1xmC1ln7j7_ag4eIyYD3NThID8SC7gXukjhUq_IQNeR0hA7sSSmKgP9OEScujERw4GKLr2iNdYSKBZt0gB_e3seq4o9Q31KXBbs09WpqRULVK9xwvPXKZ0tkFsNYyEjbYKTOi_uwg-44pt2XJPSoz8Q5QI2E"
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
           />
           <div className="hidden xl:flex flex-col text-left">
             <span className="font-label-md text-xs text-on-surface leading-tight font-semibold">Klara M.</span>

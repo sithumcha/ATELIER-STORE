@@ -1,22 +1,17 @@
 // Catalog & Shop Page Component
 import React, { useState, useEffect } from 'react';
+import { getProductOffer, formatRsPrice } from '../utils/offerUtils';
 
 // Price helper function for Sri Lankan Rupees (Rs.)
 const formatRs = (val) => {
   if (val === undefined || val === null) return 'Rs. 0';
   let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  if (num > 0 && num < 1000) {
-    num = num * 100;
-  }
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 };
 
 const getRsNumber = (val) => {
   if (val === undefined || val === null) return 0;
   let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
-  if (num > 0 && num < 1000) {
-    num = num * 100;
-  }
   return Math.round(num);
 };
 
@@ -50,8 +45,22 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
+          const formatImgUrl = (urlStr) => {
+            if (!urlStr) return '';
+            if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) return urlStr;
+            if (urlStr.startsWith('/uploads/')) return `http://localhost:5001${urlStr}`;
+            if (urlStr.startsWith('uploads/')) return `http://localhost:5001/${urlStr}`;
+            return `http://localhost:5001/${urlStr}`;
+          };
+
           const formatted = data.map((p) => {
             const numPrice = getRsNumber(p.price);
+            const rawImages = Array.isArray(p.images) ? p.images.map(formatImgUrl).filter(Boolean) : [];
+            let displayImg = formatImgUrl(rawImages[0] || p.img || p.image);
+            let hoverImg = formatImgUrl(rawImages[1] || (p.colors && p.colors[1] && p.colors[1].img) || rawImages[0] || p.img);
+
+            if (!displayImg) displayImg = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+            if (!hoverImg) hoverImg = displayImg;
 
             return {
               id: p._id || p.id,
@@ -60,9 +69,17 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
               subtitle: p.subtitle || p.description || '',
               price: formatRs(numPrice),
               numericPrice: numPrice,
+              offerPercentage: p.offerPercentage || 0,
+              offerExpiresAt: p.offerExpiresAt || null,
+              offerTitle: p.offerTitle || '',
               studio: p.studio || 'Kyoto Atelier',
               badge: p.badge || 'Limited Edition',
-              img: p.img || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+              img: displayImg,
+              hoverImg: hoverImg,
+              images: rawImages,
+              colors: p.colors || [],
+              sizes: p.sizes || [],
+              rawProduct: p,
             };
           });
           setProducts(formatted);
@@ -113,10 +130,13 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
 
   const handleQuickAdd = (p) => {
     if (onAddToCart) {
+      const offer = getProductOffer(p);
+      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : p.numericPrice;
+
       onAddToCart({
         id: p.id,
         title: p.title,
-        price: p.numericPrice,
+        price: effectivePrice,
         img: p.img,
       });
       setAddedNotice((prev) => ({ ...prev, [p.id]: true }));
@@ -633,87 +653,123 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-lg">
-                {sortedProducts.map((p) => (
-                  <div
-                    key={p.id}
-                    className="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden p-space-sm card-hover-lift border border-surface-variant/80"
-                  >
+                {sortedProducts.map((p) => {
+                  const offer = getProductOffer(p);
+
+                  return (
                     <div
-                      className="relative w-full aspect-[3/4] rounded-lg bg-surface-container overflow-hidden mb-space-sm cursor-pointer"
-                      onClick={() => handleProductClick(p.id)}
+                      key={p.id}
+                      className="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden p-space-sm card-hover-lift border border-surface-variant/80"
                     >
-                      <img
-                        src={p.img}
-                        alt={p.title}
-                        className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-108"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
-                        }}
-                      />
-                      {p.badge && (
-                        <span className="absolute top-3 left-3 px-3 py-1 rounded-full glass-panel font-label-caps text-[10px] uppercase text-on-surface tracking-wider shadow-sm">
-                          {p.badge}
-                        </span>
-                      )}
-
-                      {(() => {
-                        const pIdStr = String(p.id || p._id || '');
-                        const isFav = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
-                        return (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onToggleWishlist) onToggleWishlist(p);
-                            }}
-                            className={`absolute top-3 right-3 w-9 h-9 rounded-full glass-panel flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer z-10 ${
-                              isFav ? 'text-red-600 bg-surface-container-lowest scale-110 shadow-lg' : 'text-on-surface hover:text-red-600 hover:scale-110'
-                            }`}
-                            title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                            type="button"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              {isFav ? 'favorite' : 'favorite_border'}
-                            </span>
-                          </button>
-                        );
-                      })()}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuickAdd(p);
-                        }}
-                        className={`absolute bottom-3 inset-x-3 h-11 rounded-xl font-label-caps text-xs tracking-wider uppercase backdrop-blur-md opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg cursor-pointer font-bold ${
-                          addedNotice[p.id]
-                            ? 'bg-emerald-700 text-white shadow-emerald-900/20'
-                            : 'bg-primary text-on-primary hover:bg-secondary'
-                        }`}
-                        type="button"
+                      <div
+                        className="relative w-full aspect-[3/4] rounded-lg bg-surface-container overflow-hidden mb-space-sm cursor-pointer"
+                        onClick={() => handleProductClick(p.id)}
                       >
-                        <span className="material-symbols-outlined text-base">
-                          {addedNotice[p.id] ? 'check_circle' : 'add_shopping_cart'}
-                        </span>
-                        <span>{addedNotice[p.id] ? 'Added to Bag ✓' : 'Quick Add +'}</span>
-                      </button>
-                    </div>
+                        <img
+                          src={p.img}
+                          alt={p.title}
+                          className="w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:opacity-0 group-hover:scale-108"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+                          }}
+                        />
 
-                    <div className="flex flex-col flex-1 justify-between px-1 py-1 space-y-1">
-                      <div>
-                        <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest block">
-                          {p.category}
-                        </span>
+                        {/* Secondary Hover Image Swap Angle from MongoDB */}
+                        <img
+                          src={p.hoverImg || p.img}
+                          alt={`${p.title} alternate angle`}
+                          className="w-full h-full object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out group-hover:scale-105 pointer-events-none"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = p.img;
+                          }}
+                        />
+
+                        {offer.hasActiveOffer ? (
+                          <div className="absolute top-3 left-3 flex flex-col gap-1 items-start z-10">
+                            <span className="px-2.5 py-0.5 bg-rose-600 text-white font-label-caps font-bold text-[10px] tracking-wider rounded-full shadow-md flex items-center gap-1 animate-pulse">
+                              <span className="material-symbols-outlined text-xs">local_offer</span>
+                              {offer.offerPercentage}% OFF
+                            </span>
+                            <span className="px-2 py-0.5 bg-black/80 text-amber-300 text-[9px] font-mono rounded shadow-xs">
+                              ⏳ {offer.timeRemainingStr}
+                            </span>
+                          </div>
+                        ) : p.badge ? (
+                          <span className="absolute top-3 left-3 px-3 py-1 rounded-full glass-panel font-label-caps text-[10px] uppercase text-on-surface tracking-wider shadow-sm z-10 transition-transform duration-300 group-hover:scale-105">
+                            {p.badge}
+                          </span>
+                        ) : null}
+
+                        {(() => {
+                          const pIdStr = String(p.id || p._id || '');
+                          const isFav = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onToggleWishlist) onToggleWishlist(p);
+                              }}
+                              className={`absolute top-3 right-3 w-9 h-9 rounded-full glass-panel flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer z-10 ${
+                                isFav ? 'text-red-600 bg-surface-container-lowest scale-110 shadow-lg' : 'text-on-surface hover:text-red-600 hover:scale-110'
+                              }`}
+                              title={isFav ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                              type="button"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                {isFav ? 'favorite' : 'favorite_border'}
+                              </span>
+                            </button>
+                          );
+                        })()}
+
                         <button
-                          onClick={() => handleProductClick(p.id)}
-                          className="font-subheading-md text-subheading-md text-on-surface group-hover:text-secondary transition-colors duration-300 mb-1 truncate text-left cursor-pointer font-medium block"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickAdd(p);
+                          }}
+                          className={`absolute bottom-3 inset-x-3 h-11 rounded-xl font-label-caps text-xs tracking-wider uppercase backdrop-blur-md opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-lg cursor-pointer font-bold ${
+                            addedNotice[p.id]
+                              ? 'bg-emerald-700 text-white shadow-emerald-900/20'
+                              : 'bg-primary text-on-primary hover:bg-secondary'
+                          }`}
+                          type="button"
                         >
-                          {p.title}
+                          <span className="material-symbols-outlined text-base">
+                            {addedNotice[p.id] ? 'check_circle' : 'add_shopping_cart'}
+                          </span>
+                          <span>{addedNotice[p.id] ? 'Added to Bag ✓' : 'Quick Add +'}</span>
                         </button>
                       </div>
-                      <div className="pt-2 flex items-center justify-between border-t border-surface-variant/40">
-                        <span className="font-price-editorial text-price-editorial text-primary font-bold">
-                          {p.price}
-                        </span>
+
+                      <div className="flex flex-col flex-1 justify-between px-1 py-1 space-y-1">
+                        <div>
+                          <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest block">
+                            {p.category}
+                          </span>
+                          <button
+                            onClick={() => handleProductClick(p.id)}
+                            className="font-subheading-md text-subheading-md text-on-surface group-hover:text-secondary transition-colors duration-300 mb-1 truncate text-left cursor-pointer font-medium block"
+                          >
+                            {p.title}
+                          </button>
+                        </div>
+                        <div className="pt-2 flex items-center justify-between border-t border-surface-variant/40">
+                          {offer.hasActiveOffer ? (
+                            <div className="flex flex-col">
+                              <span className="font-price-editorial text-price-editorial text-rose-700 font-bold">
+                                {formatRsPrice(offer.discountedPrice)}
+                              </span>
+                              <span className="line-through text-[11px] text-outline font-mono">
+                                {formatRsPrice(offer.rawPrice)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-price-editorial text-price-editorial text-primary font-bold">
+                              {p.price}
+                            </span>
+                          )}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -734,8 +790,9 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
             )}
           </div>
         </div>

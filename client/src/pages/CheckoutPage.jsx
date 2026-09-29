@@ -66,8 +66,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
 
   // Pricing math in LKR (Rs.)
   const itemsSubtotal = displayItems.reduce((acc, item) => {
-    let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
-    if (p > 0 && p < 1000) p = p * 100;
+    let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
     const q = item.qty || item.quantity || 1;
     return acc + (p * q);
   }, 0);
@@ -134,14 +133,19 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
       patronName: customerName,
       patronEmail: email,
       items: displayItems.map(item => {
-        let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
-        if (p > 0 && p < 1000) p = p * 100;
+        let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+        let itemImg = item.img || item.image || (Array.isArray(item.images) && item.images[0]) || '';
+        if (itemImg && !itemImg.startsWith('http') && !itemImg.startsWith('data:')) {
+          if (itemImg.startsWith('/uploads/')) itemImg = `http://localhost:5001${itemImg}`;
+          else if (itemImg.startsWith('uploads/')) itemImg = `http://localhost:5001/${itemImg}`;
+          else if (!itemImg.startsWith('/')) itemImg = `http://localhost:5001/${itemImg}`;
+        }
         return {
           id: item.id || 'p1',
           title: item.title,
           price: p,
           qty: item.qty || item.quantity || 1,
-          img: item.img || item.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
+          img: itemImg || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
           color: item.color || 'Default',
           size: item.size || 'M',
         };
@@ -812,8 +816,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
               {/* Items List View */}
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {displayItems.map((item, idx) => {
-                  let numPrice = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
-                  if (numPrice > 0 && numPrice < 1000) numPrice = numPrice * 100;
+                  let numPrice = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
                   const qty = item.qty || item.quantity || 1;
 
                   return (
@@ -1036,8 +1039,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
                   {displayItems.map((item, idx) => {
-                    let price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 10000;
-                    if (price > 0 && price < 1000) price = price * 100;
+                    let price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
                     const qty = item.qty || item.quantity || 1;
                     return (
                       <tr key={idx} className="py-3">
