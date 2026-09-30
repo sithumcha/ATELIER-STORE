@@ -607,7 +607,9 @@ export default function App() {
       </main>
 
       {/* Render Footer except on Checkout & Admin pages */}
-      {activeTab !== 'checkout' && activeTab !== 'admin' && <Footer />}
+      {activeTab !== 'checkout' && activeTab !== 'admin' && (
+        <Footer onNavigate={(tab) => navigateTo(tab)} onOpenAuth={() => setIsAuthOpen(true)} />
+      )}
 
       {/* Shopping Bag Drawer Slide-over */}
       {isCartOpen && (
