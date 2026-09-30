@@ -1085,8 +1085,13 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                               <div>
                                 <h4 className="font-subheading-md text-on-surface font-medium">{item.title}</h4>
                                 <p className="font-body-sm text-xs text-on-surface-variant">
-                                  Qty: {item.qty} · {item.price}
+                                  Qty: {item.qty || item.quantity || 1} · {item.price}
                                 </p>
+                                {item.monogram && item.monogram.enabled && (
+                                  <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-900 text-[10px] font-mono font-bold">
+                                    <span>🧵 Custom Monogram: [{item.monogram.text}] · {item.monogram.threadColor} · {item.monogram.position}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 

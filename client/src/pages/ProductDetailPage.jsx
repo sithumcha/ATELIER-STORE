@@ -20,6 +20,84 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   const [addedNotice, setAddedNotice] = useState(false);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
 
+  // Atelier AI Personal Stylist State
+  const [isAiStylistOpen, setIsAiStylistOpen] = useState(false);
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiInputText, setAiInputText] = useState('');
+  const [aiThinking, setAiThinking] = useState(false);
+
+  // Bespoke Monogram Personalization State
+  const [isMonogramEnabled, setIsMonogramEnabled] = useState(false);
+  const [monogramText, setMonogramText] = useState('');
+  const [monogramThreadColor, setMonogramThreadColor] = useState('Muted Gold');
+  const [monogramPlacement, setMonogramPlacement] = useState('Left Sleeve Cuff');
+  const [monogramFontStyle, setMonogramFontStyle] = useState('Classic Serif');
+
+  // Back-in-Stock Restock Notification State
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [restockEmail, setRestockEmail] = useState('');
+  const [restockSuccess, setRestockSuccess] = useState(false);
+
+  // Initialize initial AI greeting when product loads
+  useEffect(() => {
+    if (product) {
+      setAiMessages([
+        {
+          id: 'welcome',
+          sender: 'ai',
+          text: `Bonjour! I am your Atelier AI Personal Stylist. How may I assist your styling, sizing, or fiber care selection for "${product.title}" today?`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  }, [product?.id, product?.title]);
+
+  const handleSendAiMessage = (userPrompt) => {
+    const query = userPrompt || aiInputText.trim();
+    if (!query) return;
+
+    const userMsg = {
+      id: `usr_${Date.now()}`,
+      sender: 'user',
+      text: query,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setAiMessages((prev) => [...prev, userMsg]);
+    if (!userPrompt) setAiInputText('');
+    setAiThinking(true);
+
+    setTimeout(() => {
+      let responseText = '';
+      const qLower = query.toLowerCase();
+
+      if (qLower.includes('size') || qLower.includes('fit') || qLower.includes('height') || qLower.includes('weight') || qLower.includes('measurement')) {
+        const sizesList = product?.sizes ? product.sizes.map(s => `${s.label} (${s.fit})`).join(', ') : 'S, M, L, XL';
+        responseText = `For "${product?.title}", we recommend sizing based on chest proportions: Available sizes are ${sizesList}. If you prefer a relaxed architectural silhouette, select one size up. For a 175cm / 70kg frame, Size M (Medium) fits perfectly.`;
+      } else if (qLower.includes('style') || qLower.includes('pair') || qLower.includes('wear') || qLower.includes('outfit')) {
+        responseText = `We recommend styling "${product?.title}" with our raw flax linen trousers or structured kimono duster. Pair with neutral minimalist footwear and un-dyed ceramic accessories for a quiet ceremonial aesthetic.`;
+      } else if (qLower.includes('wash') || qLower.includes('care') || qLower.includes('clean') || qLower.includes('maintain')) {
+        const careStr = Array.isArray(product?.careInstructions) ? product.careInstructions.join(' ') : 'Submerge in cool water (under 25°C) with mild neutral pH detergent.';
+        responseText = `Garment Care Protocol: ${careStr} Do not tumble dry or expose to direct harsh sun. Each piece comes with a lifetime sashiko seam repair passport.`;
+      } else if (qLower.includes('delivery') || qLower.includes('shipping') || qLower.includes('dispatch') || qLower.includes('courier')) {
+        responseText = `All orders are dispatched in carbon-neutral insulated garment packaging. Islandwide delivery across Sri Lanka takes 2-3 business days. Express international air courier arrives in 3-5 business days.`;
+      } else if (qLower.includes('price') || qLower.includes('cost') || qLower.includes('discount')) {
+        responseText = `The current price for "${product?.title}" is ${product?.price}, inclusive of all local sales taxes and complimentary carbon-neutral shipping on qualified orders.`;
+      } else {
+        responseText = `"${product?.title}" is woven from ${product?.gsm || '380 GSM heavyweight'} natural fibers (${product?.shuttle || 'hand loom'}). It features a natural un-dyed drape with zero chemical finishes. Would you like to check available sizes, color swatches, or delivery timelines?`;
+      }
+
+      const aiMsg = {
+        id: `ai_${Date.now()}`,
+        sender: 'ai',
+        text: responseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setAiMessages((prev) => [...prev, aiMsg]);
+      setAiThinking(false);
+    }, 800);
+  };
 
   // Verified Patron Reviews State
   const [reviews, setReviews] = useState([]);
@@ -423,12 +501,46 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
       stock: finalTotalStock,
       badge: data.badge || data.category || 'LIMITED EDITION',
       summary: data.description || data.summary || data.subtitle || 'Hand-crafted archival garment woven with patience.',
-      colors: Array.isArray(data.colors) && data.colors.length > 0 ? data.colors.map((c, idx) => ({
-        id: `c_${idx}`,
-        name: typeof c === 'string' ? c : (c.name || 'Natural Hue'),
-        hex: typeof c === 'object' && c.hex ? c.hex : '#1C1C18',
-        img: imgs[0]
-      })) : [{ id: 'c0', name: 'Natural Hue', hex: '#1C1C18', img: imgs[0] }],
+      colors: (Array.isArray(data.colors) && data.colors.length > 0)
+        ? data.colors.map((c, idx) => {
+            const name = typeof c === 'string' ? c : (c.name || 'Natural Hue');
+            let hex = typeof c === 'object' && c.hex ? c.hex : null;
+            let weave = typeof c === 'object' && c.weave ? c.weave : null;
+
+            if (!hex) {
+              const nLower = name.toLowerCase();
+              if (nLower.includes('persimmon') || nLower.includes('kakishibu')) hex = '#B85B35';
+              else if (nLower.includes('indigo')) hex = '#1A2332';
+              else if (nLower.includes('ochre') || nLower.includes('brown')) hex = '#946138';
+              else if (nLower.includes('ecru') || nLower.includes('cream') || nLower.includes('natural')) hex = '#E5E0D8';
+              else if (nLower.includes('slate') || nLower.includes('charcoal') || nLower.includes('black')) hex = '#363636';
+              else if (nLower.includes('olive') || nLower.includes('green')) hex = '#4A5D4E';
+              else hex = idx === 0 ? '#E5E0D8' : idx === 1 ? '#1A2332' : idx === 2 ? '#946138' : '#363636';
+            }
+
+            if (!weave) {
+              const nLower = name.toLowerCase();
+              if (nLower.includes('persimmon') || nLower.includes('kakishibu')) weave = 'Fermented Tannin Tannic Wash';
+              else if (nLower.includes('indigo')) weave = 'Botanical Indigo Vat Dye';
+              else if (nLower.includes('ochre')) weave = 'Mineral Clay Pigment Dye';
+              else if (nLower.includes('ecru')) weave = 'Raw Organic Flax Weave';
+              else weave = idx === 0 ? 'Raw Organic Flax Weave' : idx === 1 ? 'Botanical Indigo Vat Dye' : idx === 2 ? 'Mineral Clay Pigment Dye' : 'Unrefined Oak Charcoal Tint';
+            }
+
+            return {
+              id: `c_${idx}`,
+              name,
+              hex,
+              imgIndex: Math.min(idx, imgs.length - 1),
+              weave
+            };
+          })
+        : [
+            { id: 'c0', name: 'Undyed Natural Ecru', hex: '#E5E0D8', imgIndex: 0, weave: 'Raw Organic Flax Weave' },
+            { id: 'c1', name: 'Midnight Indigo', hex: '#1A2332', imgIndex: Math.min(1, imgs.length - 1), weave: 'Botanical Indigo Vat Dye' },
+            { id: 'c2', name: 'Raw Ochre', hex: '#946138', imgIndex: Math.min(2, imgs.length - 1), weave: 'Mineral Clay Pigment Dye' },
+            { id: 'c3', name: 'Charcoal Slate', hex: '#363636', imgIndex: Math.min(3, imgs.length - 1), weave: 'Unrefined Oak Charcoal Tint' },
+          ],
       sizes: parsedSizes,
       img: imgs[0],
       images: imgs,
@@ -487,20 +599,56 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
     setLoading(false);
   };
 
+  const handleRequestRestock = (e) => {
+    e.preventDefault();
+    if (!restockEmail.trim()) return;
+    try {
+      const requests = JSON.parse(localStorage.getItem('atelierstore_restock_requests') || '[]');
+      requests.push({
+        id: `req_${Date.now()}`,
+        productId: product?.id,
+        productTitle: product?.title,
+        size: selectedSize,
+        color: selectedColor,
+        email: restockEmail.trim(),
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('atelierstore_restock_requests', JSON.stringify(requests));
+    } catch (err) {}
+    setRestockSuccess(true);
+    setTimeout(() => {
+      setRestockSuccess(false);
+      setIsRestockModalOpen(false);
+      setRestockEmail('');
+    }, 2500);
+  };
+
   const handleAcquireClick = () => {
     if (onAddToCart && product) {
       const offer = getProductOffer(product);
-      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+      const basePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+      const monogramExtra = isMonogramEnabled ? 2500 : 0;
+      const effectivePrice = basePrice + monogramExtra;
+
+      const monogramObj = isMonogramEnabled ? {
+        enabled: true,
+        text: monogramText.trim() || 'A.K.',
+        threadColor: monogramThreadColor,
+        position: monogramPlacement,
+        fontStyle: monogramFontStyle,
+        price: 2500
+      } : null;
 
       onAddToCart({
         id: product.id,
         _id: product.id,
-        title: product.title,
+        title: product.title + (isMonogramEnabled ? ` (Monogrammed "${monogramText.trim() || 'A.K.'}")` : ''),
         price: effectivePrice,
         img: product.images[selectedImageIndex] || product.img,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
+        monogram: monogramObj,
         rawProduct: product.rawProduct || product,
       });
 
@@ -512,18 +660,30 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
   const handleBuyNowClick = () => {
     if (product) {
       const offer = getProductOffer(product);
-      const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+      const basePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
+      const monogramExtra = isMonogramEnabled ? 2500 : 0;
+      const effectivePrice = basePrice + monogramExtra;
+
+      const monogramObj = isMonogramEnabled ? {
+        enabled: true,
+        text: monogramText.trim() || 'A.K.',
+        threadColor: monogramThreadColor,
+        position: monogramPlacement,
+        fontStyle: monogramFontStyle,
+        price: 2500
+      } : null;
 
       const directItem = {
         id: product.id,
         _id: product.id,
-        title: product.title,
+        title: product.title + (isMonogramEnabled ? ` (Monogrammed "${monogramText.trim() || 'A.K.'}")` : ''),
         price: effectivePrice,
         img: (product.images && product.images[selectedImageIndex]) || product.img,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
         qty: quantity,
+        monogram: monogramObj,
         rawProduct: product.rawProduct || product,
       };
 
@@ -557,6 +717,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
   const isFavorited = wishlistIds.includes(product.id);
   const activeSizeObj = product.sizes.find((s) => s.label === selectedSize || s.roman === selectedSize || s.id === selectedSize) || product.sizes[0] || { label: selectedSize || 'M', fit: 'Standard', stock: 5 };
+  const activeColorObj = (product.colors && Array.isArray(product.colors) && product.colors.find(c => c.name === selectedColor)) || (product.colors && product.colors[0]) || { name: selectedColor, hex: '#E5E0D8', weave: 'Organic Fiber Weave' };
 
 
   return (
@@ -630,7 +791,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
             </div>
 
             {/* Main Display Vessel */}
-            <div className="relative w-full aspect-[3/4] bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-surface-variant group">
+            <div className="relative w-full aspect-[3/4] bg-surface-container-low rounded-xl overflow-hidden shadow-sm border border-surface-variant group flex-1">
               <img
                 id="main-product-img"
                 className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 cursor-zoom-in"
@@ -759,7 +920,9 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
                       key={col.name}
                       onClick={() => {
                         setSelectedColor(col.name);
-                        if (col.img) {
+                        if (col.imgIndex !== undefined && col.imgIndex < product.images.length) {
+                          setSelectedImageIndex(col.imgIndex);
+                        } else if (col.img) {
                           const idx = product.images.indexOf(col.img);
                           if (idx !== -1) setSelectedImageIndex(idx);
                         }
@@ -836,6 +999,98 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
                   {product.totalStock > 0 ? 'In Vault Stock' : 'Out of Stock'}
                 </span>
               </div>
+
+              {/* Back in Stock Priority Alert Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsRestockModalOpen(true)}
+                className="w-full py-2.5 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 text-xs font-label-caps font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer mt-1"
+              >
+                <span className="material-symbols-outlined text-base text-amber-700">notifications_active</span>
+                <span>🔔 Notify Me When Re-loomed / Restocked</span>
+              </button>
+            </div>
+
+            {/* Bespoke Monogram Embroidery Personalization */}
+            <div className="p-4 rounded-xl bg-surface-container-low border border-surface-variant/70 space-y-3">
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsMonogramEnabled(!isMonogramEnabled)}>
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-amber-700 text-xl">dry_cleaning</span>
+                  <div>
+                    <span className="font-label-caps text-xs uppercase font-bold text-on-surface block">
+                      🧵 Bespoke Monogram Embroidery
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant font-medium">
+                      Hand-stitched initials on cuff, sleeve, or pocket (+Rs. 2,500)
+                    </span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isMonogramEnabled}
+                  onChange={(e) => setIsMonogramEnabled(e.target.checked)}
+                  className="w-4.5 h-4.5 accent-amber-700 cursor-pointer"
+                />
+              </div>
+
+              {isMonogramEnabled && (
+                <div className="pt-3 border-t border-surface-variant/50 space-y-3 text-xs animate-fade-in">
+                  <div>
+                    <label className="block font-label-caps text-[10px] uppercase text-on-surface-variant mb-1 font-bold">
+                      Initials / Monogram Text (Max 5 Characters):
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={5}
+                      value={monogramText}
+                      onChange={(e) => setMonogramText(e.target.value.toUpperCase())}
+                      placeholder="e.g. A.K."
+                      className="w-full h-9 px-3 bg-surface-container-lowest border border-surface-variant rounded-lg font-mono font-bold text-on-surface text-xs focus:outline-none focus:border-secondary"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-label-caps text-[10px] uppercase text-on-surface-variant mb-1 font-bold">
+                        Thread Shade:
+                      </label>
+                      <select
+                        value={monogramThreadColor}
+                        onChange={(e) => setMonogramThreadColor(e.target.value)}
+                        className="w-full h-9 px-2 bg-surface-container-lowest border border-surface-variant rounded-lg text-xs text-on-surface focus:outline-none"
+                      >
+                        <option value="Muted Gold">✨ Muted Gold</option>
+                        <option value="Raw Silk Cream">🌾 Raw Silk Cream</option>
+                        <option value="Charcoal Slate">🖤 Charcoal Slate</option>
+                        <option value="Botanical Indigo">💙 Botanical Indigo</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-label-caps text-[10px] uppercase text-on-surface-variant mb-1 font-bold">
+                        Placement:
+                      </label>
+                      <select
+                        value={monogramPlacement}
+                        onChange={(e) => setMonogramPlacement(e.target.value)}
+                        className="w-full h-9 px-2 bg-surface-container-lowest border border-surface-variant rounded-lg text-xs text-on-surface focus:outline-none"
+                      >
+                        <option value="Left Sleeve Cuff">Left Sleeve Cuff</option>
+                        <option value="Chest Pocket">Chest Pocket</option>
+                        <option value="Inner Hemline">Inner Hemline</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Live Spec Preview Badge */}
+                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-[11px]">
+                    <span className="font-mono text-amber-900 font-bold tracking-wider">
+                      SPEC: [{monogramText || 'A.K.'}] · {monogramThreadColor} · {monogramPlacement}
+                    </span>
+                    <span className="font-bold text-amber-800">+Rs. 2,500</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons: Add to Cart, Buy Now & Wishlist */}
@@ -1279,6 +1534,204 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
                 RETURN TO PIECE
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Atelier AI Personal Stylist Launcher Button */}
+      <button
+        onClick={() => setIsAiStylistOpen(true)}
+        className="fixed bottom-6 right-6 z-40 px-4 py-3 bg-slate-900 text-amber-400 hover:bg-black rounded-full shadow-2xl border border-amber-500/30 flex items-center gap-2 font-label-caps text-xs tracking-wider uppercase font-bold transition-all duration-300 hover:scale-105 cursor-pointer group"
+        title="Consult Atelier AI Personal Stylist"
+        type="button"
+      >
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+        </span>
+        <span className="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">auto_awesome</span>
+        <span>AI Stylist</span>
+      </button>
+
+      {/* Atelier AI Personal Stylist Drawer Modal */}
+      {isAiStylistOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-end p-0 sm:p-6 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in">
+          <div className="w-full sm:w-[440px] h-[85vh] sm:h-[620px] bg-surface-container-lowest text-on-surface rounded-t-3xl sm:rounded-3xl shadow-2xl border border-surface-variant flex flex-col overflow-hidden relative">
+            
+            {/* AI Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-600/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
+                  <span className="material-symbols-outlined text-lg animate-pulse">auto_awesome</span>
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-sm text-white tracking-wide">ATELIER AI STYLIST</h3>
+                  <span className="text-[10px] text-amber-400/90 font-label-caps flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Active Concierge for {product?.title || 'Garment'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAiStylistOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+
+            {/* Quick Prompts Strip */}
+            <div className="p-3 bg-surface-container-low border-b border-surface-variant/50 flex gap-2 overflow-x-auto scrollbar-none text-[11px]">
+              <button
+                type="button"
+                onClick={() => handleSendAiMessage(`What size fits a 175cm / 70kg frame best for ${product?.title}?`)}
+                className="px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container border border-surface-variant/60 whitespace-nowrap font-medium text-on-surface cursor-pointer shrink-0 transition-colors"
+              >
+                📏 Sizing Advice
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendAiMessage(`How should I style and pair ${product?.title}?`)}
+                className="px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container border border-surface-variant/60 whitespace-nowrap font-medium text-on-surface cursor-pointer shrink-0 transition-colors"
+              >
+                👔 Outfit Pairing
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendAiMessage(`What are the fabric wash and care instructions for ${product?.title}?`)}
+                className="px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container border border-surface-variant/60 whitespace-nowrap font-medium text-on-surface cursor-pointer shrink-0 transition-colors"
+              >
+                🧼 Wash &amp; Care
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendAiMessage(`What are the delivery and dispatch times?`)}
+                className="px-3 py-1.5 rounded-full bg-surface-container-lowest hover:bg-surface-container border border-surface-variant/60 whitespace-nowrap font-medium text-on-surface cursor-pointer shrink-0 transition-colors"
+              >
+                🚚 Dispatch Times
+              </button>
+            </div>
+
+            {/* Messages Scroll Area */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-surface text-xs">
+              {aiMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] p-3.5 rounded-2xl ${
+                      msg.sender === 'user'
+                        ? 'bg-primary text-on-primary rounded-tr-none shadow-xs font-medium'
+                        : 'bg-surface-container-low text-on-surface border border-surface-variant/60 rounded-tl-none leading-relaxed'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant/60 mt-1 px-1 font-mono">
+                    {msg.timestamp}
+                  </span>
+                </div>
+              ))}
+
+              {aiThinking && (
+                <div className="flex items-center gap-2 p-3 bg-surface-container-low rounded-2xl rounded-tl-none border border-surface-variant/60 text-xs text-on-surface-variant w-fit">
+                  <span className="material-symbols-outlined text-sm animate-spin text-secondary">sync</span>
+                  <span>Atelier Stylist is analyzing fabric &amp; size monograph...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Input Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendAiMessage();
+              }}
+              className="p-3 bg-surface-container-lowest border-t border-surface-variant flex items-center gap-2"
+            >
+              <input
+                value={aiInputText}
+                onChange={(e) => setAiInputText(e.target.value)}
+                placeholder={`Ask Stylist AI about ${product?.title || 'this garment'}...`}
+                className="flex-1 h-11 px-4 bg-surface-container-low rounded-xl border border-surface-variant/60 text-xs text-on-surface focus:outline-none focus:border-secondary transition-all"
+              />
+              <button
+                type="submit"
+                disabled={!aiInputText.trim() || aiThinking}
+                className="h-11 px-4 rounded-xl bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-secondary transition-all disabled:opacity-50 cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
+              >
+                <span>Ask</span>
+                <span className="material-symbols-outlined text-sm">send</span>
+              </button>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Back-in-Stock Restock Notification Priority Modal */}
+      {isRestockModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-2xl p-6 shadow-2xl relative border border-surface-variant text-on-surface">
+            <button
+              className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface cursor-pointer"
+              onClick={() => setIsRestockModalOpen(false)}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
+
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center mb-3">
+              <span className="material-symbols-outlined text-xl">notifications_active</span>
+            </div>
+
+            <h3 className="font-serif text-xl font-bold text-on-surface mb-1">
+              Priority Loom Restock Alert
+            </h3>
+            <p className="font-body-sm text-xs text-on-surface-variant mb-4 leading-relaxed">
+              Enter your email address below. We will send an instant priority notification to your inbox the moment <strong>{product?.title}</strong> ({selectedSize} / {selectedColor}) is re-loomed in our partner preservation workshops.
+            </p>
+
+            {restockSuccess ? (
+              <div className="p-4 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 font-label-caps text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                <span>Priority alert requested! We will notify you upon restock.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleRequestRestock} className="space-y-3">
+                <div>
+                  <label className="block font-label-caps text-[10px] uppercase text-on-surface-variant mb-1 font-bold">
+                    Patron Email Address:
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={restockEmail}
+                    onChange={(e) => setRestockEmail(e.target.value)}
+                    placeholder="patron@domain.com"
+                    className="w-full h-11 px-4 bg-surface-container-low border border-surface-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-secondary"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsRestockModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-surface-variant text-on-surface font-label-caps text-xs uppercase font-bold hover:bg-surface-container"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-caps text-xs uppercase font-bold hover:bg-secondary shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>Request Alert</span>
+                    <span className="material-symbols-outlined text-sm">send</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
