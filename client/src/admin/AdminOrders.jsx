@@ -11,26 +11,125 @@ export default function AdminOrders() {
     fetchOrders();
   }, []);
 
+  const resolveItemImage = (it, dbProductsList = []) => {
+    let rawImg = it?.img || it?.image || (Array.isArray(it?.images) && it?.images[0]) || '';
+    if (rawImg && !rawImg.includes('photo-1558769132-cb1aea458c5e')) {
+      if (!rawImg.startsWith('http') && !rawImg.startsWith('data:')) {
+        if (rawImg.startsWith('/uploads/')) return `http://localhost:5001${rawImg}`;
+        if (rawImg.startsWith('uploads/')) return `http://localhost:5001/${rawImg}`;
+        if (!rawImg.startsWith('/')) return `http://localhost:5001/${rawImg}`;
+      }
+      return rawImg;
+    }
+
+    if (Array.isArray(dbProductsList) && dbProductsList.length > 0) {
+      const itemId = String(it?.id || it?.productId || '');
+      const itemTitle = String(it?.title || (typeof it === 'string' ? it : '')).toLowerCase().trim();
+
+      let matched = dbProductsList.find((p) => {
+        const pId = String(p._id || p.id || '');
+        return pId && itemId.includes(pId);
+      });
+
+      if (!matched && itemTitle) {
+        matched = dbProductsList.find((p) => {
+          const pTitle = String(p.title || p.name || '').toLowerCase().trim();
+          return pTitle && (itemTitle.includes(pTitle) || pTitle.includes(itemTitle));
+        });
+      }
+
+      if (matched) {
+        let foundImg = matched.img || (matched.images && matched.images[0]) || '';
+        if (Array.isArray(matched.colors) && matched.colors.length > 0) {
+          const colorMatch = matched.colors.find((c) => c.name && itemTitle.includes(c.name.toLowerCase()));
+          if (colorMatch && colorMatch.img) {
+            foundImg = colorMatch.img;
+          }
+        }
+        if (foundImg) {
+          if (!foundImg.startsWith('http') && !foundImg.startsWith('data:')) {
+            if (foundImg.startsWith('/uploads/')) return `http://localhost:5001${foundImg}`;
+            if (foundImg.startsWith('uploads/')) return `http://localhost:5001/${foundImg}`;
+            if (!foundImg.startsWith('/')) return `http://localhost:5001/${foundImg}`;
+          }
+          return foundImg;
+        }
+      }
+    }
+
+    return 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+  };
+
+  const formatLKR = (val) => {
+    if (val === null || val === undefined || val === '') return 'Rs. 0';
+    let num = 0;
+    if (typeof val === 'number') {
+      num = val;
+    } else {
+      const cleaned = String(val).replace(/[^0-9.]/g, '');
+      num = parseFloat(cleaned) || 0;
+    }
+    return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
+  };
+
   const fetchOrders = async () => {
+    let dbProds = [];
+    try {
+      const pRes = await fetch('http://localhost:5001/api/products');
+      if (pRes.ok) dbProds = await pRes.json();
+    } catch (e) {}
+
     try {
       const res = await fetch('http://localhost:5001/api/orders');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          const formatted = data.map((o) => ({
-            id: o.orderId || o._id,
-            patron: o.patronName || 'Archival Collector',
-            email: o.patronEmail || 'patron@atelier.co',
-            tier: o.tier || 'Verified Collector',
-            items: Array.isArray(o.items) ? o.items.map((i) => i.title || i).join(', ') : (o.items || 'Archival Items'),
-            destination: o.destination || 'Global Dispatch',
-            total: typeof o.total === 'number' ? `$${o.total.toFixed(2)}` : (String(o.total).startsWith('$') ? o.total : `$${o.total}`),
-            status: o.status || 'Awaiting Dispatch',
-            courier: o.courier || 'DHL Express Insured',
-            trackingNo: o.trackingNo || '7849-2048-1920',
-            origin: o.origin || 'Kyoto Workshop Kiln #2',
-            rawOrder: o,
-          }));
+          const formatted = data.map((o) => {
+            let itemList = [];
+            if (Array.isArray(o.items) && o.items.length > 0) {
+              itemList = o.items.map((i) => {
+                const itemObj = typeof i === 'string' ? { title: i } : i;
+                return {
+                  id: itemObj.id || itemObj._id || itemObj.title,
+                  title: itemObj.title || itemObj.name || 'Garment Item',
+                  qty: itemObj.qty || itemObj.quantity || 1,
+                  size: itemObj.size || '',
+                  color: itemObj.color || '',
+                  price: itemObj.price || 0,
+                  img: resolveItemImage(itemObj, dbProds),
+                };
+              });
+            } else if (typeof o.items === 'string') {
+              itemList = [{
+                title: o.items,
+                qty: 1,
+                img: resolveItemImage({ title: o.items }, dbProds),
+              }];
+            }
+
+            const itemsSummaryText = itemList.map((i) => {
+              let details = [];
+              if (i.size) details.push(`Size: ${i.size}`);
+              if (i.color) details.push(`Color: ${i.color}`);
+              return `${i.title}${details.length > 0 ? ` (${details.join(', ')})` : ''}`;
+            }).join(', ');
+
+            return {
+              id: o.orderId || o._id || o.id,
+              patron: o.patronName || 'Archival Collector',
+              email: o.patronEmail || 'patron@atelier.co',
+              tier: o.tier || 'Verified Collector',
+              itemsList: itemList,
+              itemsText: itemsSummaryText || o.items || 'Archival Items',
+              destination: o.destination || 'Global Dispatch',
+              total: formatLKR(o.total),
+              status: o.status || 'Awaiting Dispatch',
+              courier: o.courier || 'DHL Express Insured',
+              trackingNo: o.trackingNo || '7849-2048-1920',
+              origin: o.origin || 'Kyoto Workshop Kiln #2',
+              rawOrder: o,
+            };
+          });
           setOrders(formatted);
           return;
         }
@@ -68,19 +167,33 @@ export default function AdminOrders() {
     }
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm(`Are you sure you want to delete Order "${orderId}" permanently from dispatch database?`)) return;
-    try {
-      await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(orderId)}`, {
-        method: 'DELETE',
-      });
-    } catch (err) {
-      console.log('Delete order API error:', err);
-    }
-    setOrders((prev) => prev.filter((o) => o.id !== orderId));
-    if (selectedWaybill && selectedWaybill.id === orderId) {
-      setSelectedWaybill(null);
-    }
+  const handleDeleteOrder = (orderId) => {
+    toast(`Delete Order "${orderId}" permanently?`, {
+      description: 'Inventory stock will be restored to vault.',
+      action: {
+        label: 'Confirm Delete',
+        onClick: async () => {
+          try {
+            await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(orderId)}`, {
+              method: 'DELETE',
+            });
+            toast.success(`Order "${orderId}" deleted successfully`);
+          } catch (err) {
+            console.log('Delete order API error:', err);
+            toast.error('Failed to delete order');
+          }
+          setOrders((prev) => prev.filter((o) => o.id !== orderId));
+          if (selectedWaybill && selectedWaybill.id === orderId) {
+            setSelectedWaybill(null);
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+      duration: 8000,
+    });
   };
 
   const handleProcessOrder = (orderId) => {
@@ -103,7 +216,7 @@ export default function AdminOrders() {
       `"${(ord.patron || '').replace(/"/g, '""')}"`,
       `"${(ord.email || '').replace(/"/g, '""')}"`,
       `"${(ord.tier || '').replace(/"/g, '""')}"`,
-      `"${(ord.items || '').replace(/"/g, '""')}"`,
+      `"${(ord.itemsText || ord.items || '').replace(/"/g, '""')}"`,
       `"${(ord.destination || '').replace(/"/g, '""')}"`,
       `"${(ord.total || '').replace(/"/g, '""')}"`,
       `"${(ord.status || '').replace(/"/g, '""')}"`,
@@ -193,7 +306,37 @@ export default function AdminOrders() {
                     <div className="font-subheading-md text-xs font-medium text-primary">{ord.patron}</div>
                     <div className="font-label-caps text-[10px] text-secondary">{ord.tier}</div>
                   </td>
-                  <td className="py-4 px-4 font-medium text-primary">{ord.items}</td>
+                  <td className="py-4 px-4">
+                    <div className="flex flex-col gap-2 min-w-[220px]">
+                      {ord.itemsList && ord.itemsList.length > 0 ? (
+                        ord.itemsList.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-3 bg-surface-container-low/80 p-1.5 rounded-lg border border-surface-variant/40">
+                            <img
+                              src={item.img}
+                              alt={item.title}
+                              className="w-11 h-11 object-cover rounded-md border border-surface-variant shrink-0 bg-surface-container-high shadow-2xs"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+                              }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-subheading-md text-xs font-semibold text-primary truncate" title={item.title}>
+                                {item.title}
+                              </div>
+                              <div className="font-label-caps text-[10px] text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium text-secondary">Qty: {item.qty || 1}</span>
+                                {item.size && <span>• Size: {item.size}</span>}
+                                {item.color && <span>• Color: {item.color}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="font-medium text-primary">{ord.itemsText}</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-4 px-4">{ord.destination}</td>
                   <td className="py-4 px-4 font-price-editorial text-price-editorial text-primary font-medium">{ord.total}</td>
                   <td className="py-4 px-4">
@@ -314,15 +457,46 @@ export default function AdminOrders() {
                 <table className="w-full text-left font-body-sm text-xs">
                   <thead className="bg-surface-container-low font-label-caps text-[10px] text-outline">
                     <tr>
-                      <th className="p-3">Item Description</th>
-                      <th className="p-3 text-right">Declared Value</th>
+                      <th className="p-3">Item Artifact</th>
+                      <th className="p-3">Specification</th>
+                      <th className="p-3 text-right">Quantity</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-container">
-                    <tr>
-                      <td className="p-3 font-medium text-primary">{selectedWaybill.items}</td>
-                      <td className="p-3 text-right font-price-editorial font-semibold text-primary">{selectedWaybill.total}</td>
-                    </tr>
+                    {selectedWaybill.itemsList && selectedWaybill.itemsList.length > 0 ? (
+                      selectedWaybill.itemsList.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={item.img}
+                                alt={item.title}
+                                className="w-12 h-12 object-cover rounded-md border border-surface-variant shrink-0 bg-surface-container-high"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80';
+                                }}
+                              />
+                              <span className="font-semibold text-primary">{item.title}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-on-surface-variant text-[11px]">
+                            {item.size && <div>Size: {item.size}</div>}
+                            {item.color && <div>Color: {item.color}</div>}
+                            {!item.size && !item.color && <div className="text-outline">Standard Specification</div>}
+                          </td>
+                          <td className="p-3 text-right font-semibold text-primary">
+                            x{item.qty || 1}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="p-3 font-medium text-primary">{selectedWaybill.itemsText}</td>
+                        <td className="p-3 text-on-surface-variant text-[11px]">Standard Specification</td>
+                        <td className="p-3 text-right font-semibold text-primary">x1</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

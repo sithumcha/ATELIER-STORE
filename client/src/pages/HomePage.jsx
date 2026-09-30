@@ -375,7 +375,12 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
           };
 
           const formatted = data.map((p, idx) => {
-            let numPrice = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 42000;
+            let numPrice = typeof p.price === 'number' && p.price > 0
+              ? p.price
+              : parseFloat(String(p.price || 0).replace(/[^0-9.]/g, '')) || 0;
+            if (!numPrice || numPrice <= 0) {
+              numPrice = 1500;
+            }
 
             const rawImages = Array.isArray(p.images) ? p.images.map(formatImgUrl).filter(Boolean) : [];
             let displayImg = formatImgUrl(rawImages[0] || p.img || p.image);
@@ -397,6 +402,9 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               studio: p.studio || 'Kyoto Atelier • Loomed 2026',
               price: numPrice,
               numericPrice: numPrice,
+              offerPercentage: Number(p.offerPercentage) || 0,
+              offerExpiresAt: p.offerExpiresAt || null,
+              offerTitle: p.offerTitle || '',
               type: p.category?.includes('Outerwear') ? 'Outerwear' : p.category?.includes('Dress') ? 'Dresses & Tunics' : p.category?.includes('Trouser') ? 'Trousers' : p.category?.includes('Knit') ? 'Knitwear' : 'Outerwear',
               sizes: p.sizes ? p.sizes.map((s) => typeof s === 'string' ? s : s.label || s.roman) : ['S', 'M', 'L', 'XL'],
               img: displayImg,
@@ -970,8 +978,8 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {filteredProducts.map((p, idx) => {
-              const pIdStr = String(p.id || p._id || '');
-              const isFavorited = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
+              const pIdStr = String(p.id || p._id || p.title || '').trim();
+              const isFavorited = wishlistIds.some((id) => id && id === pIdStr);
               const isAdded = addedNotice[p.id];
               const staggerClass = `stagger-${(idx % 4) + 1}`;
               const offer = getProductOffer(p);

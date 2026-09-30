@@ -1,5 +1,5 @@
-// Collectors & Members Registry Component
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AdminPatrons() {
   const [patrons, setPatrons] = useState([]);
@@ -80,14 +80,28 @@ export default function AdminPatrons() {
     }
   };
 
-  const handleDeletePatron = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to delete patron "${name || id}" permanently from database?`)) return;
-    try {
-      await fetch(`http://localhost:5001/api/users/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.log('Delete patron error:', err);
-    }
-    setPatrons((prev) => prev.filter((p) => (p._id || p.id) !== id));
+  const handleDeletePatron = (id, name) => {
+    toast(`Delete patron "${name || id}" permanently?`, {
+      description: 'This record will be removed from database.',
+      action: {
+        label: 'Confirm Delete',
+        onClick: async () => {
+          try {
+            await fetch(`http://localhost:5001/api/users/${id}`, { method: 'DELETE' });
+            toast.success(`Patron "${name || id}" deleted successfully`);
+          } catch (err) {
+            console.log('Delete patron error:', err);
+            toast.error('Failed to delete patron');
+          }
+          setPatrons((prev) => prev.filter((p) => (p._id || p.id) !== id));
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+      duration: 8000,
+    });
   };
 
   return (

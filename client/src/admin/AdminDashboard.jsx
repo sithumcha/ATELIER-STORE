@@ -21,11 +21,29 @@ export default function AdminDashboard({ onGoToPublicStore }) {
   const [orders, setOrders] = useState([]);
 
   // Calculate metrics dynamically from database orders
+  const formatLKR = (val) => {
+    if (val === null || val === undefined || val === '') return 'Rs. 0';
+    let num = 0;
+    if (typeof val === 'number') {
+      num = val;
+    } else {
+      const cleaned = String(val).replace(/[^0-9.]/g, '');
+      num = parseFloat(cleaned) || 0;
+    }
+    return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
+  };
+
+  // Calculate metrics dynamically from database orders
   const totalSettlementNum = orders.reduce((sum, ord) => {
-    const val = typeof ord.total === 'number'
-      ? ord.total
-      : parseFloat(String(ord.total).replace(/[^0-9.]/g, '')) || 0;
-    return sum + val;
+    const rawVal = ord.rawOrder?.total !== undefined ? ord.rawOrder.total : ord.total;
+    let num = 0;
+    if (typeof rawVal === 'number') {
+      num = rawVal;
+    } else {
+      const cleaned = String(rawVal || '').replace(/[^0-9.]/g, '');
+      num = parseFloat(cleaned) || 0;
+    }
+    return sum + num;
   }, 0);
 
   const avgOrderNum = orders.length > 0 ? (totalSettlementNum / orders.length) : 0;
@@ -34,9 +52,9 @@ export default function AdminDashboard({ onGoToPublicStore }) {
   const donePercentVal = orders.length > 0 ? Math.round((deliveredCount / orders.length) * 100) : 0;
 
   const currentMetrics = {
-    grossSettlement: `$${totalSettlementNum.toFixed(2)}`,
+    grossSettlement: formatLKR(totalSettlementNum),
     grossGrowth: orders.length > 0 ? '100%' : '0%',
-    avgOrder: `$${avgOrderNum.toFixed(2)}`,
+    avgOrder: formatLKR(avgOrderNum),
     acquisitions: String(orders.length),
     donePercent: `${donePercentVal}%`,
     pending: `${pendingCount} Pending dispatch`,
@@ -83,8 +101,9 @@ export default function AdminDashboard({ onGoToPublicStore }) {
             tier: o.tier || 'Verified Collector',
             items: Array.isArray(o.items) ? o.items.map((i) => i.title || i).join(', ') : (o.items || 'Archival Items'),
             destination: o.destination || 'Global Destination',
-            total: typeof o.total === 'number' ? `$${o.total.toFixed(2)}` : (String(o.total).startsWith('$') ? o.total : `$${o.total}`),
+            total: formatLKR(o.total),
             status: o.status || 'Awaiting Dispatch',
+            rawOrder: o,
             statusClass: o.status?.includes('Awaiting')
               ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold'
               : o.status?.includes('Transit')

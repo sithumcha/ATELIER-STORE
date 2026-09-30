@@ -1,4 +1,5 @@
 import React from 'react';
+import { getProductOffer } from '../utils/offerUtils';
 
 export default function WishlistModal({ isOpen, onClose, wishlistItems, onAddToCart, onRemoveWishlist }) {
   if (!isOpen) return null;
@@ -34,23 +35,33 @@ export default function WishlistModal({ isOpen, onClose, wishlistItems, onAddToC
             </div>
           ) : (
             <div className="space-y-space-md">
-              {wishlistItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-space-md p-space-xs rounded bg-surface-container-low border border-surface-variant"
-                >
-                  <img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-16 h-20 object-cover rounded shrink-0 bg-surface-container"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
-                      {item.title}
-                    </h4>
-                    <span className="font-price-editorial text-price-editorial text-on-surface block mb-2 font-bold">
-                      Rs. {Math.round(item.price).toLocaleString('en-LK')}
-                    </span>
+              {wishlistItems.map((item) => {
+                const offer = getProductOffer(item.rawProduct || item);
+                const hasDiscount = offer.hasActiveOffer && offer.rawPrice > item.price;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-space-md p-space-xs rounded bg-surface-container-low border border-surface-variant"
+                  >
+                    <img
+                      src={item.img}
+                      alt={item.title}
+                      className="w-16 h-20 object-cover rounded shrink-0 bg-surface-container"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
+                        {item.title}
+                      </h4>
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <span className="font-price-editorial text-price-editorial text-on-surface font-bold">
+                          Rs. {Math.round(item.price).toLocaleString('en-LK')}
+                        </span>
+                        {hasDiscount && (
+                          <span className="line-through text-[11px] text-outline font-mono">
+                            Rs. {Math.round(offer.rawPrice).toLocaleString('en-LK')}
+                          </span>
+                        )}
+                      </div>
 
                     <button
                       onClick={() => {
@@ -69,7 +80,8 @@ export default function WishlistModal({ isOpen, onClose, wishlistItems, onAddToC
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

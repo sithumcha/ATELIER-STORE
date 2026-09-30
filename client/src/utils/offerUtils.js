@@ -3,8 +3,8 @@ export function getProductOffer(product) {
   if (!product) {
     return {
       hasActiveOffer: false,
-      rawPrice: 0,
-      discountedPrice: 0,
+      rawPrice: 1500,
+      discountedPrice: 1500,
       offerPercentage: 0,
       offerTitle: '',
       timeRemainingStr: '',
@@ -13,12 +13,30 @@ export function getProductOffer(product) {
     };
   }
 
-  const rawPrice = typeof product.price === 'number'
-    ? product.price
-    : parseFloat(String(product.price || 0).replace(/[^0-9.]/g, '')) || 0;
+  let rawPrice = 0;
 
-  const pct = Number(product.offerPercentage) || 0;
-  const expiresAtStr = product.offerExpiresAt || null;
+  // 1. Try numeric fields first
+  if (typeof product.numericPrice === 'number' && product.numericPrice > 0) {
+    rawPrice = product.numericPrice;
+  } else if (typeof product.price === 'number' && product.price > 0) {
+    rawPrice = product.price;
+  } else if (product.raw && typeof product.raw.price === 'number' && product.raw.price > 0) {
+    rawPrice = product.raw.price;
+  } else if (product.rawProduct && typeof product.rawProduct.price === 'number' && product.rawProduct.price > 0) {
+    rawPrice = product.rawProduct.price;
+  } else {
+    // 2. Try parsing string price
+    const strVal = String(product.price || product.raw?.price || product.rawProduct?.price || '');
+    rawPrice = parseFloat(strVal.replace(/[^0-9.]/g, '')) || 0;
+  }
+
+  // Fallback to 1500 if price missing or 0
+  if (!rawPrice || rawPrice <= 0) {
+    rawPrice = 1500;
+  }
+
+  const pct = Number(product.offerPercentage || product.raw?.offerPercentage || product.rawProduct?.offerPercentage) || 0;
+  const expiresAtStr = product.offerExpiresAt || product.raw?.offerExpiresAt || product.rawProduct?.offerExpiresAt || null;
   const expiresAt = expiresAtStr ? new Date(expiresAtStr).getTime() : null;
   const now = Date.now();
 
@@ -62,7 +80,7 @@ export function getProductOffer(product) {
     rawPrice,
     discountedPrice,
     offerPercentage: pct,
-    offerTitle: product.offerTitle || `${pct}% OFF Special Offer`,
+    offerTitle: product.offerTitle || product.raw?.offerTitle || `${pct}% OFF Special Offer`,
     timeRemainingStr,
     expiresAt,
     isExpired: false,
@@ -71,7 +89,9 @@ export function getProductOffer(product) {
 
 // Helper to format currency Rs.
 export function formatRsPrice(val) {
-  if (val === undefined || val === null) return 'Rs. 0';
-  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (val === undefined || val === null) return 'Rs. 1,500';
+  let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, '')) || 0;
+  if (!num || num <= 0) num = 1500;
   return `Rs. ${Math.round(num).toLocaleString('en-LK')}`;
 }
+

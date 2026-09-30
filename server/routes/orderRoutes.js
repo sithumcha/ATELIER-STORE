@@ -1,8 +1,128 @@
 // Orders API Routes
 import express from 'express';
 import Order from '../models/Order.js';
+import Product from '../models/Product.js';
 
 const router = express.Router();
+
+// Helper: Deduct stock from Product database for ordered items
+async function deductStockForOrder(items) {
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  for (const item of items) {
+    try {
+      const qtyToDeduct = Number(item.qty || item.quantity) || 1;
+      const rawTargetId = String(item.id || item._id || item.productId || '').trim();
+      const cleanId = rawTargetId.replace(/[^0-9a-fA-F]/g, '');
+      const targetTitle = (item.title || item.name || '').toLowerCase().trim();
+
+      let product = null;
+
+      // 1. Try finding product by cleaned 24-char MongoDB ObjectId
+      if (cleanId && cleanId.length === 24) {
+        product = await Product.findById(cleanId);
+      }
+
+      // 2. Try finding product by custom id string
+      if (!product && rawTargetId) {
+        product = await Product.findOne({
+          $or: [{ id: rawTargetId }, { id: cleanId }]
+        });
+      }
+
+      // 3. Try finding product by title match
+      if (!product && targetTitle) {
+        const cleanTitle = targetTitle.split('(')[0].trim();
+        product = await Product.findOne({
+          title: new RegExp('^' + cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
+        });
+      }
+
+      if (product) {
+        // Deduct from overall stock
+        const currentStock = Number(product.stock) || 0;
+        product.stock = Math.max(0, currentStock - qtyToDeduct);
+
+        // Deduct from specific size stock if size matches
+        if (Array.isArray(product.sizes) && product.sizes.length > 0 && item.size) {
+          const itemSizeStr = String(item.size).toLowerCase().trim();
+          product.sizes = product.sizes.map((s) => {
+            if (typeof s === 'object' && s !== null) {
+              const szLabel = String(s.label || s.roman || s.code || '').toLowerCase().trim();
+              if (szLabel === itemSizeStr || itemSizeStr.includes(szLabel) || szLabel.includes(itemSizeStr)) {
+                const sStock = Number(s.stock) || 0;
+                return { ...s, stock: Math.max(0, sStock - qtyToDeduct) };
+              }
+            }
+            return s;
+          });
+        }
+
+        await product.save();
+        console.log(`[STOCK DEDUCTED] Product "${product.title}" (${product._id}): reduced by ${qtyToDeduct} (New Stock: ${product.stock})`);
+      } else {
+        console.warn(`[STOCK WARNING] Could not match product for item:`, item);
+      }
+    } catch (err) {
+      console.error('Error deducting stock for order item:', err);
+    }
+  }
+}
+
+// Helper: Restore stock to Product database when order is deleted or cancelled
+async function restoreStockForOrder(items) {
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  for (const item of items) {
+    try {
+      const qtyToRestore = Number(item.qty || item.quantity) || 1;
+      const rawTargetId = String(item.id || item._id || item.productId || '').trim();
+      const cleanId = rawTargetId.replace(/[^0-9a-fA-F]/g, '');
+      const targetTitle = (item.title || item.name || '').toLowerCase().trim();
+
+      let product = null;
+
+      if (cleanId && cleanId.length === 24) {
+        product = await Product.findById(cleanId);
+      }
+      if (!product && rawTargetId) {
+        product = await Product.findOne({
+          $or: [{ id: rawTargetId }, { id: cleanId }]
+        });
+      }
+      if (!product && targetTitle) {
+        const cleanTitle = targetTitle.split('(')[0].trim();
+        product = await Product.findOne({
+          title: new RegExp('^' + cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
+        });
+      }
+
+      if (product) {
+        const currentStock = Number(product.stock) || 0;
+        product.stock = currentStock + qtyToRestore;
+
+        if (Array.isArray(product.sizes) && product.sizes.length > 0 && item.size) {
+          const itemSizeStr = String(item.size).toLowerCase().trim();
+          product.sizes = product.sizes.map((s) => {
+            if (typeof s === 'object' && s !== null) {
+              const szLabel = String(s.label || s.roman || s.code || '').toLowerCase().trim();
+              if (szLabel === itemSizeStr || itemSizeStr.includes(szLabel) || szLabel.includes(itemSizeStr)) {
+                const sStock = Number(s.stock) || 0;
+                return { ...s, stock: sStock + qtyToRestore };
+              }
+            }
+            return s;
+          });
+        }
+
+        await product.save();
+        console.log(`[STOCK RESTORED] Product "${product.title}" (${product._id}): restored by ${qtyToRestore} (New Stock: ${product.stock})`);
+      }
+    } catch (err) {
+      console.error('Error restoring stock for order item:', err);
+    }
+  }
+}
 
 // 1. All Orders laba ganeema (GET /api/orders)
 router.get('/', async (req, res) => {
@@ -61,6 +181,10 @@ router.post('/', async (req, res) => {
     });
 
     const savedOrder = await newOrder.save();
+
+    // Automatically deduct stock for ordered items
+    await deductStockForOrder(savedOrder.items);
+
     res.status(201).json(savedOrder);
   } catch (error) {
     res.status(400).json({ message: 'Failed to place order', error: error.message });
@@ -96,6 +220,8 @@ router.delete('/:id', async (req, res) => {
       deleted = await Order.findByIdAndDelete(id);
     }
     if (deleted) {
+      // Automatically restore stock when order is deleted
+      await restoreStockForOrder(deleted.items);
       res.json({ message: 'Order deleted successfully' });
     } else {
       res.status(404).json({ message: 'Order not found' });

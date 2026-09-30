@@ -1,20 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getProductOffer } from '../utils/offerUtils';
 
 export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems = [], user, isDirectBuy = false }) {
+  // Live products database from backend
+  const [dbProducts, setDbProducts] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/products')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDbProducts(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Email & Contact
-  const [email, setEmail] = useState(user?.email || 'clara.vanderbilt@atelier.co');
+  const [email, setEmail] = useState(user?.email || '');
   
-  // Address State
+  // Address State (Auto-filled from user saved profile address)
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [newAddress, setNewAddress] = useState({
-    firstName: user?.name ? user.name.split(' ')[0] : 'Clara',
-    lastName: user?.name ? user.name.split(' ')[1] || '' : 'Vanderbilt',
-    street: '142 Franklin St, Apt 4B',
-    city: 'Colombo',
-    state: 'Western Province',
-    zip: '00300',
-    phone: '+94 77 123 4567',
+    firstName: user?.name ? user.name.split(' ')[0] : '',
+    lastName: user?.name ? user.name.split(' ').slice(1).join(' ') : '',
+    street: user?.address?.street || '',
+    city: user?.address?.city || '',
+    state: user?.address?.country || user?.address?.state || '',
+    zip: user?.address?.postalCode || user?.address?.zip || '',
+    phone: user?.address?.phone || '',
   });
+
+  // Sync user profile address changes automatically
+  useEffect(() => {
+    if (user) {
+      if (user.email) setEmail(user.email);
+      setNewAddress({
+        firstName: user.name ? user.name.split(' ')[0] : '',
+        lastName: user.name ? user.name.split(' ').slice(1).join(' ') : '',
+        street: user.address?.street || '',
+        city: user.address?.city || '',
+        state: user.address?.country || user.address?.state || '',
+        zip: user.address?.postalCode || user.address?.zip || '',
+        phone: user.address?.phone || '',
+      });
+    }
+  }, [user]);
 
   // Shipping Logistics Option State
   const [shippingCost, setShippingCost] = useState(0);
@@ -23,10 +54,10 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
   // Payment Method State: 'card' | 'koko' | 'bank' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [cardDetails, setCardDetails] = useState({
-    number: '4532 •••• •••• 8819',
-    exp: '09 / 27',
-    cvc: '842',
-    name: 'CLARA VANDERBILT',
+    number: '',
+    exp: '',
+    cvc: '',
+    name: user?.name || '',
   });
 
   // Promo Code State
@@ -41,6 +72,7 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
   const [orderSecured, setOrderSecured] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
+  const [securedOrderData, setSecuredOrderData] = useState(null);
   
   const [orderId] = useState(() => `ATL-${Math.floor(100000 + Math.random() * 900000)}`);
   const [orderDate] = useState(() => new Date().toLocaleDateString('en-US', {
@@ -51,18 +83,48 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
     minute: '2-digit'
   }));
 
-  // Items List
-  const displayItems = (cartItems && cartItems.length > 0) ? cartItems : [
-    {
-      id: 'p1',
-      title: 'Solitude Raw Linen Kimono Duster',
-      price: 42000,
-      qty: 1,
-      color: 'Undyed Ecru',
-      size: 'II',
-      img: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-    },
-  ];
+  const formatAttr = (val) => {
+    if (!val) return '';
+    if (typeof val === 'string' || typeof val === 'number') return String(val);
+    if (typeof val === 'object') {
+      return val.name || val.label || val.size || val.color || val.title || val.value || '';
+    }
+    return String(val);
+  };
+
+  // Resolve dynamic live price for any product
+  const resolveCheckoutPrice = (item) => {
+    if (!item) return 0;
+    const itemIdStr = String(item._id || item.rawProduct?._id || item.id || item.rawProduct?.id || item.productId || '').trim();
+
+    if (itemIdStr && Array.isArray(dbProducts) && dbProducts.length > 0) {
+      const matched = dbProducts.find((p) => {
+        const pIdStr = String(p._id || p.id || '').trim();
+        return pIdStr && pIdStr === itemIdStr;
+      });
+
+      if (matched) {
+        const offer = getProductOffer(matched);
+        return offer.hasActiveOffer ? offer.discountedPrice : offer.rawPrice;
+      }
+    }
+
+    const offer = getProductOffer(item.rawProduct || item);
+    return offer.hasActiveOffer ? offer.discountedPrice : offer.rawPrice;
+  };
+
+  // Raw Items List selection: strictly use actual cart items without hardcoded fake items
+  const rawItems = (cartItems && cartItems.length > 0) ? cartItems : [];
+
+  const displayItems = rawItems.map((item) => {
+    let effectivePrice = typeof item.price === 'number' && item.price > 0 ? item.price : resolveCheckoutPrice(item);
+    return {
+      ...item,
+      price: effectivePrice > 0 ? effectivePrice : (item.price || 1500),
+      color: formatAttr(item.color) || 'Default',
+      size: formatAttr(item.size) || 'M',
+    };
+  });
 
   // Pricing math in LKR (Rs.)
   const itemsSubtotal = displayItems.reduce((acc, item) => {
@@ -73,8 +135,8 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
 
   const discountAmount = promoApplied ? Math.round(itemsSubtotal * discountPercent) : 0;
   const activeSubtotal = Math.max(0, itemsSubtotal - discountAmount);
-  const estimatedTax = Math.round(activeSubtotal * 0.08); // 8% estimated luxury VAT/Tax
-  const totalSettlement = activeSubtotal + estimatedTax + shippingCost;
+  const estimatedTax = 0; // Tax is fully inclusive in listed garment price
+  const totalSettlement = activeSubtotal + shippingCost;
 
   const handleApplyPromo = () => {
     const code = promoCode.trim().toUpperCase();
@@ -116,22 +178,36 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
     }
   };
 
-  const handleTriggerOrder = () => {
+  const handleTriggerOrder = async () => {
+    if (submitting || orderSecured) return;
+
+    if (!user || !user.email) {
+      alert('Authentication Required! Please sign in or register an account to place an order.');
+      return;
+    }
+
     setSubmitting(true);
     setSubmitStepText('Encrypting Vault Transaction...');
 
     const customerName = useNewAddress
-      ? `${newAddress.firstName || ''} ${newAddress.lastName || ''}`.trim() || (user?.name || 'Clara Vanderbilt')
-      : (user?.name || 'Clara Vanderbilt');
+      ? `${newAddress.firstName || ''} ${newAddress.lastName || ''}`.trim() || (user?.name || 'Valued Patron')
+      : (user?.name || 'Valued Patron');
+
+    const primaryAddrStr = [
+      user?.address?.street,
+      user?.address?.city,
+      user?.address?.country,
+      user?.address?.postalCode,
+    ].filter(Boolean).join(', ');
 
     const customerDestination = useNewAddress
-      ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}`
-      : '142 Franklin St, Apt 4B, Tribeca, New York, NY 10013';
+      ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}`.trim()
+      : (primaryAddrStr || 'Primary Address Location');
 
     const orderPayload = {
       orderId: orderId,
       patronName: customerName,
-      patronEmail: email,
+      patronEmail: email || user?.email || 'patron@atelierstore.com',
       items: displayItems.map(item => {
         let p = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
         let itemImg = item.img || item.image || (Array.isArray(item.images) && item.images[0]) || '';
@@ -141,53 +217,56 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
           else if (!itemImg.startsWith('/')) itemImg = `http://localhost:5001/${itemImg}`;
         }
         return {
-          id: item.id || 'p1',
+          id: item._id || item.rawProduct?._id || item.id || item.rawProduct?.id || 'p1',
           title: item.title,
           price: p,
           qty: item.qty || item.quantity || 1,
           img: itemImg || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=80',
-          color: item.color || 'Default',
-          size: item.size || 'M',
+          color: formatAttr(item.color) || 'Default',
+          size: formatAttr(item.size) || 'M',
         };
       }),
       destination: customerDestination,
       total: totalSettlement,
+      itemsSubtotal: itemsSubtotal,
+      discountAmount: discountAmount,
+      shippingCost: shippingCost,
       status: 'Awaiting Dispatch',
       date: orderDate,
       paymentMethod: paymentMethod === 'card' ? 'Credit Card (Vault)' : paymentMethod === 'koko' ? 'Koko / Mint Pay' : paymentMethod === 'bank' ? 'Bank Transfer' : 'Cash on Delivery',
     };
 
-    // Stage 1: DB Save
-    setTimeout(() => {
-      setSubmitStepText('Generating Archival Invoice & Passport...');
-      try {
-        fetch('http://localhost:5001/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderPayload)
-        }).catch((err) => console.error('DB Order log error:', err));
-      } catch (e) {
-        console.error('API call exception:', e);
-      }
+    setSubmitStepText('Generating Archival Invoice & Passport...');
 
-      try {
-        const existingUserOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
-        localStorage.setItem('atelierstore_user_orders', JSON.stringify([orderPayload, ...existingUserOrders]));
-      } catch (e) {
-        console.error('Error saving order to localStorage:', e);
-      }
-    }, 700);
+    try {
+      await fetch('http://localhost:5001/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+    } catch (err) {
+      console.error('DB Order log error:', err);
+    }
 
-    // Stage 2: Finalize
-    setTimeout(() => {
-      setSubmitting(false);
-      setOrderSecured(true);
-      setShowToast(true);
-      setShowBillModal(true);
+    try {
+      const existingUserOrders = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify([orderPayload, ...existingUserOrders]));
+    } catch (e) {
+      console.error('Error saving order to localStorage:', e);
+    }
 
-      if (onOrderComplete) onOrderComplete();
-      setTimeout(() => setShowToast(false), 5000);
-    }, 1600);
+    setSecuredOrderData(orderPayload);
+    setSubmitting(false);
+    setOrderSecured(true);
+    setShowToast(true);
+    setShowBillModal(true);
+
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {}
+
+    if (onOrderComplete) onOrderComplete(displayItems);
+    setTimeout(() => setShowToast(false), 5000);
   };
 
   const scrollToSection = (id) => {
@@ -263,7 +342,104 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
       {/* Main Checkout Workspace */}
       <div className="w-full max-w-[1360px] mx-auto px-margin-mobile sm:px-margin-tablet lg:px-margin-desktop py-space-2xl">
         
-        {/* Step Navigation Bar */}
+        {!user && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-4 text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-amber-600 text-2xl">lock_person</span>
+              <div>
+                <span className="font-bold text-sm block">Patron Authentication Required</span>
+                <span className="text-xs opacity-90 block">You are currently browsing as a guest. Please sign in or register an account before placing an order.</span>
+              </div>
+            </div>
+            <button
+              onClick={onBackToHome}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shrink-0 cursor-pointer shadow-xs"
+            >
+              Sign In / Register
+            </button>
+          </div>
+        )}
+
+        {displayItems.length === 0 && !orderSecured ? (
+          <div className="bg-surface-container-lowest p-8 sm:p-12 rounded-3xl border border-surface-variant/60 max-w-xl mx-auto text-center space-y-6">
+            <div className="w-16 h-16 bg-surface-container text-on-surface-variant rounded-full flex items-center justify-center mx-auto">
+              <span className="material-symbols-outlined text-3xl">shopping_bag</span>
+            </div>
+            <div>
+              <h2 className="font-headline-sm text-2xl font-bold text-on-surface">Your Shopping Bag is Empty</h2>
+              <p className="font-body-md text-xs text-on-surface-variant mt-2">
+                You currently have no garments or objects in your cart to checkout.
+              </p>
+            </div>
+            <button
+              onClick={onBackToHome}
+              className="px-8 h-12 bg-primary hover:bg-secondary text-on-primary font-label-caps text-xs tracking-wider uppercase rounded-xl font-bold transition-all cursor-pointer shadow-md"
+            >
+              Explore Store Catalog
+            </button>
+          </div>
+        ) : orderSecured ? (
+          <div className="bg-surface-container-lowest p-8 sm:p-12 rounded-3xl border border-secondary/30 shadow-xl max-w-4xl mx-auto text-center space-y-6 animate-fade-in">
+            <div className="w-20 h-20 bg-secondary/15 text-secondary rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
+              <span className="material-symbols-outlined text-4xl">check_circle</span>
+            </div>
+            <div className="space-y-2">
+              <span className="px-4 py-1.5 rounded-full bg-secondary/20 text-secondary font-label-caps text-xs font-bold uppercase tracking-widest">
+                Order #{orderId} Confirmed &amp; Secured
+              </span>
+              <h1 className="font-headline-lg text-3xl sm:text-4xl text-on-surface font-serif font-bold mt-3">
+                Thank You for Your Order
+              </h1>
+              <p className="font-body-md text-on-surface-variant max-w-lg mx-auto text-sm">
+                Your order has been recorded in our vault and dispatch logistics have been initialized. An official tax invoice and print receipt are ready below.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left bg-surface-container-low p-6 rounded-2xl border border-surface-variant/60 my-6 text-xs">
+              <div>
+                <span className="font-label-caps text-[10px] text-on-surface-variant uppercase font-bold block mb-1">ORDER REFERENCE</span>
+                <span className="font-mono font-bold text-sm text-on-surface">#{orderId}</span>
+                <span className="block text-[11px] text-on-surface-variant mt-0.5">{orderDate}</span>
+              </div>
+              <div>
+                <span className="font-label-caps text-[10px] text-on-surface-variant uppercase font-bold block mb-1">DESTINATION</span>
+                <span className="font-semibold text-on-surface block truncate">
+                  {useNewAddress ? `${newAddress.firstName || ''} ${newAddress.lastName || ''}`.trim() : (user?.name || 'Valued Patron')}
+                </span>
+                <span className="block text-[11px] text-on-surface-variant mt-0.5 truncate">
+                  {useNewAddress ? `${newAddress.street}, ${newAddress.city}` : ([user?.address?.street, user?.address?.city].filter(Boolean).join(', ') || 'Primary Address')}
+                </span>
+              </div>
+              <div>
+                <span className="font-label-caps text-[10px] text-on-surface-variant uppercase font-bold block mb-1">TOTAL SETTLED</span>
+                <span className="font-price-editorial font-bold text-base text-primary block">
+                  Rs. {Math.round(securedOrderData ? securedOrderData.total : totalSettlement).toLocaleString('en-LK')}
+                </span>
+                <span className="block text-[11px] text-secondary font-medium mt-0.5">
+                  Paid via {securedOrderData ? securedOrderData.paymentMethod : (paymentMethod === 'card' ? 'Vault Credit Card' : paymentMethod === 'koko' ? 'Koko' : paymentMethod === 'bank' ? 'Bank Transfer' : 'COD')}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <button
+                onClick={() => setShowBillModal(true)}
+                className="w-full sm:w-auto px-8 h-12 bg-primary hover:bg-secondary text-on-primary font-label-caps text-xs tracking-wider uppercase rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">print</span>
+                <span>View &amp; Print Official Bill PDF</span>
+              </button>
+              <button
+                onClick={onBackToHome}
+                className="w-full sm:w-auto px-8 h-12 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-caps text-xs tracking-wider uppercase rounded-xl font-bold transition-all cursor-pointer border border-surface-variant"
+              >
+                Return to Store Catalog
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Step Navigation Bar */}
         <div className="mb-space-2xl bg-surface-container-low p-4 rounded-2xl border border-surface-variant/60 shadow-xs">
           <div className="grid grid-cols-3 gap-2 md:gap-4 max-w-3xl mx-auto">
             
@@ -403,11 +579,15 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-subheading-md text-sm text-on-surface font-bold">{user?.name || 'Clara Vanderbilt'}</span>
+                        <span className="font-subheading-md text-sm text-on-surface font-bold">{user?.name || 'Valued Patron'}</span>
                         <span className="bg-primary text-on-primary font-label-caps text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">Primary Residence</span>
                       </div>
-                      <p className="font-body-md text-xs text-on-surface-variant mt-1 font-medium">142 Franklin St, Apt 4B, Tribeca, New York, NY 10013</p>
-                      <p className="font-body-sm text-xs text-on-surface-variant/80 mt-0.5">+1 (212) 555-0198</p>
+                      <p className="font-body-md text-xs text-on-surface-variant mt-1 font-medium">
+                        {[user?.address?.street, user?.address?.postalCode, user?.address?.city, user?.address?.country].filter(Boolean).join(', ') || 'No primary address saved yet'}
+                      </p>
+                      {user?.address?.phone && (
+                        <p className="font-body-sm text-xs text-on-surface-variant/80 mt-0.5">{user.address.phone}</p>
+                      )}
                     </div>
                   </div>
                   <span className="font-label-caps text-xs text-secondary font-bold">VERIFIED</span>
@@ -948,7 +1128,9 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
           </aside>
 
         </div>
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Printable Order Bill Invoice Modal */}
       {(showBillModal || orderSecured) && (
@@ -1009,10 +1191,10 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">CUSTOMER DETAILS</span>
                 <p className="font-semibold text-slate-900 text-sm">
-                  {useNewAddress ? `${newAddress.firstName || 'Valued'} ${newAddress.lastName || 'Patron'}` : (user?.name || 'Clara Vanderbilt')}
+                  {useNewAddress ? `${newAddress.firstName || 'Valued'} ${newAddress.lastName || 'Patron'}` : (user?.name || 'Valued Patron')}
                 </p>
                 <p className="text-slate-600 mt-0.5">
-                  {useNewAddress ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}` : '142 Franklin St, Apt 4B, Tribeca, New York, NY 10013'}
+                  {useNewAddress ? `${newAddress.street}, ${newAddress.city}, ${newAddress.state} ${newAddress.zip}` : ([user?.address?.street, user?.address?.city, user?.address?.country, user?.address?.postalCode].filter(Boolean).join(', ') || 'Primary Residence Destination')}
                 </p>
               </div>
               <div className="text-right">
@@ -1038,16 +1220,18 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-800">
-                  {displayItems.map((item, idx) => {
+                  {(securedOrderData?.items || displayItems).map((item, idx) => {
                     let price = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
                     const qty = item.qty || item.quantity || 1;
+                    const cStr = formatAttr(item.color);
+                    const sStr = formatAttr(item.size);
                     return (
                       <tr key={idx} className="py-3">
                         <td className="py-2 font-medium">
                           {item.title}
-                          {(item.color || item.size) && (
+                          {(cStr || sStr) && (
                             <span className="block text-[10px] text-slate-400">
-                              {[item.color, item.size ? `Size ${item.size}` : ''].filter(Boolean).join(' • ')}
+                              {[cStr, sStr ? `Size ${sStr}` : ''].filter(Boolean).join(' • ')}
                             </span>
                           )}
                         </td>
@@ -1067,27 +1251,31 @@ export default function CheckoutPage({ onBackToHome, onOrderComplete, cartItems 
             <div className="border-t border-slate-200 pt-4 flex flex-col gap-1.5 text-xs text-slate-600 max-w-xs ml-auto">
               <div className="flex justify-between">
                 <span>Items Subtotal</span>
-                <span className="font-mono text-slate-900 font-medium">Rs. {itemsSubtotal.toLocaleString('en-LK')}</span>
+                <span className="font-mono text-slate-900 font-medium">
+                  Rs. {Math.round(securedOrderData ? (securedOrderData.itemsSubtotal || securedOrderData.total) : itemsSubtotal).toLocaleString('en-LK')}
+                </span>
               </div>
-              {promoApplied && (
+              {(securedOrderData ? securedOrderData.discountAmount > 0 : promoApplied) && (
                 <div className="flex justify-between text-emerald-700 font-semibold">
-                  <span>Member Discount (-{Math.round(discountPercent * 100)}%)</span>
-                  <span className="font-mono">-Rs. {discountAmount.toLocaleString('en-LK')}</span>
+                  <span>Member Discount</span>
+                  <span className="font-mono">-Rs. {Math.round(securedOrderData ? securedOrderData.discountAmount : discountAmount).toLocaleString('en-LK')}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>Shipping &amp; Logistics</span>
                 <span className="font-mono text-slate-900 font-medium">
-                  {shippingCost === 0 ? 'COMPLIMENTARY' : `Rs. ${shippingCost.toLocaleString('en-LK')}`}
+                  {(securedOrderData ? securedOrderData.shippingCost : shippingCost) === 0 ? 'COMPLIMENTARY' : `Rs. ${(securedOrderData ? securedOrderData.shippingCost : shippingCost).toLocaleString('en-LK')}`}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Estimated Tax (8%)</span>
-                <span className="font-mono text-slate-900 font-medium">Rs. {estimatedTax.toLocaleString('en-LK')}</span>
+                <span>Vat / Local Sales Tax</span>
+                <span className="font-mono text-emerald-700 font-semibold">INCLUDED (0% EXTRA)</span>
               </div>
               <div className="border-t-2 border-slate-900 my-1 pt-2 flex justify-between items-baseline font-bold text-slate-900 text-sm">
                 <span>GRAND TOTAL PAID</span>
-                <span className="font-mono text-base text-amber-700">Rs. {Math.round(totalSettlement).toLocaleString('en-LK')}</span>
+                <span className="font-mono text-base text-amber-700">
+                  Rs. {Math.round(securedOrderData ? securedOrderData.total : totalSettlement).toLocaleString('en-LK')}
+                </span>
               </div>
             </div>
 

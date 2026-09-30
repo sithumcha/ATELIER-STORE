@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, onGoToShop }) {
   const [activeTab, setActiveTab] = useState('orders');
@@ -18,11 +19,22 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   const [editPhone, setEditPhone] = useState(user?.address?.phone || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Edit Address Modal State
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [editAddrLabel, setEditAddrLabel] = useState('');
+  const [editAddrStreet, setEditAddrStreet] = useState('');
+  const [editAddrCity, setEditAddrCity] = useState('');
+  const [editAddrCountry, setEditAddrCountry] = useState('');
+  const [editAddrPostal, setEditAddrPostal] = useState('');
+  const [editAddrPhone, setEditAddrPhone] = useState('');
+
   // New Address form
   const [newLabel, setNewLabel] = useState('');
   const [newStreet, setNewStreet] = useState('');
   const [newCity, setNewCity] = useState('');
   const [newCountry, setNewCountry] = useState('');
+  const [newPostal, setNewPostal] = useState('');
+  const [newPhone, setNewPhone] = useState('');
 
   // Concierge Support Inquiry State
   const [inquirySubject, setInquirySubject] = useState('General Support Inquiry');
@@ -177,6 +189,48 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
     setReviewNotice(`✓ Review for "${itemObj.title}" submitted to Admin for Approval! Once approved, it will be published in public testimonials.`);
     setReviewModalItem(null);
     setTimeout(() => setReviewNotice(''), 4500);
+  };
+
+  // Delete user order handler (Restores inventory stock via Sonner confirmation)
+  const handleDeleteUserOrder = (orderId) => {
+    toast(`Cancel & Remove Order #${orderId}?`, {
+      description: 'Product inventory stock will be restored to vault.',
+      action: {
+        label: 'Confirm Delete',
+        onClick: async () => {
+          try {
+            await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(orderId)}`, {
+              method: 'DELETE',
+            });
+            toast.success(`Order #${orderId} deleted successfully`, {
+              description: 'Product inventory stock has been restored to vault.',
+            });
+          } catch (err) {
+            console.log('Error deleting order from DB:', err);
+            toast.error('Failed to delete order from server');
+          }
+
+          try {
+            const uOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+            const filteredU = uOrds.filter((o) => (o.orderId || o.id) !== orderId);
+            localStorage.setItem('atelierstore_user_orders', JSON.stringify(filteredU));
+
+            const gOrds = JSON.parse(localStorage.getItem('atelierstore_orders') || '[]');
+            const filteredG = gOrds.filter((o) => (o.orderId || o.id) !== orderId);
+            localStorage.setItem('atelierstore_orders', JSON.stringify(filteredG));
+          } catch (e) {
+            console.log('Error updating local storage after order deletion:', e);
+          }
+
+          setPlacedOrders((prev) => prev.filter((o) => o.id !== orderId));
+        },
+      },
+      cancel: {
+        label: 'Keep Order',
+        onClick: () => {},
+      },
+      duration: 10000,
+    });
   };
 
   // Extra Addresses database (Dynamically loaded from user profile)
@@ -495,6 +549,25 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
       setEditCountry(user.address?.country || '');
       setEditPostal(user.address?.postalCode || '');
       setEditPhone(user.address?.phone || '');
+
+      if (user.address && (user.address.street || user.address.city)) {
+        setAddresses((prev) => {
+          const nonPrimary = prev.filter((a) => a.id !== 'addr-1');
+          return [
+            {
+              id: 'addr-1',
+              label: 'Primary Address',
+              isPrimary: true,
+              street: user.address.street || '',
+              city: user.address.city || '',
+              country: user.address.country || '',
+              postal: user.address.postalCode || '',
+              phone: user.address.phone || '',
+            },
+            ...nonPrimary,
+          ];
+        });
+      }
     }
   }, [user]);
 
@@ -515,10 +588,8 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
       },
     };
 
-    // 1. Immediately update local state & localStorage
     if (onUpdateUser) onUpdateUser(updatedUser);
 
-    // 2. Async API PUT to Express MongoDB database
     try {
       const res = await fetch('http://localhost:5001/api/users/update-profile', {
         method: 'PUT',
@@ -541,7 +612,6 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
       console.error('Failed to sync profile update to MongoDB database:', err);
     }
 
-    // 3. Update registered users list in localStorage
     try {
       const regList = JSON.parse(localStorage.getItem('atelierstore_registered_users') || '[]');
       const updatedRegList = regList.map(u => (u.email === user?.email || u.id === user?.id) ? { ...u, ...updatedUser } : u);
@@ -553,29 +623,177 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
 
     setIsEditingProfile(false);
     setSaveSuccess(true);
+    toast.success('Profile & address updated successfully!');
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleAddAddressSubmit = (e) => {
+  const handleOpenEditAddress = (addr) => {
+    setEditingAddress(addr);
+    setEditAddrLabel(addr.label || 'Primary Address');
+    setEditAddrStreet(addr.street || '');
+    setEditAddrCity(addr.city || '');
+    setEditAddrCountry(addr.country || '');
+    setEditAddrPostal(addr.postal || addr.postalCode || '');
+    setEditAddrPhone(addr.phone || user?.address?.phone || '');
+  };
+
+  const handleSaveEditAddress = async (e) => {
     e.preventDefault();
-    setAddresses((prev) => [
-      ...prev,
-      {
-        id: 'addr-' + Date.now(),
-        label: newLabel || 'Secondary Address',
-        isPrimary: false,
-        street: newStreet,
-        city: newCity,
-        country: newCountry,
-        postal: '00000',
-        phone: editPhone,
-      },
-    ]);
+    if (!editingAddress) return;
+
+    const updated = addresses.map((a) => {
+      if (a.id === editingAddress.id) {
+        return {
+          ...a,
+          label: editAddrLabel,
+          street: editAddrStreet,
+          city: editAddrCity,
+          country: editAddrCountry,
+          postal: editAddrPostal,
+          phone: editAddrPhone,
+        };
+      }
+      return a;
+    });
+
+    setAddresses(updated);
+
+    if (editingAddress.isPrimary || updated.length === 1) {
+      const updatedUser = {
+        ...user,
+        address: {
+          street: editAddrStreet,
+          city: editAddrCity,
+          country: editAddrCountry,
+          postalCode: editAddrPostal,
+          phone: editAddrPhone,
+        },
+      };
+
+      if (onUpdateUser) onUpdateUser(updatedUser);
+
+      try {
+        await fetch('http://localhost:5001/api/users/update-profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedUser),
+        });
+      } catch (err) {}
+
+      try {
+        const regList = JSON.parse(localStorage.getItem('atelierstore_registered_users') || '[]');
+        const updatedRegList = regList.map((u) =>
+          u.email === user?.email || u.id === user?.id ? { ...u, ...updatedUser } : u
+        );
+        localStorage.setItem('atelierstore_registered_users', JSON.stringify(updatedRegList));
+      } catch (err) {}
+    }
+
+    setEditingAddress(null);
+    toast.success('Address updated successfully!');
+  };
+
+  const handleAddAddressSubmit = async (e) => {
+    e.preventDefault();
+    const isFirst = addresses.length === 0;
+    const newAddr = {
+      id: 'addr-' + Date.now(),
+      label: newLabel || 'Secondary Address',
+      isPrimary: isFirst,
+      street: newStreet,
+      city: newCity,
+      country: newCountry,
+      postal: newPostal || '00000',
+      phone: newPhone || user?.address?.phone || editPhone || '',
+    };
+
+    const updatedAddresses = [...addresses, newAddr];
+    setAddresses(updatedAddresses);
+
+    if (isFirst || newAddr.isPrimary) {
+      const updatedUser = {
+        ...user,
+        address: {
+          street: newAddr.street,
+          city: newAddr.city,
+          country: newAddr.country,
+          postalCode: newAddr.postal,
+          phone: newAddr.phone,
+        },
+      };
+      if (onUpdateUser) onUpdateUser(updatedUser);
+
+      try {
+        await fetch('http://localhost:5001/api/users/update-profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedUser),
+        });
+      } catch (err) {}
+    }
+
     setIsAddingAddress(false);
     setNewLabel('');
     setNewStreet('');
     setNewCity('');
     setNewCountry('');
+    setNewPostal('');
+    setNewPhone('');
+    toast.success('New delivery address added successfully!');
+  };
+
+  const handleSetPrimaryAddress = async (targetId) => {
+    const updated = addresses.map((a) => ({
+      ...a,
+      isPrimary: a.id === targetId,
+    }));
+    setAddresses(updated);
+
+    const primaryAddr = updated.find((a) => a.id === targetId);
+    if (primaryAddr) {
+      const updatedUser = {
+        ...user,
+        address: {
+          street: primaryAddr.street,
+          city: primaryAddr.city,
+          country: primaryAddr.country,
+          postalCode: primaryAddr.postal,
+          phone: primaryAddr.phone,
+        },
+      };
+
+      if (onUpdateUser) onUpdateUser(updatedUser);
+
+      try {
+        await fetch('http://localhost:5001/api/users/update-profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedUser),
+        });
+      } catch (err) {}
+    }
+    toast.success('Primary address updated!');
+  };
+
+  const handleDeleteAddress = (idToDelete) => {
+    const updated = addresses.filter((a) => a.id !== idToDelete);
+    if (updated.length > 0 && !updated.some((a) => a.isPrimary)) {
+      updated[0].isPrimary = true;
+      const primaryAddr = updated[0];
+      const updatedUser = {
+        ...user,
+        address: {
+          street: primaryAddr.street,
+          city: primaryAddr.city,
+          country: primaryAddr.country,
+          postalCode: primaryAddr.postal,
+          phone: primaryAddr.phone,
+        },
+      };
+      if (onUpdateUser) onUpdateUser(updatedUser);
+    }
+    setAddresses(updated);
+    toast.success('Address removed.');
   };
 
   // If user is logged out, show Login/Register CTA
@@ -743,7 +961,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                           {order.date}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <button
                           onClick={() => handlePrintInvoice(order)}
                           className="px-3 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-surface-variant rounded font-label-caps text-[10px] uppercase font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
@@ -751,6 +969,14 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                         >
                           <span className="material-symbols-outlined text-sm">print</span>
                           Print Invoice PDF
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUserOrder(order.id)}
+                          className="px-3 py-1 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 rounded font-label-caps text-[10px] uppercase font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                          title="Cancel and remove order"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          Delete Order
                         </button>
                         <span
                           className={`px-3 py-1 rounded-full font-label-caps text-[10px] uppercase tracking-wider ${
@@ -763,7 +989,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                         >
                           ● {order.status}
                         </span>
-                        <span className="font-price-editorial text-price-editorial text-on-surface font-bold">
+                        <span className="font-price-editorial text-price-editorial text-on-surface font-bold ml-1">
                           {order.total}
                         </span>
                       </div>
@@ -1020,25 +1246,57 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                 {addresses.map((addr) => (
                   <div
                     key={addr.id}
-                    className={`p-space-xl rounded-xl border shadow-sm relative bg-surface-container-low ${
+                    className={`p-space-xl rounded-xl border shadow-sm relative bg-surface-container-low flex flex-col justify-between ${
                       addr.isPrimary ? 'border-secondary' : 'border-surface-variant'
                     }`}
                   >
-                    {addr.isPrimary && (
-                      <span className="absolute top-4 right-4 font-label-caps text-[10px] uppercase bg-secondary text-on-secondary px-2.5 py-0.5 rounded-full font-semibold">
-                        Primary
-                      </span>
-                    )}
-                    <h3 className="font-subheading-lg text-on-surface mb-2 font-semibold">{addr.label}</h3>
-                    <p className="font-body-sm text-on-surface-variant leading-relaxed mb-4">
-                      {user?.name || editName}<br />
-                      {addr.street}<br />
-                      {addr.postal ? `${addr.postal} ` : ''}{addr.city}{addr.city && addr.country ? ', ' : ''}{addr.country}<br />
-                      {addr.phone}
-                    </p>
-                    <button className="font-label-md text-xs uppercase text-secondary underline cursor-pointer font-bold">
-                      Edit Address
-                    </button>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-subheading-lg text-on-surface font-semibold">{addr.label}</h3>
+                        {addr.isPrimary && (
+                          <span className="font-label-caps text-[10px] uppercase bg-secondary text-on-secondary px-2.5 py-0.5 rounded-full font-semibold">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-body-sm text-on-surface-variant leading-relaxed mb-4">
+                        {user?.name || editName}<br />
+                        {addr.street}<br />
+                        {addr.postal ? `${addr.postal} ` : ''}{addr.city}{addr.city && addr.country ? ', ' : ''}{addr.country}<br />
+                        {addr.phone || user?.address?.phone}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-surface-variant/50">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditAddress(addr)}
+                        className="font-label-md text-xs uppercase text-secondary underline cursor-pointer font-bold hover:text-primary transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                        <span>Edit Address</span>
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {!addr.isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimaryAddress(addr.id)}
+                            className="text-[11px] font-label-caps uppercase text-on-surface-variant hover:text-secondary underline cursor-pointer font-semibold"
+                          >
+                            Set Primary
+                          </button>
+                        )}
+                        {addresses.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAddress(addr.id)}
+                            className="text-[11px] font-label-caps uppercase text-error hover:underline cursor-pointer font-semibold"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1208,6 +1466,107 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
         </div>
       )}
 
+      {/* Edit Address Modal */}
+      {editingAddress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-margin-mobile bg-primary/50 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-surface-container-lowest rounded-xl shadow-2xl p-space-xl border border-surface-variant">
+            <div className="flex items-center justify-between pb-space-md border-b border-surface-variant mb-space-lg">
+              <h3 className="font-headline-sm uppercase text-on-surface">Edit Address Location</h3>
+              <button
+                onClick={() => setEditingAddress(null)}
+                className="p-1 text-on-surface-variant hover:text-on-surface cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAddress} className="space-y-4">
+              <div>
+                <label className="font-label-caps text-xs block mb-1">Address Label (e.g. Primary Residence / Office)</label>
+                <input
+                  type="text"
+                  value={editAddrLabel}
+                  onChange={(e) => setEditAddrLabel(e.target.value)}
+                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-label-caps text-xs block mb-1">Street Address</label>
+                <input
+                  type="text"
+                  value={editAddrStreet}
+                  onChange={(e) => setEditAddrStreet(e.target.value)}
+                  className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">City</label>
+                  <input
+                    type="text"
+                    value={editAddrCity}
+                    onChange={(e) => setEditAddrCity(e.target.value)}
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">Country</label>
+                  <input
+                    type="text"
+                    value={editAddrCountry}
+                    onChange={(e) => setEditAddrCountry(e.target.value)}
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">Postal / ZIP Code</label>
+                  <input
+                    type="text"
+                    value={editAddrPostal}
+                    onChange={(e) => setEditAddrPostal(e.target.value)}
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  />
+                </div>
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={editAddrPhone}
+                    onChange={(e) => setEditAddrPhone(e.target.value)}
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingAddress(null)}
+                  className="px-5 h-11 rounded border border-on-surface text-on-surface font-label-md uppercase cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 h-11 rounded bg-primary text-on-primary font-label-md uppercase hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  Save Address
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Address Modal */}
       {isAddingAddress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-margin-mobile bg-primary/50 backdrop-blur-xs">
@@ -1267,6 +1626,29 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                     value={newCountry}
                     onChange={(e) => setNewCountry(e.target.value)}
                     placeholder="Country"
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">Postal Code</label>
+                  <input
+                    type="text"
+                    value={newPostal}
+                    onChange={(e) => setNewPostal(e.target.value)}
+                    placeholder="ZIP / Postal Code"
+                    className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
+                  />
+                </div>
+                <div>
+                  <label className="font-label-caps text-xs block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="Phone Contact"
                     className="w-full h-11 px-3 rounded bg-surface-container-low border border-surface-variant text-on-surface font-body-sm"
                   />
                 </div>

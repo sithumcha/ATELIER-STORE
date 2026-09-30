@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { getProductOffer, formatRsPrice } from '../utils/offerUtils';
 
 export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
@@ -53,14 +54,28 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
   }, []);
 
   // Delete product
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this product edition from vault inventory?')) return;
-    try {
-      await fetch(`http://localhost:5001/api/products/${id}`, { method: 'DELETE' });
-    } catch (err) {
-      console.log('API Delete error:', err);
-    }
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const handleDelete = (id) => {
+    toast('Remove product edition from vault inventory?', {
+      description: 'This action cannot be undone.',
+      action: {
+        label: 'Confirm Remove',
+        onClick: async () => {
+          try {
+            await fetch(`http://localhost:5001/api/products/${id}`, { method: 'DELETE' });
+            toast.success('Product removed from inventory');
+          } catch (err) {
+            console.log('API Delete error:', err);
+            toast.error('Failed to remove product from server');
+          }
+          setProducts((prev) => prev.filter((p) => p.id !== id));
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+      duration: 8000,
+    });
   };
 
   // Quick stock updater
@@ -73,7 +88,9 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stock: newStock }),
-          }).catch((err) => console.log('Stock update error:', err));
+          })
+            .then(() => toast.success(`Updated stock to ${newStock}`))
+            .catch((err) => console.log('Stock update error:', err));
           return { ...p, stock: newStock };
         }
         return p;
@@ -123,13 +140,15 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
       if (res.ok) {
         await fetchProducts(); // Refresh state
         setIsOfferModalOpen(false);
-        alert(`✨ ${isBulk ? 'Bulk Offer applied to ALL items' : `Offer applied to ${selectedOfferProduct.name}`} for ${durationHours} hours!`);
+        toast.success(isBulk ? 'Bulk Offer applied to ALL items!' : `Offer applied to ${selectedOfferProduct.name}`, {
+          description: `${offerPercentage}% OFF active for ${durationHours} hours`,
+        });
       } else {
-        alert('Failed to update offer. Please check backend API.');
+        toast.error('Failed to update offer. Please check backend server.');
       }
     } catch (err) {
       console.error('Error applying offer:', err);
-      alert('Network error while applying offer.');
+      toast.error('Network error while applying offer.');
     } finally {
       setIsSubmittingOffer(false);
     }
@@ -150,14 +169,15 @@ export default function AdminProducts({ onOpenNewEdition, onEditProduct }) {
       if (res.ok) {
         await fetchProducts();
         setIsOfferModalOpen(false);
-        alert(`✓ Offer removed successfully.`);
+        toast.info(isBulk ? 'Bulk offer removed from all items' : `Offer removed from ${selectedOfferProduct.name}`);
       }
     } catch (err) {
-      console.error('Error clearing offer:', err);
+      toast.error('Failed to remove offer');
     } finally {
       setIsSubmittingOffer(false);
     }
   };
+
 
   const lowStockProducts = products.filter((p) => Number(p.stock) <= 5);
   const outOfStockCount = products.filter((p) => Number(p.stock) === 0).length;

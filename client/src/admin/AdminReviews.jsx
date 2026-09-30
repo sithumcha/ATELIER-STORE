@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AdminReviews() {
   const [reviews, setReviews] = useState([]);
@@ -99,20 +100,30 @@ export default function AdminReviews() {
     showNotice(`Review ${newStatus.toLowerCase()} successfully!`);
   };
 
-  const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm('Are you sure you want to delete this patron review?')) return;
+  const handleDeleteReview = (reviewId) => {
+    toast('Delete this patron review?', {
+      description: 'This evaluation will be removed permanently.',
+      action: {
+        label: 'Confirm Delete',
+        onClick: async () => {
+          const updatedReviews = reviews.filter((r) => (r._id || r.id) !== reviewId);
+          setReviews(updatedReviews);
 
-    const updatedReviews = reviews.filter((r) => (r._id || r.id) !== reviewId);
-    setReviews(updatedReviews);
-
-    try {
-      localStorage.setItem('atelierstore_all_user_reviews', JSON.stringify(updatedReviews));
-      await fetch(`http://localhost:5001/api/reviews/${reviewId}`, { method: 'DELETE' });
-    } catch (err) {
-      console.log('Error deleting review:', err);
-    }
-
-    showNotice('Review deleted from records.');
+          try {
+            localStorage.setItem('atelierstore_all_user_reviews', JSON.stringify(updatedReviews));
+            await fetch(`http://localhost:5001/api/reviews/${reviewId}`, { method: 'DELETE' });
+            showNotice('Review deleted from records.');
+          } catch (err) {
+            console.log('Error deleting review:', err);
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+      duration: 8000,
+    });
   };
 
   const showNotice = (msg) => {

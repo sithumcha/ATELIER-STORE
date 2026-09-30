@@ -54,7 +54,8 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
           };
 
           const formatted = data.map((p) => {
-            const numPrice = getRsNumber(p.price);
+            let numPrice = getRsNumber(p.price);
+            if (!numPrice || numPrice <= 0) numPrice = 1500;
             const rawImages = Array.isArray(p.images) ? p.images.map(formatImgUrl).filter(Boolean) : [];
             let displayImg = formatImgUrl(rawImages[0] || p.img || p.image);
             let hoverImg = formatImgUrl(rawImages[1] || (p.colors && p.colors[1] && p.colors[1].img) || rawImages[0] || p.img);
@@ -69,7 +70,7 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
               subtitle: p.subtitle || p.description || '',
               price: formatRs(numPrice),
               numericPrice: numPrice,
-              offerPercentage: p.offerPercentage || 0,
+              offerPercentage: Number(p.offerPercentage) || 0,
               offerExpiresAt: p.offerExpiresAt || null,
               offerTitle: p.offerTitle || '',
               studio: p.studio || 'Kyoto Atelier',
@@ -703,8 +704,8 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                         ) : null}
 
                         {(() => {
-                          const pIdStr = String(p.id || p._id || '');
-                          const isFav = wishlistIds.some((id) => String(id) === pIdStr || String(id) === String(p._id));
+                          const pIdStr = String(p.id || p._id || p.title || '').trim();
+                          const isFav = wishlistIds.some((id) => id && id === pIdStr);
                           return (
                             <button
                               onClick={(e) => {

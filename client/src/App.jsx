@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Toaster, toast } from 'sonner';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
@@ -19,26 +20,30 @@ import LookbookJournalPage from './pages/LookbookJournalPage';
 
 
 
+
 // Admin Console from src/admin/
 import AdminDashboard from './admin/AdminDashboard';
 
 // URL Path Routing Helpers
-const getTabFromPath = (pathname) => {
-  const cleanPath = pathname.toLowerCase().replace(/\/$/, '');
-  if (!cleanPath || cleanPath === '') return { tab: 'home', prodId: 'p1' };
-  if (cleanPath === '/shop') return { tab: 'shop', prodId: 'p1' };
-  if (cleanPath === '/apparel') return { tab: 'apparel', prodId: 'p1' };
-  if (cleanPath === '/womens-wardrobe') return { tab: 'womens-wardrobe', prodId: 'p1' };
-  if (cleanPath === '/mens-tailoring') return { tab: 'mens-tailoring', prodId: 'p1' };
-  if (cleanPath === '/textiles' || cleanPath === '/textiles-and-fiber') return { tab: 'textiles', prodId: 'p1' };
-  if (cleanPath === '/lookbook' || cleanPath === '/lookbook-and-journal') return { tab: 'lookbook', prodId: 'p1' };
-  if (cleanPath === '/living') return { tab: 'living', prodId: 'p1' };
-  if (cleanPath === '/about') return { tab: 'about', prodId: 'p1' };
-  if (cleanPath === '/account') return { tab: 'account', prodId: 'p1' };
-  if (cleanPath === '/checkout') return { tab: 'checkout', prodId: 'p1' };
-  if (cleanPath === '/admin' || cleanPath.startsWith('/admin/')) return { tab: 'admin', prodId: 'p1' };
-  if (cleanPath.startsWith('/product/')) {
-    const id = cleanPath.replace('/product/', '');
+const getTabFromPath = (pathname = window.location.pathname, hash = window.location.hash) => {
+  const cleanPath = (pathname || '').toLowerCase().replace(/\/$/, '');
+  const cleanHash = (hash || '').toLowerCase().replace(/^#\/?/, '').replace(/\/$/, '');
+  const target = cleanHash || cleanPath;
+
+  if (!target || target === '') return { tab: 'home', prodId: 'p1' };
+  if (target === '/shop' || target === 'shop') return { tab: 'shop', prodId: 'p1' };
+  if (target === '/apparel' || target === 'apparel') return { tab: 'apparel', prodId: 'p1' };
+  if (target === '/womens-wardrobe' || target === 'womens-wardrobe') return { tab: 'womens-wardrobe', prodId: 'p1' };
+  if (target === '/mens-tailoring' || target === 'mens-tailoring') return { tab: 'mens-tailoring', prodId: 'p1' };
+  if (target === '/textiles' || target === 'textiles' || target === '/textiles-and-fiber' || target === 'textiles-and-fiber') return { tab: 'textiles', prodId: 'p1' };
+  if (target === '/lookbook' || target === 'lookbook' || target === '/lookbook-and-journal' || target === 'lookbook-and-journal') return { tab: 'lookbook', prodId: 'p1' };
+  if (target === '/living' || target === 'living') return { tab: 'living', prodId: 'p1' };
+  if (target === '/about' || target === 'about') return { tab: 'about', prodId: 'p1' };
+  if (target === '/account' || target === 'account') return { tab: 'account', prodId: 'p1' };
+  if (target === '/checkout' || target === 'checkout') return { tab: 'checkout', prodId: 'p1' };
+  if (target === '/admin' || target === 'admin' || target.startsWith('/admin/') || target.startsWith('admin/')) return { tab: 'admin', prodId: 'p1' };
+  if (target.startsWith('/product/') || target.startsWith('product/')) {
+    const id = target.replace(/^\/?product\//, '');
     return { tab: 'product-detail', prodId: id || 'p1' };
   }
   return { tab: 'home', prodId: 'p1' };
@@ -84,10 +89,12 @@ export default function App() {
   };
 
   const handleBuyNow = (item) => {
+    const effectivePrice = resolveItemPrice(item, dbProducts);
+
     setDirectCheckoutItem({
-      id: item.id,
-      title: item.title,
-      price: item.price,
+      id: item.id || item._id,
+      title: item.title || item.name,
+      price: effectivePrice,
       qty: item.quantity || item.qty || 1,
       img: item.img,
       size: item.size,
@@ -109,16 +116,20 @@ export default function App() {
     navigateTo('shop');
   };
 
-  // Sync state on Browser Back / Forward buttons (popstate)
+  // Sync state on Browser Back / Forward buttons & Hash changes
   useEffect(() => {
     const handlePopState = () => {
-      const route = getTabFromPath(window.location.pathname);
+      const route = getTabFromPath(window.location.pathname, window.location.hash);
       setActiveTabState(route.tab);
       setSelectedProductId(route.prodId);
     };
 
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
   // Automatically scroll window to top on tab or product selection changes
@@ -161,6 +172,50 @@ export default function App() {
         .catch(() => {});
     }
   }, [user?.email]);
+
+  // Live Database Products state for dynamic price synchronization
+  const [dbProducts, setDbProducts] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/products')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDbProducts(data);
+        }
+      })
+      .catch((err) => console.log('App live db fetch error:', err));
+  }, []);
+
+  const getProductUniqueId = (product) => {
+    if (!product) return `prod_${Date.now()}`;
+    const realId = product._id || product.rawProduct?._id || product.id || product.rawProduct?.id;
+    if (realId) return String(realId).trim();
+    const pTitle = product.title || product.name || 'garment';
+    const pPrice = product.price || product.numericPrice || product.rawProduct?.price || 0;
+    return `prod_${pTitle.toLowerCase().replace(/\s+/g, '_')}_${pPrice}`;
+  };
+
+  // Helper to dynamically resolve effective live price (Discounted or DB price)
+  const resolveItemPrice = (item, productsList = dbProducts) => {
+    if (!item) return 1500;
+    const itemIdStr = getProductUniqueId(item);
+
+    if (itemIdStr && Array.isArray(productsList) && productsList.length > 0) {
+      const matchedById = productsList.find((p) => {
+        const pIdStr = getProductUniqueId(p);
+        return pIdStr && pIdStr === itemIdStr;
+      });
+
+      if (matchedById) {
+        const offer = getProductOffer(matchedById);
+        return offer.hasActiveOffer ? offer.discountedPrice : offer.rawPrice;
+      }
+    }
+
+    const offer = getProductOffer(item.rawProduct || item);
+    return offer.hasActiveOffer ? offer.discountedPrice : offer.rawPrice;
+  };
 
   // Helper keys for per-user Cart & Wishlist persistence
   const getCartStorageKey = (u) => {
@@ -207,9 +262,39 @@ export default function App() {
     }
   });
 
+  // Dynamic price resolution effect: Overwrites legacy hardcoded prices with live DB/Offer prices
+  useEffect(() => {
+    if (!dbProducts || dbProducts.length === 0) return;
+
+    setCartItems((prevCart) => {
+      let changed = false;
+      const updated = prevCart.map((item) => {
+        const livePrice = resolveItemPrice(item, dbProducts);
+        if (item.price !== livePrice) {
+          changed = true;
+          return { ...item, price: livePrice };
+        }
+        return item;
+      });
+      return changed ? updated : prevCart;
+    });
+
+    setWishlistItems((prevWish) => {
+      let changed = false;
+      const updated = prevWish.map((item) => {
+        const livePrice = resolveItemPrice(item, dbProducts);
+        if (item.price !== livePrice) {
+          changed = true;
+          return { ...item, price: livePrice };
+        }
+        return item;
+      });
+      return changed ? updated : prevWish;
+    });
+  }, [dbProducts]);
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
 
   // Load active user's Cart and Wishlist whenever user changes (login / logout)
   useEffect(() => {
@@ -255,57 +340,69 @@ export default function App() {
   const handleAuthSuccess = (userData) => {
     setUser(userData);
     localStorage.setItem('atelierstore_user', JSON.stringify(userData));
-    setToastMessage(`Welcome back, ${userData.name}!`);
-    setTimeout(() => setToastMessage(null), 3500);
+    toast.success(`Welcome back, ${userData.name}!`, {
+      description: 'Successfully signed into your Patron account.',
+    });
   };
 
   const handleLogOut = () => {
     setUser(null);
     localStorage.removeItem('atelierstore_user');
-    setToastMessage('Signed out of Patron account');
-    setTimeout(() => setToastMessage(null), 3000);
+    toast.info('Signed out of Patron account', {
+      description: 'You have been logged out safely.',
+    });
     navigateTo('home');
   };
 
   const handleUpdateUser = (updatedUserData) => {
     setUser(updatedUserData);
     localStorage.setItem('atelierstore_user', JSON.stringify(updatedUserData));
+    toast.success('Account profile updated successfully!');
   };
 
   // Add product to cart handler
   const handleAddToCart = (product) => {
-    const offer = getProductOffer(product);
-    let rawPrice = offer.hasActiveOffer ? offer.discountedPrice : product.price;
-    let numericPrice = typeof rawPrice === 'number'
-      ? rawPrice
-      : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
+    if (!product) return;
+    const targetId = getProductUniqueId(product);
+    const titleStr = product.title || product.name || 'Atelier Garment';
+    const effectivePrice = resolveItemPrice(product, dbProducts);
+    let displayImg = product.img;
+    if (!displayImg && product.images && product.images.length > 0) {
+      displayImg = product.images[0];
+    }
 
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find((item) => getProductUniqueId(item) === targetId);
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+          getProductUniqueId(item) === targetId
+            ? { ...item, price: effectivePrice, qty: item.qty + 1 }
+            : item
         );
       }
       return [
         ...prev,
         {
-          id: product.id,
-          title: product.title,
-          price: numericPrice,
+          id: targetId,
+          _id: targetId,
+          title: titleStr,
+          price: effectivePrice,
+          rawProduct: product,
           qty: 1,
-          img: product.img,
+          img: displayImg,
         },
       ];
     });
 
-    setToastMessage(`Added "${product.title}" to your Shopping Bag`);
-    setTimeout(() => setToastMessage(null), 3000);
+    toast.success(`Added "${titleStr}" to Shopping Bag`, {
+      description: `Price: Rs. ${Math.round(effectivePrice).toLocaleString('en-LK')}`,
+    });
   };
 
   // Remove cart item
   const handleRemoveCartItem = (id) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+    setCartItems((prev) => prev.filter((item) => getProductUniqueId(item) !== String(id).trim()));
+    toast.info('Item removed from Shopping Bag');
   };
 
   // Update quantity
@@ -313,7 +410,7 @@ export default function App() {
     setCartItems((prev) =>
       prev
         .map((item) => {
-          if (item.id === id) {
+          if (getProductUniqueId(item) === String(id).trim()) {
             const newQty = item.qty + delta;
             return newQty > 0 ? { ...item, qty: newQty } : null;
           }
@@ -332,37 +429,34 @@ export default function App() {
   // Toggle item in Wishlist / Favorites
   const handleToggleWishlist = (product) => {
     if (!product) return;
-    let rawPrice = product.price;
-    let numericPrice = typeof rawPrice === 'number'
-      ? rawPrice
-      : parseInt(String(rawPrice || '24500').replace(/[^0-9.]/g, ''), 10) || 24500;
+    const targetId = getProductUniqueId(product);
+    if (!targetId) return;
 
-    const prodId = product._id || product.id || 'wish_' + Date.now();
     const titleStr = product.title || product.name || 'Atelier Garment';
+    const effectivePrice = resolveItemPrice(product, dbProducts);
     let displayImg = product.img;
     if (!displayImg && product.images && product.images.length > 0) {
       displayImg = product.images[0];
     }
 
     setWishlistItems((prev) => {
-      const exists = prev.some(
-        (item) => String(item.id) === String(prodId) || String(item.id) === String(product.id) || (product.title && item.title === product.title)
-      );
+      const exists = prev.some((item) => getProductUniqueId(item) === targetId);
+
       if (exists) {
-        setToastMessage(`Removed "${titleStr}" from Wishlist`);
-        setTimeout(() => setToastMessage(null), 2500);
-        return prev.filter(
-          (item) => String(item.id) !== String(prodId) && String(item.id) !== String(product.id) && item.title !== titleStr
-        );
+        toast.info(`Removed "${titleStr}" from Wishlist`);
+        return prev.filter((item) => getProductUniqueId(item) !== targetId);
       } else {
-        setToastMessage(`Saved "${titleStr}" to your Wishlist ❤️`);
-        setTimeout(() => setToastMessage(null), 2500);
+        toast.success(`Saved "${titleStr}" to Wishlist ❤️`, {
+          description: `Price: Rs. ${Math.round(effectivePrice).toLocaleString('en-LK')}`,
+        });
         return [
           ...prev,
           {
-            id: prodId,
+            id: targetId,
+            _id: targetId,
             title: titleStr,
-            price: numericPrice,
+            price: effectivePrice,
+            rawProduct: product,
             img: displayImg || 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1000&q=80',
           },
         ];
@@ -370,19 +464,14 @@ export default function App() {
     });
   };
 
-  const wishlistIds = wishlistItems.map((item) => item.id);
+  const wishlistIds = wishlistItems
+    .map((item) => getProductUniqueId(item))
+    .filter(Boolean);
 
   return (
     <div className="w-full bg-surface font-body-md text-on-surface antialiased selection:bg-surface-variant selection:text-on-surface">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-lg bg-primary text-on-primary font-label-md shadow-2xl flex items-center gap-3 animate-fade-in-up">
-          <span className="material-symbols-outlined text-[20px] text-secondary">
-            favorite
-          </span>
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      {/* Sonner Global Rich Toast Container */}
+      <Toaster richColors position="top-right" closeButton />
 
       {/* Render Header except on Checkout & Admin pages */}
       {activeTab !== 'checkout' && activeTab !== 'admin' && (
@@ -429,9 +518,14 @@ export default function App() {
               setDirectCheckoutItem(null);
               navigateTo('home');
             }}
-            onOrderComplete={() => {
+            onOrderComplete={(orderedItems) => {
               if (directCheckoutItem) {
+                const targetDirectId = getProductUniqueId(directCheckoutItem);
+                setCartItems((prev) => prev.filter((item) => getProductUniqueId(item) !== targetDirectId));
                 setDirectCheckoutItem(null);
+              } else if (Array.isArray(orderedItems) && orderedItems.length > 0) {
+                const orderedIds = orderedItems.map((it) => getProductUniqueId(it)).filter(Boolean);
+                setCartItems((prev) => prev.filter((item) => !orderedIds.includes(getProductUniqueId(item))));
               } else {
                 setCartItems([]);
               }
@@ -568,23 +662,33 @@ export default function App() {
                 </div>
               ) : (
                 <div className="space-y-space-md">
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-space-md p-space-xs rounded bg-surface-container-low border border-surface-variant"
-                    >
-                      <img
-                        src={item.img}
-                        alt={item.title}
-                        className="w-16 h-20 object-cover rounded shrink-0 bg-surface-container"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
-                          {item.title}
-                        </h4>
-                        <span className="font-price-editorial text-price-editorial text-on-surface font-semibold block">
-                          Rs. {Math.round(item.price).toLocaleString('en-LK')}
-                        </span>
+                  {cartItems.map((item) => {
+                    const offer = getProductOffer(item.rawProduct || item);
+                    const hasDiscount = offer.hasActiveOffer && offer.rawPrice > item.price;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-space-md p-space-xs rounded bg-surface-container-low border border-surface-variant"
+                      >
+                        <img
+                          src={item.img}
+                          alt={item.title}
+                          className="w-16 h-20 object-cover rounded shrink-0 bg-surface-container"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-subheading-md text-body-md text-on-surface mb-0.5">
+                            {item.title}
+                          </h4>
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-price-editorial text-price-editorial text-on-surface font-semibold">
+                              Rs. {Math.round(item.price).toLocaleString('en-LK')}
+                            </span>
+                            {hasDiscount && (
+                              <span className="line-through text-[11px] text-outline font-mono">
+                                Rs. {Math.round(offer.rawPrice).toLocaleString('en-LK')}
+                              </span>
+                            )}
+                          </div>
 
                         <div className="flex items-center gap-3 mt-2">
                           <button
@@ -613,7 +717,8 @@ export default function App() {
                         </span>
                       </button>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </div>

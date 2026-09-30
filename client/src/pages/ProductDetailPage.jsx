@@ -406,6 +406,7 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
 
     const formattedObj = {
       id: data._id || data.id || 'p_unknown',
+      _id: data._id || data.id || 'p_unknown',
       title: data.title || data.name || 'Archival Garment',
       edition: data.edition || data.category || 'ATELIER COLLECTION',
       editionName: data.editionName || data.category || 'ATELIER COLLECTION',
@@ -414,6 +415,10 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
       density: data.density || data.gsm || '380 GSM density',
       price: formatRs(numericPrice),
       numericPrice: numericPrice,
+      offerPercentage: Number(data.offerPercentage) || 0,
+      offerExpiresAt: data.offerExpiresAt || null,
+      offerTitle: data.offerTitle || '',
+      rawProduct: data,
       totalStock: finalTotalStock,
       stock: finalTotalStock,
       badge: data.badge || data.category || 'LIMITED EDITION',
@@ -488,13 +493,15 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
       const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
 
       onAddToCart({
-        id: `${product.id}-${selectedSize}-${selectedColor}`,
-        title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
+        id: product.id,
+        _id: product.id,
+        title: product.title,
         price: effectivePrice,
         img: product.images[selectedImageIndex] || product.img,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
+        rawProduct: product.rawProduct || product,
       });
 
       setAddedNotice(true);
@@ -508,14 +515,16 @@ export default function ProductDetailPage({ selectedProductId, onAddToCart, onBu
       const effectivePrice = offer.hasActiveOffer ? offer.discountedPrice : product.numericPrice;
 
       const directItem = {
-        id: `${product.id}-${selectedSize}-${selectedColor}`,
-        title: `${product.title} (Size: ${selectedSize}, Color: ${selectedColor})`,
+        id: product.id,
+        _id: product.id,
+        title: product.title,
         price: effectivePrice,
         img: (product.images && product.images[selectedImageIndex]) || product.img,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
         qty: quantity,
+        rawProduct: product.rawProduct || product,
       };
 
       if (onBuyNow) {
