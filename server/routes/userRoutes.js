@@ -70,6 +70,56 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 2.5 Google Auth Login / Register
+router.post('/google-login', async (req, res) => {
+  try {
+    const { name, email, avatar, googleId } = req.body;
+    const cleanEmail = email ? String(email).toLowerCase().trim() : '';
+
+    if (!cleanEmail) {
+      return res.status(400).json({ message: 'Google email is required' });
+    }
+
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (!user) {
+      const defaultAvatar = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || cleanEmail.split('@')[0])}&background=1c1917&color=f5f5f4&bold=true`;
+      user = await User.create({
+        name: name || cleanEmail.split('@')[0] || 'Google Patron',
+        email: cleanEmail,
+        password: `g_oauth_${googleId || Date.now()}_${Math.random()}`,
+        avatar: defaultAvatar,
+        tier: 'Verified Patron',
+        address: {},
+      });
+      console.log(`[GOOGLE AUTH] Created new user: ${user.email}`);
+    } else {
+      if (avatar && (!user.avatar || user.avatar.includes('ui-avatars.com'))) {
+        user.avatar = avatar;
+        await user.save();
+      }
+      console.log(`[GOOGLE AUTH] Logged in existing user: ${user.email}`);
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        tier: user.tier || 'Verified Patron',
+        avatar: user.avatar,
+        address: user.address || {},
+      },
+      token: generateToken(user._id),
+      message: 'Google Sign-In successful!',
+    });
+  } catch (error) {
+    console.error('Google Auth Route Error:', error);
+    res.status(500).json({ message: 'Google Auth failed', error: error.message });
+  }
+});
+
 // 3. Update Profile (PUT /api/users/update-profile or /api/users/profile)
 const handleUpdateProfile = async (req, res) => {
   try {

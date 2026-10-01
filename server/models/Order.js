@@ -17,6 +17,8 @@ const orderSchema = new mongoose.Schema(
     destination: { type: String, required: true },
     total: { type: Number, required: true },
     status: { type: String, default: 'Awaiting Dispatch' },
+    trackingCode: { type: String, default: '' },
+    trackingNumber: { type: String, default: '' },
   },
   {
     timestamps: true,

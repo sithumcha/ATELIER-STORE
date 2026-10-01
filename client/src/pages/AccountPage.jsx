@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { downloadDirectPDFInvoice } from '../utils/pdfInvoiceGenerator';
 
 export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, onGoToShop }) {
   const [activeTab, setActiveTab] = useState('orders');
@@ -384,6 +385,9 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                     date: item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent Order'),
                     total: formattedPrice,
                     status: item.status || 'Awaiting Dispatch',
+                    trackingCode: item.trackingCode || item.trackingNumber || item.trackingNo || '',
+                    trackingNumber: item.trackingCode || item.trackingNumber || item.trackingNo || '',
+                    trackingNo: item.trackingCode || item.trackingNumber || item.trackingNo || '',
                     courier: item.courier || 'Insured Courier',
                     estimatedDelivery: item.estimatedDelivery || '3-5 Business Days',
                     items: Array.isArray(item.items) && item.items.length > 0 ? item.items.map((it) => {
@@ -394,6 +398,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                         qty: it.qty || it.quantity || 1,
                         price: itPrice > 0 ? `Rs. ${Math.round(itPrice).toLocaleString('en-LK')}` : (typeof it.price === 'string' ? it.price : 'Rs. 0'),
                         img: resolveItemImage(it),
+                        monogram: it.monogram || null,
                       };
                     }) : [],
                   });
@@ -419,7 +424,10 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
           date: item.date || 'Recent Order',
           total: formattedPrice,
           status: item.status || 'Awaiting Dispatch',
-          courier: 'Insured Courier',
+          trackingCode: item.trackingCode || item.trackingNumber || item.trackingNo || '',
+          trackingNumber: item.trackingCode || item.trackingNumber || item.trackingNo || '',
+          trackingNo: item.trackingCode || item.trackingNumber || item.trackingNo || '',
+          courier: item.courier || 'Insured Courier',
           estimatedDelivery: '3-5 Business Days',
           items: Array.isArray(item.items) ? item.items.map((it) => ({
             id: it.id || it._id || it.title,
@@ -427,6 +435,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
             qty: it.qty || it.quantity || 1,
             price: typeof it.price === 'number' ? `Rs. ${Math.round(it.price).toLocaleString('en-LK')}` : it.price,
             img: resolveItemImage(it),
+            monogram: it.monogram || null,
           })) : [],
         });
       }
@@ -437,11 +446,13 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
   };
 
   const getOrderStepIndex = (statusStr = '') => {
-    const s = String(statusStr).toLowerCase();
-    if (s.includes('deliver')) return 4;
-    if (s.includes('dispatch') || s.includes('transit') || s.includes('courier')) return 3;
-    if (s.includes('prepare') || s.includes('looming') || s.includes('crafting') || s.includes('dyeing')) return 2;
-    return 1;
+    const s = String(statusStr).trim().toLowerCase();
+    if (s.includes('cancel')) return 0;
+    if (s.includes('deliver')) return 5;
+    if (s === 'dispatched' || (s.includes('dispatch') && !s.includes('awaiting'))) return 4;
+    if (s.includes('transit')) return 3;
+    if (s.includes('prepare') || s.includes('package') || s.includes('looming') || s.includes('crafting')) return 2;
+    return 1; // Awaiting Dispatch
   };
 
   const handlePrintInvoice = (order) => {
@@ -963,12 +974,22 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                       </div>
                       <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <button
+                          type="button"
+                          onClick={() => downloadDirectPDFInvoice(order, user)}
+                          className="px-3 py-1 bg-secondary text-on-secondary hover:bg-primary font-label-caps text-[10px] uppercase font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs rounded"
+                          title="Directly download PDF Invoice document"
+                        >
+                          <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                          <span>Download PDF</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handlePrintInvoice(order)}
                           className="px-3 py-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-surface-variant rounded font-label-caps text-[10px] uppercase font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
                           title="Print official receipt"
                         >
                           <span className="material-symbols-outlined text-sm">print</span>
-                          Print Invoice PDF
+                          Print
                         </button>
                         <button
                           onClick={() => handleDeleteUserOrder(order.id)}
@@ -998,22 +1019,39 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                     {/* Live Order Status Stepper Timeline */}
                     {(() => {
                       const currentStep = getOrderStepIndex(order.status);
+                      const isCancelled = order.status?.toLowerCase().includes('cancel');
+
+                      if (isCancelled) {
+                        return (
+                          <div className="mb-space-lg p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-900 flex items-center justify-between text-xs font-label-caps">
+                            <span className="font-bold flex items-center gap-2 text-rose-800">
+                              <span className="material-symbols-outlined text-base text-rose-700">cancel</span>
+                              This Order has been Cancelled
+                            </span>
+                            <span className="bg-rose-200 text-rose-900 px-2.5 py-0.5 rounded font-mono font-bold">
+                              CANCELLED
+                            </span>
+                          </div>
+                        );
+                      }
+
                       const steps = [
-                        { title: 'Order Placed', desc: 'Confirmed', icon: 'receipt_long' },
-                        { title: 'Processing', desc: 'Preparing Item', icon: 'palette' },
-                        { title: 'Dispatched', desc: 'In Transit', icon: 'local_shipping' },
-                        { title: 'Delivered', desc: 'Completed', icon: 'task_alt' },
+                        { title: 'Awaiting Dispatch', desc: 'Order Confirmed', icon: 'receipt_long' },
+                        { title: 'Preparing Package', desc: 'Crafting & Packing', icon: 'package_2' },
+                        { title: 'In Transit', desc: 'Courier Transit', icon: 'local_shipping' },
+                        { title: 'Dispatched', desc: 'Out for Delivery', icon: 'distance' },
+                        { title: 'Delivered', desc: 'Hand Delivered', icon: 'task_alt' },
                       ];
 
                       return (
-                        <div className="mb-space-lg p-3 bg-surface-container-lowest rounded-xl border border-surface-variant/50">
+                        <div className="mb-space-lg p-3.5 bg-surface-container-lowest rounded-xl border border-surface-variant/50">
                           <div className="flex items-center justify-between mb-3 px-1">
                             <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold flex items-center gap-1">
                               <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
                               Order Fulfillment Timeline
                             </span>
                             <span className="font-label-caps text-[10px] text-secondary font-bold">
-                              Step {currentStep} of 4 · {order.status}
+                              Step {currentStep} of 5 · {order.status}
                             </span>
                           </div>
 
@@ -1021,7 +1059,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                             <div className="absolute top-1/2 left-4 right-4 h-1 bg-surface-container-high -translate-y-1/2 z-0 rounded-full"></div>
                             <div
                               className="absolute top-1/2 left-4 h-1 bg-secondary -translate-y-1/2 z-0 rounded-full transition-all duration-700 ease-out"
-                              style={{ width: `calc(${((currentStep - 1) / 3) * 100}% - 2rem)` }}
+                              style={{ width: `calc(${((currentStep - 1) / 4) * 100}% - 1rem)` }}
                             ></div>
 
                             {steps.map((st, i) => {
@@ -1032,7 +1070,7 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                               return (
                                 <div key={i} className="relative z-10 flex flex-col items-center">
                                   <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-xs ${
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-xs ${
                                       isCurrent
                                         ? 'bg-secondary text-on-secondary ring-4 ring-secondary/20 scale-110 font-bold'
                                         : isDone
@@ -1040,10 +1078,10 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                                         : 'bg-surface-container-high text-outline-variant border border-surface-variant'
                                     }`}
                                   >
-                                    <span className="material-symbols-outlined text-sm">{st.icon}</span>
+                                    <span className="material-symbols-outlined text-xs sm:text-sm">{st.icon}</span>
                                   </div>
                                   <span
-                                    className={`font-label-caps text-[9px] mt-1.5 text-center whitespace-nowrap ${
+                                    className={`font-label-caps text-[8px] sm:text-[9px] mt-1.5 text-center whitespace-nowrap ${
                                       isCurrent ? 'text-secondary font-bold' : isDone ? 'text-on-surface font-semibold' : 'text-outline-variant'
                                     }`}
                                   >
@@ -1119,22 +1157,56 @@ export default function AccountPage({ user, onOpenAuth, onLogOut, onUpdateUser, 
                       })}
                     </div>
 
-                    {/* Courier Progress Meter */}
-                    <div className="bg-surface-container-lowest p-space-md rounded-lg border border-surface-variant">
-                      <div className="flex items-center justify-between font-label-caps text-xs text-on-surface mb-2">
-                        <span>Courier: {order.courier}</span>
-                        <span>Est. Arrival: {order.estimatedDelivery}</span>
+                    {/* Courier & Optional Tracking Code Bar */}
+                    <div className="bg-surface-container-lowest p-3.5 rounded-lg border border-surface-variant space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between font-label-caps text-xs text-on-surface gap-2">
+                        <span className="flex items-center gap-1.5 font-bold">
+                          <span className="material-symbols-outlined text-base text-secondary">local_shipping</span>
+                          Courier: {order.courier || 'Pronto Express Courier'}
+                        </span>
+
+                        {(() => {
+                          const activeTrackingCode = order.trackingCode || order.trackingNumber || order.trackingNo;
+                          if (activeTrackingCode && String(activeTrackingCode).trim()) {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-on-surface-variant uppercase font-semibold">Tracking Code (AWB):</span>
+                                <span className="px-2.5 py-1 rounded bg-surface-container-high border border-surface-variant font-mono text-xs font-bold text-primary flex items-center gap-1.5 shadow-2xs">
+                                  {activeTrackingCode}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(activeTrackingCode);
+                                      toast.success(`Tracking code "${activeTrackingCode}" copied to clipboard!`);
+                                    }}
+                                    className="text-secondary hover:text-primary cursor-pointer transition-colors p-0.5"
+                                    title="Copy Tracking Code"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                                  </button>
+                                </span>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant/70 font-medium italic">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-pulse"></span>
+                              <span>Tracking Code: Pending Admin Assignment</span>
+                            </div>
+                          );
+                        })()}
                       </div>
+
                       <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
                         <div
                           className={`h-full bg-secondary rounded-full transition-all duration-500 ${
-                            isDelivered ? 'w-full bg-emerald-600' : order.status === 'In Transit' ? 'w-2/3' : 'w-1/3'
+                            isDelivered ? 'w-full bg-emerald-600' : order.status === 'In Transit' || order.status === 'Dispatched' ? 'w-3/4' : 'w-1/3'
                           }`}
                         />
                       </div>
-                      <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant mt-2">
-                        <span>Dispatched</span>
-                        <span className="font-bold text-secondary">In Transit</span>
+                      <div className="flex justify-between items-center font-label-caps text-[10px] text-on-surface-variant">
+                        <span>Awaiting Dispatch</span>
+                        <span className="font-bold text-secondary">In Transit / Dispatched</span>
                         <span className={isDelivered ? 'font-bold text-emerald-700' : ''}>Delivered</span>
                       </div>
                     </div>

@@ -1,10 +1,12 @@
 // Orders & Global Dispatch Management Component
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AdminOrders() {
   const [filter, setFilter] = useState('All');
   const [selectedWaybill, setSelectedWaybill] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [trackingInputs, setTrackingInputs] = useState({});
 
   // Database eken orders fetch kireema
   useEffect(() => {
@@ -124,9 +126,11 @@ export default function AdminOrders() {
               destination: o.destination || 'Global Dispatch',
               total: formatLKR(o.total),
               status: o.status || 'Awaiting Dispatch',
-              courier: o.courier || 'DHL Express Insured',
-              trackingNo: o.trackingNo || '7849-2048-1920',
-              origin: o.origin || 'Kyoto Workshop Kiln #2',
+              courier: o.courier || 'Insured Courier',
+              trackingCode: o.trackingCode || o.trackingNumber || o.trackingNo || '',
+              trackingNumber: o.trackingCode || o.trackingNumber || o.trackingNo || '',
+              trackingNo: o.trackingCode || o.trackingNumber || o.trackingNo || '',
+              origin: o.origin || 'Atelier Vault',
               rawOrder: o,
             };
           });
@@ -165,6 +169,60 @@ export default function AdminOrders() {
     if (selectedWaybill && selectedWaybill.id === orderId) {
       setSelectedWaybill((prev) => ({ ...prev, status: newStatus }));
     }
+  };
+
+  const handleSaveTrackingNumber = async (orderId, trackingNum) => {
+    const cleanTracking = String(trackingNum || '').trim();
+
+    // 1. Sync to state immediately
+    setOrders((prev) =>
+      prev.map((o) => {
+        const isMatch = o.id === orderId || o.rawOrder?.orderId === orderId || o.rawOrder?._id === orderId;
+        return isMatch
+          ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }
+          : o;
+      })
+    );
+    if (selectedWaybill && (selectedWaybill.id === orderId || selectedWaybill.rawOrder?.orderId === orderId || selectedWaybill.rawOrder?._id === orderId)) {
+      setSelectedWaybill((prev) => ({
+        ...prev,
+        trackingCode: cleanTracking,
+        trackingNumber: cleanTracking,
+        trackingNo: cleanTracking,
+      }));
+    }
+
+    // 2. Sync to backend API
+    try {
+      await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(orderId)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }),
+      });
+    } catch (err) {
+      console.log('Status update API error:', err);
+    }
+
+    // 3. Sync to LocalStorage
+    try {
+      const uOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const updatedUOrds = uOrds.map((o) =>
+        (o.orderId === orderId || o.id === orderId || o._id === orderId)
+          ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }
+          : o
+      );
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify(updatedUOrds));
+
+      const gOrds = JSON.parse(localStorage.getItem('atelierstore_orders') || '[]');
+      const updatedGOrds = gOrds.map((o) =>
+        (o.orderId === orderId || o.id === orderId || o._id === orderId)
+          ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }
+          : o
+      );
+      localStorage.setItem('atelierstore_orders', JSON.stringify(updatedGOrds));
+    } catch (e) {}
+
+    toast.success(`Tracking number updated for Order #${orderId}`);
   };
 
   const handleDeleteOrder = (orderId) => {
@@ -293,6 +351,7 @@ export default function AdminOrders() {
                 <th className="py-3 px-4">Patron</th>
                 <th className="py-3 px-4">Artifact Items</th>
                 <th className="py-3 px-4">Destination</th>
+                <th className="py-3 px-4">Tracking Code (AWB)</th>
                 <th className="py-3 px-4">Total</th>
                 <th className="py-3 px-4">Status (Click to Change)</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -338,6 +397,28 @@ export default function AdminOrders() {
                     </div>
                   </td>
                   <td className="py-4 px-4">{ord.destination}</td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-1.5 min-w-[170px]">
+                      <input
+                        type="text"
+                        placeholder="e.g. DOMEX-9982"
+                        value={trackingInputs[ord.id] !== undefined ? trackingInputs[ord.id] : (ord.trackingCode || ord.trackingNumber || ord.trackingNo || '')}
+                        onChange={(e) => setTrackingInputs({ ...trackingInputs, [ord.id]: e.target.value })}
+                        className="w-32 h-8 px-2 bg-surface-container-low border border-surface-variant rounded font-mono text-[11px] text-primary focus:outline-none focus:border-secondary font-bold"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = trackingInputs[ord.id] !== undefined ? trackingInputs[ord.id] : (ord.trackingCode || ord.trackingNumber || ord.trackingNo || '');
+                          handleSaveTrackingNumber(ord.id, val);
+                        }}
+                        className="h-8 w-8 rounded bg-primary text-on-primary hover:bg-secondary flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-2xs"
+                        title="Save Tracking Code for this Order"
+                      >
+                        <span className="material-symbols-outlined text-sm">save</span>
+                      </button>
+                    </div>
+                  </td>
                   <td className="py-4 px-4 font-price-editorial text-price-editorial text-primary font-medium">{ord.total}</td>
                   <td className="py-4 px-4">
                     <div className="relative inline-block">
@@ -444,7 +525,35 @@ export default function AdminOrders() {
                   <span className="font-label-caps text-[10px] text-outline block">Destination &amp; Freight</span>
                   <p className="font-semibold text-primary">{selectedWaybill.destination}</p>
                   <p className="text-on-surface-variant text-[11px]">{selectedWaybill.courier}</p>
-                  <p className="font-mono text-[10px] text-outline mt-0.5">AWB: {selectedWaybill.trackingNo}</p>
+                  <p className="font-mono text-[10px] text-outline mt-0.5">AWB: {selectedWaybill.trackingCode || selectedWaybill.trackingNumber || selectedWaybill.trackingNo || 'Not Assigned Yet'}</p>
+                </div>
+              </div>
+
+              {/* Optional Tracking Code Input */}
+              <div className="mt-3 pt-3 border-t border-surface-variant/60 space-y-1">
+                <label className="font-label-caps text-[10px] uppercase font-bold text-secondary flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">local_shipping</span>
+                  Optional Courier Tracking Code / AWB No:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={trackingInputs[selectedWaybill.id] !== undefined ? trackingInputs[selectedWaybill.id] : (selectedWaybill.trackingCode || selectedWaybill.trackingNumber || selectedWaybill.trackingNo || '')}
+                    onChange={(e) => setTrackingInputs({ ...trackingInputs, [selectedWaybill.id]: e.target.value })}
+                    placeholder="e.g. DOMEX-LK-994821 or ATL-TRK-8849"
+                    className="flex-1 h-9 px-3 bg-surface-container-lowest border border-surface-variant rounded-lg font-mono text-xs font-bold text-primary focus:outline-none focus:border-secondary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = trackingInputs[selectedWaybill.id] !== undefined ? trackingInputs[selectedWaybill.id] : (selectedWaybill.trackingCode || selectedWaybill.trackingNumber || selectedWaybill.trackingNo || '');
+                      handleSaveTrackingNumber(selectedWaybill.id, val);
+                    }}
+                    className="h-9 px-4 rounded bg-primary text-on-primary font-label-caps text-[10px] uppercase font-bold hover:bg-secondary cursor-pointer transition-all shrink-0 flex items-center gap-1 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-xs">save</span>
+                    <span>Save Tracking</span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -59,7 +59,7 @@
 
 ---
 
-## 🛠️ 15 Core Engineering Challenges & Solutions
+## 🛠️ 18 Core Engineering Challenges & Solutions
 
 | # | Technical Challenge | Root Cause | Engineering Solution | Code File Link |
 |---|---|---|---|---|
@@ -78,6 +78,9 @@
 | **13** | Floating-Point Price Precision | Discounts and taxes generated long float strings (e.g. `4200.0000000000005`). | Applied `Math.round()` on checkout subtotals and discounts. | [`CheckoutPage.jsx`](file:///d:/Intern/client/src/pages/CheckoutPage.jsx#L68-L77) |
 | **14** | Offline API Fallback Support | Blank page/crash when backend database was temporarily offline. | Added pre-curated fallback products array inside `try-catch-finally` fetch blocks. | [`AdminProducts.jsx`](file:///d:/Intern/client/src/admin/AdminProducts.jsx#L14-L43) |
 | **15** | Instant State Sync on Delete | Product deletions didn't reflect on UI until page refresh. | Performed optimistic state filter update (`setProducts(prev => prev.filter(...))`) immediately. | [`AdminProducts.jsx`](file:///d:/Intern/client/src/admin/AdminProducts.jsx#L51-L59) |
+| **16** | Tracking Code Reset on Refresh | Long-running Node process loaded prior to schema edit, causing in-memory Mongoose model to silently strip `trackingCode` on `.save()`. | Restarted server with `nodemon server.js` for automated schema recompilation and updated `PUT /api/orders/:id/status` controller. | [`orderRoutes.js`](file:///d:/Intern/server/routes/orderRoutes.js#L195-L228) |
+| **17** | Seamless Google OAuth Integration | Users required fast 1-click Google Sign-In with official Google Client ID & Secret credentials. | Built `POST /api/users/google-login` endpoint, loaded GIS SDK in `index.html`, and added custom Google Auth modal flow. | [`userRoutes.js`](file:///d:/Intern/server/routes/userRoutes.js#L73-L121) |
+| **18** | Direct PDF Invoice Generation | Browser print dialogs interrupted user experience when downloading official receipts. | Engineered `downloadDirectPDFInvoice` utility using `jsPDF` for instant vector PDF receipt downloads. | [`pdfInvoiceGenerator.js`](file:///d:/Intern/client/src/utils/pdfInvoiceGenerator.js#L1-L145) |
 
 ---
 

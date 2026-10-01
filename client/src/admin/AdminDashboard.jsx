@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import AdminOrders from './AdminOrders';
@@ -19,6 +20,7 @@ export default function AdminDashboard({ onGoToPublicStore }) {
 
   // Dynamic Orders Database from MongoDB API (http://localhost:5001/api/orders)
   const [orders, setOrders] = useState([]);
+  const [trackingInputs, setTrackingInputs] = useState({});
 
   // Calculate metrics dynamically from database orders
   const formatLKR = (val) => {
@@ -103,6 +105,9 @@ export default function AdminDashboard({ onGoToPublicStore }) {
             destination: o.destination || 'Global Destination',
             total: formatLKR(o.total),
             status: o.status || 'Awaiting Dispatch',
+            trackingCode: o.trackingCode || o.trackingNumber || o.trackingNo || '',
+            trackingNumber: o.trackingCode || o.trackingNumber || o.trackingNo || '',
+            trackingNo: o.trackingCode || o.trackingNumber || o.trackingNo || '',
             rawOrder: o,
             statusClass: o.status?.includes('Awaiting')
               ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold'
@@ -158,6 +163,45 @@ export default function AdminDashboard({ onGoToPublicStore }) {
 
   const handleProcessOrder = (id) => {
     handleUpdateOrderStatus(id, 'Dispatched');
+  };
+
+  const handleSaveTrackingNumber = async (id, trackingNum) => {
+    const cleanTracking = String(trackingNum || '').trim();
+
+    setOrders((prev) =>
+      prev.map((o) => {
+        const isMatch = o.id === id || o.rawOrder?.orderId === id || o.rawOrder?._id === id;
+        return isMatch
+          ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }
+          : o;
+      })
+    );
+
+    try {
+      await fetch(`http://localhost:5001/api/orders/${encodeURIComponent(id)}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking }),
+      });
+    } catch (e) {
+      console.error('API order tracking update failed:', e);
+    }
+
+    try {
+      const uOrds = JSON.parse(localStorage.getItem('atelierstore_user_orders') || '[]');
+      const updatedUOrds = uOrds.map((o) =>
+        (o.orderId === id || o.id === id || o._id === id) ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking } : o
+      );
+      localStorage.setItem('atelierstore_user_orders', JSON.stringify(updatedUOrds));
+
+      const gOrds = JSON.parse(localStorage.getItem('atelierstore_orders') || '[]');
+      const updatedGOrds = gOrds.map((o) =>
+        (o.orderId === id || o.id === id || o._id === id) ? { ...o, trackingCode: cleanTracking, trackingNumber: cleanTracking, trackingNo: cleanTracking } : o
+      );
+      localStorage.setItem('atelierstore_orders', JSON.stringify(updatedGOrds));
+    } catch (e) {}
+
+    toast.success(`Tracking number updated for Order #${id}`);
   };
 
   const handleDeleteOrder = async (id) => {
@@ -516,6 +560,7 @@ export default function AdminDashboard({ onGoToPublicStore }) {
                         <th className="py-3 px-4">Patron</th>
                         <th className="py-3 px-4">Editions</th>
                         <th className="py-3 px-4">Destination</th>
+                        <th className="py-3 px-4">Tracking Code (AWB)</th>
                         <th className="py-3 px-4">Settlement</th>
                         <th className="py-3 px-4">State</th>
                         <th className="py-3 px-4 text-right">Action</th>
@@ -531,6 +576,28 @@ export default function AdminDashboard({ onGoToPublicStore }) {
                           </td>
                           <td className="py-4 px-4 font-medium text-primary">{ord.items}</td>
                           <td className="py-4 px-4">{ord.destination}</td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-1.5 min-w-[170px]">
+                              <input
+                                type="text"
+                                placeholder="e.g. DOMEX-9982"
+                                value={trackingInputs[ord.id] !== undefined ? trackingInputs[ord.id] : (ord.trackingCode || ord.trackingNumber || ord.trackingNo || '')}
+                                onChange={(e) => setTrackingInputs({ ...trackingInputs, [ord.id]: e.target.value })}
+                                className="w-32 h-8 px-2 bg-surface-container-low border border-surface-variant rounded font-mono text-[11px] text-primary focus:outline-none focus:border-secondary font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const val = trackingInputs[ord.id] !== undefined ? trackingInputs[ord.id] : (ord.trackingCode || ord.trackingNumber || ord.trackingNo || '');
+                                  handleSaveTrackingNumber(ord.id, val);
+                                }}
+                                className="h-8 w-8 rounded bg-primary text-on-primary hover:bg-secondary flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-2xs"
+                                title="Save Tracking Code for this Order"
+                              >
+                                <span className="material-symbols-outlined text-sm">save</span>
+                              </button>
+                            </div>
+                          </td>
                           <td className="py-4 px-4 font-price-editorial text-price-editorial text-primary font-medium">{ord.total}</td>
                           <td className="py-4 px-4">
                             <div className="relative inline-block">

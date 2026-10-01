@@ -191,23 +191,39 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 5. Order status eka update kireema (PUT /api/orders/:id/status)
+// 5. Order status & tracking info update kireema (PUT /api/orders/:id/status)
 router.put('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    let order = await Order.findOne({ orderId: id });
-    if (!order && id.match(/^[0-9a-fA-F]{24}$/)) {
+    let order = null;
+
+    if (id && id.match(/^[0-9a-fA-F]{24}$/)) {
       order = await Order.findById(id);
     }
+    if (!order) {
+      order = await Order.findOne({
+        $or: [{ orderId: id }, { id: id }]
+      });
+    }
+
     if (order) {
-      order.status = req.body.status || order.status;
+      if (req.body.status) order.status = req.body.status;
+      if (req.body.trackingCode !== undefined) order.trackingCode = req.body.trackingCode;
+      if (req.body.trackingNumber !== undefined) order.trackingNumber = req.body.trackingNumber;
+      if (req.body.trackingNo !== undefined) {
+        order.trackingCode = req.body.trackingNo;
+        order.trackingNumber = req.body.trackingNo;
+      }
+
       const updatedOrder = await order.save();
-      res.json(updatedOrder);
+      console.log(`[ORDER UPDATED] Order ${order._id} (${order.orderId}): Status=${order.status}, Tracking=${order.trackingCode}`);
+      return res.json(updatedOrder);
     } else {
-      res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: 'Order not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update order status', error: error.message });
+    console.error('Error updating order status/tracking:', error);
+    return res.status(500).json({ message: 'Failed to update order status or tracking', error: error.message });
   }
 });
 

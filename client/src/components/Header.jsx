@@ -84,18 +84,23 @@ export default function Header({
     }
   };
 
-  // Filter live products for suggestions
+  const [selectedSearchCategory, setSelectedSearchCategory] = useState('All');
+
+  // Filter live products for suggestions with optional Category filter
   const matchingLiveProducts = internalQuery.trim()
     ? liveProducts
         .filter((p) => {
           const q = internalQuery.toLowerCase().trim();
           const haystack = `${p.title || ''} ${p.category || ''} ${p.subtitle || ''} ${p.description || ''}`.toLowerCase();
-          return haystack.includes(q);
+          const matchesText = haystack.includes(q);
+          if (selectedSearchCategory === 'All') return matchesText;
+          return matchesText && String(p.category || '').toLowerCase().includes(selectedSearchCategory.toLowerCase());
         })
-        .slice(0, 5)
+        .slice(0, 6)
     : [];
 
-  const popularTags = ['Dresses', 'Linen', 'Tunics', 'Blazer', 'Robes', 'Culottes', 'Silk'];
+  const popularTags = ['Dresses', 'Linen', 'Tunics', 'Blazer', 'Robes', 'Culottes', 'Silk', 'Stoneware'];
+  const categoryFilters = ['All', 'Flax', 'Linen', 'Tailoring', 'Textiles', 'Ceramics'];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-md border-b border-surface-variant/40 shadow-xs transition-all duration-300">
@@ -369,6 +374,27 @@ export default function Header({
                   className="px-3.5 py-1 rounded-full bg-surface-container-low hover:bg-amber-600 hover:text-white border border-surface-variant/60 font-label-caps text-[11px] uppercase transition-all duration-200 cursor-pointer shrink-0 hover:scale-105 shadow-2xs"
                 >
                   {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Live Category Filter Chips */}
+            <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <span className="font-label-caps text-[10px] text-outline uppercase font-semibold shrink-0 mr-1">
+                Filter Category:
+              </span>
+              {categoryFilters.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedSearchCategory(cat)}
+                  className={`px-2.5 py-0.5 rounded-full font-label-caps text-[10px] uppercase transition-colors cursor-pointer shrink-0 ${
+                    selectedSearchCategory === cat
+                      ? 'bg-primary text-on-primary font-bold'
+                      : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {cat}
                 </button>
               ))}
             </div>
