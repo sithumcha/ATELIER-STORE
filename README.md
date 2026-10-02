@@ -13,32 +13,118 @@
 
 ## 📖 Executive Summary
 
-**ATELIER-STORE** is a full-stack, editorial luxury e-commerce web application engineered using the **MERN (MongoDB, Express.js, React + Vite, Node.js)** architecture. Inspired by high-end artisanal textile studios and Japanese bespoke tailoring, the platform combines a sophisticated aesthetic with robust backend telemetry, real-time inventory management, dynamic promo/offer engines, and offline fallback support.
+**ATELIER-STORE** is a full-stack, editorial luxury e-commerce web application engineered using the **MERN (MongoDB, Express.js, React + Vite, Node.js)** architecture. Inspired by high-end artisanal textile studios and Japanese bespoke tailoring, the platform combines a sophisticated aesthetic with robust backend telemetry, real-time inventory management, dynamic promo/offer engines, automated Nodemailer email notifications, Google OAuth authentication, client-side PDF invoice generation, and offline fallback support.
 
 ---
 
-## ✨ Key Project Features & Capabilities
+## 👥 User Roles & Features Breakdown (Client vs. Admin)
+
+### 👤 **1. Client / Customer Capabilities**
+
+* **🛍️ Product Browsing & Editorial Collections:**
+  * Explore Home Page hero highlights, featured items, and editorial collections.
+  * Browse dedicated collection pages: *Women's Wardrobe*, *Men's Tailoring*, *Textiles & Fiber*, and *Lookbook Journal*.
+  * Filter and view active discounted items with `🔥 % OFF` badges, strikethrough original prices (~Rs. 48,000~ → Rs. 38,400), and live `⏳ Ends in 23h 45m` countdown timers.
+
+* **📖 Interactive Monograph Product Details:**
+  * High-resolution multi-angle photo gallery with thumbnail switching.
+  * Interactive colorway palette selector and size selector (S, M, L, XL, XXL).
+  * Proportions & Fit guide modal dialog.
+  * Live stock availability check (e.g., `Only 3 left in vault` or `Out of Stock`).
+  * Read verified patron reviews and rating breakdowns.
+
+* **🔑 Account Management & 1-Click Google Sign-In:**
+  * 1-Click fast Google OAuth authentication via native Google Identity Services (GIS) popup.
+  * Standard email/password Registration and Login.
+  * Automatic profile sync (Patron Name, Email, and Google Avatar picture).
+  * Access personal account profile dashboard and order history.
+
+* **🛒 Shopping Bag & Wishlist Management:**
+  * Add products with selected sizes and quantities to the Shopping Bag.
+  * Save favorite items to Wishlist for later review.
+  * Scoped LocalStorage caching: cart items are isolated per logged-in user (`atelierstore_cart_<email>`).
+  * Real-time calculation of subtotal, applied discounts, and total settlement.
+
+* **⚡ Direct "Buy Now" Checkout:**
+  * Instant "Buy Now" option to proceed directly to Checkout without modifying or overwriting existing Shopping Bag items.
+
+* **💳 Order Placement & Cash on Delivery (COD):**
+  * Enter delivery address, contact details, and complete order placement.
+  * Automated backend stock deduction upon order completion.
+
+* **✉️ Automated Email Notifications:**
+  * Receive instant **HTML Tax Invoice Receipt Email** upon placing an order.
+  * Receive **Courier Tracking Alert Email** with AWB tracking number, courier partner name (Pronto/Domex), and estimated delivery time when the order is shipped.
+
+* **📄 Instant Vector PDF Receipt Download:**
+  * Download official vector PDF tax receipt with 1-click directly from the browser checkout/account view using `jsPDF`.
+
+* **💬 Support Inquiry Submission:**
+  * Submit inquiry/feedback tickets directly to the Atelier Store support team.
+
+---
+
+### 🛡️ **2. Admin / Store Operator Capabilities**
+
+* **🏛️ Live Inventory Telemetry & Vault Management:**
+  * View live Inventory Telemetry Dashboard (Total Products, Low Stock Warnings ≤ 5, Out of Stock counts).
+  * Quick **`+5 Restock`** button to update MongoDB stock instantly with 1 click.
+  * Commission new products with image upload (Multer extension and MIME-type validation).
+  * Edit product titles, prices, descriptions, categories, and size stock variations.
+  * Delete products with optimistic UI state removal.
+
+* **🔥 Dynamic Item & Storewide Bulk Offer Engine:**
+  * **Single Product Offer:** Apply custom percentage discounts (10% to 90%) to individual products with expiry timers (24h, 48h, 5d, 7d).
+  * **Storewide Bulk Offer:** Apply percentage discount (10% - 90%) to **ALL products in the database at once** with 1 click.
+  * **Bulk Offer Removal:** Remove all active discounts storewide with 1 click.
+  * **Single Offer Removal:** Remove discount from a specific product.
+
+* **📦 Order Processing & Logistics Management:**
+  * Real-time view of all customer orders sorted chronologically.
+  * Update order status (`Awaiting Dispatch`, `Dispatched / In Transit`, `Delivered`).
+  * Assign/Update Courier Tracking AWB code (e.g. `DOMEX-9982`), automatically triggering customer shipping alert email.
+  * Cancel / Delete orders with **automatic database stock restoration**.
+
+* **🎫 Patron Support Inquiry Desk:**
+  * View and manage customer inquiry tickets submitted via the contact support form.
+
+* **📊 Real-Time Telemetry & Dashboard Metrics:**
+  * Track overall store telemetry including total revenue, active orders, stock levels, and active offer campaigns.
+
+---
+
+## ✨ Key Technical Features & Systems
 
 ### 1. 🔥 Timed Item & Storewide Bulk Offer Engine
 * **Single Item & Bulk Offers:** Admin can apply percentage discounts (10% to 90%) to a single product or to **ALL inventory items at once** via a single click.
 * **Configurable Expiry Timers:** Set offer durations for **24 Hours (1 Day)**, **2 Days (48 Hours)**, **5 Days**, or **7 Days**.
 * **Live Storefront Countdown Badges:** Displays `🔥 % OFF` highlight badges, live `⏳ Ends in 23h 45m` countdowns, and strikethrough original prices (~Rs. 48,000~ → Rs. 38,400) across all pages (Hero, Catalog, Women's, Men's, and Detail pages).
-* **Automated Discount Checkout:** Adds items to Shopping Bag and Direct Checkout ("Buy Now") using the active discounted price automatically.
+* **Automated Discount Checkout:** Adds items to Shopping Bag and Direct Checkout ("Buy Now") using active discounted prices automatically.
 
-### 2. 🏛️ Atelier Vault Inventory & Admin Telemetry
-* **Live Telemetry Dashboard:** Monitors inventory thresholds, low-stock warnings (editions with stock ≤ 5), and out-of-stock counts.
+### 2. 📦 Automated Order Management & Inventory Control
+* **Checkout Flow & Direct Purchase:** Support for Cash on Delivery (COD) and isolated "Buy Now" direct checkout.
+* **Automatic Inventory Stock Deduction:** Subtracts ordered item quantities directly from MongoDB upon order placement.
+* **Stock Auto-Restoration:** Automatically restores inventory stock to database when an order is cancelled or deleted.
+* **Courier Tracking & AWB Dispatch:** Admin can update order status (`Awaiting Dispatch`, `Dispatched / In Transit`, `Delivered`) and assign courier AWB tracking codes (e.g., `DOMEX-9982`).
+* **Patron Order Lookup:** Customers can view their personal order history via patron email lookup.
+
+### 3. ✉️ Automated Nodemailer Email Service (Gmail SMTP)
+* **Order Confirmation Email:** Automatically sends a luxury HTML tax invoice receipt to the customer's email upon order placement.
+* **Courier Dispatch Alert Email:** Automatically sends a real-time shipping notification email containing the courier tracking code (AWB), courier partner name (Pronto/Domex), and estimated delivery date when an order is dispatched.
+
+### 4. 📄 Direct Client-side Vector PDF Invoice Generator
+* **Instant Receipt Download:** 1-click vector PDF invoice generation using `jsPDF` without needing browser print dialogs.
+* **Professional Layout:** Itemized manifest table, DDP prepaid freight details, customer info, and encrypted transaction metadata.
+
+### 5. 🔑 Google OAuth 2.0 One-Touch Authentication
+* **1-Click Google Sign-In:** Integration with Google Identity Services (GIS) SDK and backend verification endpoint (`POST /api/users/google-login`).
+* **Profile Sync:** Automatically syncs patron name, email, and Google profile picture upon login.
+
+### 6. 🏛️ Atelier Vault Admin Telemetry & Inventory System
+* **Live Telemetry Dashboard:** Monitors total product counts, low-stock warnings (editions with stock ≤ 5), and out-of-stock items.
 * **Instant Restock Controls:** Quick `+5 Restock` button updates MongoDB instantly using asynchronous PUT requests.
 * **Commissioning New Editions:** Image upload integration using Multer with extension and MIME-type validation.
-* **Optimistic UI Deletion:** Deleting a product reflects immediately in UI state before server round-trips complete.
-
-### 3. 🎨 Editorial Multi-Page Storefront
-* **Dynamic Collections:** Dedicated editorial pages for *Women's Wardrobe*, *Men's Clothing / Tailoring*, *Textiles & Fiber*, and *Lookbook Journal*.
-* **Interactive Monograph Product Detail:** Multi-angle gallery, colorway palette selector, proportions fit modal, verified patron reviews, and purchase eligibility check.
-* **Custom SPA Routing:** Browser Back/Forward buttons stay synchronized with React view states using `popstate` event listening without page reloads.
-
-### 4. 🔒 User Scoped Session & Storage Management
-* **Scoped LocalStorage Caching:** Cart and Wishlist items are isolated per user (`atelierstore_cart_<email>`), preventing data leakage upon logout/login.
-* **Direct Checkout Isolation:** "Buy Now" directs single items to Checkout without modifying or clearing existing Cart items.
+* **Optimistic UI Deletion:** Deleting or modifying a product updates UI state immediately before server round-trips complete.
 
 ---
 
@@ -49,100 +135,51 @@
 * **Styling:** Vanilla CSS & Tailwind CSS with dynamic design tokens
 * **State Management:** Scoped `useState`, `useEffect`, and `LocalStorage` persistence
 * **Icons & Fonts:** Google Material Symbols & Editorial Google Fonts (Cinzel, Inter)
+* **PDF Utility:** `jsPDF` for client-side receipt rendering
 
 ### **Backend**
 * **Runtime:** Node.js (ES Modules `"type": "module"`)
 * **Framework:** Express.js
 * **Database:** MongoDB & Mongoose ORM
+* **Email Service:** Nodemailer (Gmail SMTP integration)
 * **File Uploads:** Multer with mime-type checking & static directory exposure
 * **Concurrency:** `concurrently` package for single-terminal development
 
 ---
 
-## 🛠️ 18 Core Engineering Challenges & Solutions
+## 📡 Complete API Endpoints Reference
 
-| # | Technical Challenge | Root Cause | Engineering Solution | Code File Link |
-|---|---|---|---|---|
-| **1** | MongoDB ObjectId vs Custom String ID | Seed data used `"p1"`, MongoDB generated 24-hex ObjectIds causing Mongoose `CastError`. | Regex `/^[0-9a-fA-F]{24}$/` checks ID format to use `findById()` vs `findOne({ id })`. | [`productRoutes.js`](file:///d:/Intern/server/routes/productRoutes.js#L22-L27) |
-| **2** | Currency String Price Parsing | Prices contained `"LKR 42,000"` or `"$45.00"` strings, breaking DB sorting and filtering. | Sanitized with Regex `/[^0-9.]/g` into clean Float Primitives in backend controllers. | [`productRoutes.js`](file:///d:/Intern/server/routes/productRoutes.js#L41-L45) |
-| **3** | CORS Policy Blocking Error | Frontend (`:5173`) and Backend (`:5001`) ran on different ports, blocked by browsers. | Enabled Express `cors` middleware (`app.use(cors())`). | [`server.js`](file:///d:/Intern/server/server.js#L25) |
-| **4** | Uploaded Image 404 Error | Uploaded files in `/uploads` were not accessible via HTTP request URLs. | Exposed directory statically with `app.use('/uploads', express.static(...))`. | [`server.js`](file:///d:/Intern/server/server.js#L29) |
-| **5** | 413 Payload Too Large Error | Express default body limit (1MB) rejected high-resolution uploaded photos. | Expanded Express body limit & Multer limits to `10MB`. | [`uploadMiddleware.js`](file:///d:/Intern/server/middleware/uploadMiddleware.js#L9) |
-| **6** | Custom SPA Routing Sync | Browser Back/Forward buttons didn't update active view without React Router. | Added global `popstate` event listener in `App.jsx` `useEffect`. | [`App.jsx`](file:///d:/Intern/client/src/App.jsx#L112-L121) |
-| **7** | LocalStorage Session Persistence | Page refresh cleared cart and user session. | Implemented lazy state initialization and user-scoped keys (`atelierstore_cart_<email>`). | [`App.jsx`](file:///d:/Intern/client/src/App.jsx#L129-L132) |
-| **8** | "Buy Now" Checkout Isolation | Buy Now mixed direct item with existing shopping cart items. | Created isolated `directCheckoutItem` state for direct checkout routing. | [`App.jsx`](file:///d:/Intern/client/src/App.jsx#L85-L99) |
-| **9** | Node.js ES Modules Syntax Error | `SyntaxError: Cannot use import statement outside a module` on server start. | Added `"type": "module"` to `package.json` and explicit `.js` import extensions. | [`package.json`](file:///d:/Intern/server/package.json#L6) |
-| **10** | Dual Terminal Dev Workflow | Required running two separate terminal windows for client and server. | Configured `concurrently` script in root `package.json` to start both via `npm run dev`. | [`package.json`](file:///d:/Intern/package.json#L7-L13) |
-| **11** | File Type Upload Validation | Risk of non-image files (PDF/TXT) being uploaded to image endpoints. | Built `checkFileTypes` validator checking extension and MIME-type against image regex. | [`uploadMiddleware.js`](file:///d:/Intern/server/middleware/uploadMiddleware.js#L31-L40) |
-| **12** | Database Connection Crashes | Database connection drops crashed the Node.js server with unhandled rejections. | Wrapped `mongoose.connect` in `async try-catch` with clean `process.exit(1)` termination. | [`db.js`](file:///d:/Intern/server/config/db.js#L5-L13) |
-| **13** | Floating-Point Price Precision | Discounts and taxes generated long float strings (e.g. `4200.0000000000005`). | Applied `Math.round()` on checkout subtotals and discounts. | [`CheckoutPage.jsx`](file:///d:/Intern/client/src/pages/CheckoutPage.jsx#L68-L77) |
-| **14** | Offline API Fallback Support | Blank page/crash when backend database was temporarily offline. | Added pre-curated fallback products array inside `try-catch-finally` fetch blocks. | [`AdminProducts.jsx`](file:///d:/Intern/client/src/admin/AdminProducts.jsx#L14-L43) |
-| **15** | Instant State Sync on Delete | Product deletions didn't reflect on UI until page refresh. | Performed optimistic state filter update (`setProducts(prev => prev.filter(...))`) immediately. | [`AdminProducts.jsx`](file:///d:/Intern/client/src/admin/AdminProducts.jsx#L51-L59) |
-| **16** | Tracking Code Reset on Refresh | Long-running Node process loaded prior to schema edit, causing in-memory Mongoose model to silently strip `trackingCode` on `.save()`. | Restarted server with `nodemon server.js` for automated schema recompilation and updated `PUT /api/orders/:id/status` controller. | [`orderRoutes.js`](file:///d:/Intern/server/routes/orderRoutes.js#L195-L228) |
-| **17** | Seamless Google OAuth Integration | Users required fast 1-click Google Sign-In with official Google Client ID & Secret credentials. | Built `POST /api/users/google-login` endpoint, loaded GIS SDK in `index.html`, and added custom Google Auth modal flow. | [`userRoutes.js`](file:///d:/Intern/server/routes/userRoutes.js#L73-L121) |
-| **18** | Direct PDF Invoice Generation | Browser print dialogs interrupted user experience when downloading official receipts. | Engineered `downloadDirectPDFInvoice` utility using `jsPDF` for instant vector PDF receipt downloads. | [`pdfInvoiceGenerator.js`](file:///d:/Intern/client/src/utils/pdfInvoiceGenerator.js#L1-L145) |
-
----
-
-## 📡 API Endpoints Reference
-
-### **Products & Offers**
-* `GET /api/products` — Retrieve all products
-* `GET /api/products/:id` — Retrieve product details by ID or string code
-* `POST /api/products` — Create a new product edition
-* `PUT /api/products/:id` — Update product details / stock count
+### **Products & Offers API**
+* `GET /api/products` — Retrieve all inventory products
+* `GET /api/products/:id` — Retrieve single product details by MongoDB ObjectId or custom ID
+* `POST /api/products` — Create a new product edition (with image upload support)
+* `PUT /api/products/:id` — Update product details / restock stock count
 * `DELETE /api/products/:id` — Delete a product edition
-* `PUT /api/products/:id/offer` — Apply/update single product discount offer
-* `DELETE /api/products/:id/offer` — Remove single product discount offer
-* `POST /api/products/offer/bulk` — Apply storewide bulk offer to **ALL products**
-* `DELETE /api/products/offer/bulk` — Remove offers from **ALL products**
+* `PUT /api/products/:id/offer` — Apply or update discount offer for a single product
+* `DELETE /api/products/:id/offer` — Remove discount offer from a single product
+* `POST /api/products/offer/bulk` — Apply storewide percentage discount to **ALL products**
+* `DELETE /api/products/offer/bulk` — Remove discount offers from **ALL products**
 
-### **Orders & Inquiries**
-* `GET /api/orders` — Retrieve patron order history
-* `POST /api/orders` — Place a new patron order
-* `GET /api/inquiries` — Retrieve patron inquiry tickets
+### **Orders API**
+* `GET /api/orders` — Retrieve all customer orders (Admin)
+* `GET /api/orders/user/:email` — Retrieve order history for a specific patron email
+* `GET /api/orders/:id` — Retrieve single order details
+* `POST /api/orders` — Place a new customer order (Triggers stock deduction & email invoice)
+* `PUT /api/orders/:id/status` — Update order status / tracking code (Triggers shipping alert email)
+* `DELETE /api/orders/:id` — Delete/cancel an order (Triggers automatic stock restoration)
 
----
+### **Users & Google OAuth API**
+* `POST /api/users/google-login` — Authenticate user via Google OAuth 2.0 credential token
+* `POST /api/users/login` — Standard patron login
+* `POST /api/users/register` — Standard patron registration
 
-## 💻 Local Setup & Execution Guide
-
-### Prerequisites
-* **Node.js** (v18.0.0 or higher)
-* **MongoDB** (Local instance or MongoDB Atlas URI)
-
-### Installation Steps
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/sithumcha/ATELIER-STORE.git
-   cd ATELIER-STORE
-   ```
-
-2. **Install Dependencies:**
-   ```bash
-   # Install root, client, and server dependencies
-   npm install
-   npm run dev --prefix client
-   npm run dev --prefix server
-   ```
-
-3. **Configure Environment Variables:**
-   Create a `.env` file in the `server` directory:
-   ```env
-   PORT=5001
-   MONGO_URI=mongodb://127.0.0.1:27017/ecommerce_db
-   MAX_FILE_SIZE_MB=10
-   ```
-
-4. **Start Application Concurrently:**
-   Run a single terminal command from the workspace root:
-   ```bash
-   npm run dev
-   ```
-   * **Frontend:** `http://localhost:5173`
-   * **Backend:** `http://localhost:5001`
+### **Inquiries API**
+* `GET /api/inquiries` — Retrieve all patron support inquiries
+* `POST /api/inquiries` — Submit a new patron support inquiry ticket
 
 ---
+
+
 
 ## 🔗 Profile & Repository Links
 
@@ -150,4 +187,5 @@
 * **Organization GitHub Repository:** [https://github.com/Quick-Institute/ATELIER-STORE.git](https://github.com/Quick-Institute/ATELIER-STORE.git)
 
 ---
+
 *Developed with focus on artisanal aesthetics and software engineering principles.*

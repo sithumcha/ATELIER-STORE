@@ -2,6 +2,7 @@
 import express from 'express';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
+import { sendOrderConfirmationEmail, sendTrackingUpdateEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -168,7 +169,7 @@ router.get('/:id', async (req, res) => {
 // 4. Aluth Order ekak daaneema (POST /api/orders)
 router.post('/', async (req, res) => {
   try {
-    const { orderId, patronName, patronEmail, items, destination, total, status } = req.body;
+    const { orderId, patronName, patronEmail, items, destination, total, status, trackingCode, trackingNumber, trackingNo } = req.body;
 
     const newOrder = new Order({
       orderId: orderId || `#KR-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -178,12 +179,17 @@ router.post('/', async (req, res) => {
       destination: destination || 'Global Destination',
       total: Number(total) || 0,
       status: status || 'Awaiting Dispatch',
+      trackingCode: trackingCode || trackingNumber || trackingNo || '',
+      trackingNumber: trackingCode || trackingNumber || trackingNo || '',
     });
 
     const savedOrder = await newOrder.save();
 
     // Automatically deduct stock for ordered items
     await deductStockForOrder(savedOrder.items);
+
+    // Send automated Order Placement Confirmation & HTML Tax Invoice Email
+    sendOrderConfirmationEmail(savedOrder).catch((e) => console.log('Order email background error:', e));
 
     res.status(201).json(savedOrder);
   } catch (error) {
@@ -207,6 +213,9 @@ router.put('/:id/status', async (req, res) => {
     }
 
     if (order) {
+      const isNewTrackingAdded = req.body.trackingCode || req.body.trackingNumber || req.body.trackingNo;
+      const isDispatched = req.body.status && (req.body.status.includes('Dispatched') || req.body.status.includes('Transit'));
+
       if (req.body.status) order.status = req.body.status;
       if (req.body.trackingCode !== undefined) order.trackingCode = req.body.trackingCode;
       if (req.body.trackingNumber !== undefined) order.trackingNumber = req.body.trackingNumber;
@@ -217,6 +226,12 @@ router.put('/:id/status', async (req, res) => {
 
       const updatedOrder = await order.save();
       console.log(`[ORDER UPDATED] Order ${order._id} (${order.orderId}): Status=${order.status}, Tracking=${order.trackingCode}`);
+
+      // Send automated Courier Tracking & Shipping Alert Email to patron
+      if (isNewTrackingAdded || isDispatched) {
+        sendTrackingUpdateEmail(updatedOrder, updatedOrder.trackingCode).catch((e) => console.log('Tracking update email error:', e));
+      }
+
       return res.json(updatedOrder);
     } else {
       return res.status(404).json({ message: 'Order not found' });
