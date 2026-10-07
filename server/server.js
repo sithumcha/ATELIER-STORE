@@ -1,6 +1,6 @@
-// Express Backend Main Server
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 
@@ -21,7 +21,8 @@ connectDB();
 
 const app = express();
 
-// Middlewares
+// Middlewares - Gzip Compression & CORS
+app.use(compression());
 const maxPayloadMB = process.env.MAX_FILE_SIZE_MB || '10';
 app.use(cors());
 app.use(express.json({ limit: `${maxPayloadMB}mb` }));

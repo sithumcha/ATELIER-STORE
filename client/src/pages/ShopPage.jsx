@@ -153,6 +153,27 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
     }
   };
 
+  // 3D Tilt & Depth Parallax Card Effect Handlers
+  const handleCard3DTilt = (e) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+    card.style.transition = 'transform 0.1s ease-out';
+  };
+
+  const handleCard3DReset = (e) => {
+    const card = e.currentTarget;
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    card.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+  };
+
   const matchesDiscipline = (p, discipline) => {
     if (!discipline || discipline === 'All Objects' || discipline === 'All Disciplines' || discipline === 'All Garments') return true;
     const searchString = `${p.category || ''} ${p.title || ''} ${p.subtitle || ''} ${p.type || ''} ${p.description || ''}`.toLowerCase();
@@ -660,7 +681,9 @@ export default function ShopPage({ activeTab = 'shop', initialCategory, searchQu
                   return (
                     <div
                       key={p.id}
-                      className="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden p-space-sm card-hover-lift border border-surface-variant/80"
+                      onMouseMove={handleCard3DTilt}
+                      onMouseLeave={handleCard3DReset}
+                      className="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden p-space-sm card-hover-lift border border-surface-variant/80 card-3d-tilt-container"
                     >
                       <div
                         className="relative w-full aspect-[3/4] rounded-lg bg-surface-container overflow-hidden mb-space-sm cursor-pointer"

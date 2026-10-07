@@ -13,16 +13,18 @@ function TypewriterText({ text, speed = 12, delay = 0, className = '', cursor = 
   }, [delay]);
 
   useEffect(() => {
-    if (!started) return;
-    let i = 0;
+    if (!started || !text) return;
+    let index = 0;
+    const step = text.length > 40 ? 2 : 1;
+    const intervalTime = Math.max(16, speed);
+
     const interval = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText(text.slice(0, i + 1));
-        i++;
-      } else {
+      index = Math.min(text.length, index + step);
+      setDisplayedText(text.slice(0, index));
+      if (index >= text.length) {
         clearInterval(interval);
       }
-    }, speed);
+    }, intervalTime);
 
     return () => clearInterval(interval);
   }, [started, text, speed]);
@@ -430,6 +432,44 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
+  // 3D Tilt & Depth Parallax Card Effect Handlers
+  const handleCard3DTilt = (e) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+    card.style.transition = 'transform 0.1s ease-out';
+  };
+
+  const handleCard3DReset = (e) => {
+    const card = e.currentTarget;
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+    card.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+  };
+
+  // Interactive Magnetic Hover Button Effect Handlers
+  const handleMagneticMove = (e) => {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+
+    btn.style.transform = `translate(${x * 0.38}px, ${y * 0.38}px) scale(1.05)`;
+    btn.style.transition = 'transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1)';
+  };
+
+  const handleMagneticReset = (e) => {
+    const btn = e.currentTarget;
+    btn.style.transform = 'translate(0px, 0px) scale(1)';
+    btn.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+  };
+
   const handleAddGarmentToCart = (p) => {
     const chosenSize = selectedSizes[p.id] || (p.sizes && p.sizes[0]) || 'M';
     if (onAddToCart) {
@@ -475,66 +515,86 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
   return (
     <div className="w-full bg-surface font-body-md text-body-md text-on-surface antialiased">
-      {/* Top Notification Accent Bar */}
-      <section className="w-full bg-surface-container-high py-space-xs text-center border-b border-outline-variant/30 reveal-on-scroll">
-        <div className="max-w-[1380px] mx-auto px-margin flex items-center justify-center gap-space-md animate-top-banner-text">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary top-accent-pulse"></span>
-          <p className="font-label-uppercase text-label-uppercase tracking-[0.2em] text-on-surface font-semibold">
-            EDITION 09 / SPRING EQUINOX — THE SILENT DRAPERY COLLECTION NOW UNVEILED
-          </p>
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary top-accent-pulse"></span>
-        </div>
-      </section>
+
 
       {/* 1. HERO SECTION */}
       <section className="relative w-full overflow-hidden bg-surface pt-space-xl pb-space-2xl">
-        <div className="max-w-[1380px] mx-auto px-margin">
+        {/* Next-Level Ambient Glow Mesh Backdrop */}
+        <div className="hero-ambient-glow-orb"></div>
+        <div className="hero-ambient-glow-orb-secondary"></div>
+
+        {/* Floating Luxury Light Particles */}
+        <div className="absolute top-12 left-1/4 w-2 h-2 rounded-full bg-[#b45a34]/30 blur-[1px] animate-particle-1 pointer-events-none"></div>
+        <div className="absolute top-24 right-1/3 w-3 h-3 rounded-full bg-[#d97706]/25 blur-[1px] animate-particle-2 pointer-events-none"></div>
+        <div className="absolute top-8 right-1/4 w-1.5 h-1.5 rounded-full bg-[#8a432b]/40 blur-[1px] animate-particle-3 pointer-events-none"></div>
+
+        <div className="max-w-[1380px] mx-auto px-margin relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Hero Narrative Left */}
-            <div className="lg:col-span-7 flex flex-col justify-center space-y-space-md pr-0 lg:pr-space-lg">
-              <div className="inline-flex items-center gap-space-xs px-space-sm py-space-xs bg-surface-container rounded self-start reveal-on-scroll">
-                <span className="material-symbols-outlined text-[14px] text-secondary animate-pulse">eco</span>
-                <span className="font-label-uppercase text-label-uppercase text-on-surface tracking-widest font-semibold">
-                  <TypewriterText text="EDITION 09 • SPRING EQUINOX COLLECTION" speed={25} delay={100} cursor={true} />
+            <div className="lg:col-span-7 flex flex-col justify-center space-y-6 pr-0 lg:pr-space-lg">
+              {/* Eyebrow subheader */}
+              <div className="inline-flex items-center gap-2 px-1 py-0.5 self-start reveal-on-scroll">
+                <span className="font-label-uppercase text-xs text-[#b45a34] shimmer-copper-text tracking-[0.25em] font-bold">
+                  <TypewriterText text="THE SPRING / SUMMER EDIT — 2026" speed={25} delay={100} cursor={true} />
                 </span>
               </div>
-              <h1 className="font-headline-lg text-headline-lg lg:text-[48px] lg:leading-[56px] tracking-tight font-normal reveal-font-on-scroll hero-title-anim animate-hero-font-shimmer min-h-[110px] lg:min-h-[120px]">
-                <TypewriterText text="Garments of Breath & Fiber — Handcrafted Raiment for Still Living." speed={30} delay={400} cursor={true} />
+
+              {/* Main Headline */}
+              <h1 className="font-serif text-[48px] sm:text-[64px] lg:text-[76px] leading-[1.05] tracking-tight font-normal reveal-font-on-scroll hero-title-anim min-h-[130px] sm:min-h-[150px]">
+                <span className="block text-[#1c1917]">
+                  <TypewriterText text="Clothes for" speed={35} delay={400} cursor={false} />
+                </span>
+                <span className="block italic shimmer-copper-text">
+                  <TypewriterText text="real life." speed={35} delay={950} cursor={true} />
+                </span>
               </h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl leading-relaxed reveal-on-scroll min-h-[70px]">
-                <TypewriterText text="Tactile garments crafted from slow-loomed raw linen, unbleached mulberry silk, and botanical indigo. Designed for timeless form, relaxed silhouette, and poetic ease across seasons." speed={18} delay={1200} cursor={false} />
+
+              {/* Paragraph */}
+              <p className="font-body-lg text-body-lg text-[#57534e] max-w-xl leading-relaxed reveal-on-scroll min-h-[70px]">
+                <TypewriterText text="Thoughtful layers, tactile fabrics, and a softer approach to getting dressed. Made slowly in small batches for wherever the day takes you." speed={18} delay={1500} cursor={false} />
               </p>
-              <div className="flex flex-wrap items-center gap-space-md pt-space-sm reveal-on-scroll">
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-6 pt-2 reveal-on-scroll">
                 <a
-                  className="inline-flex items-center gap-space-xs px-space-lg py-space-md bg-primary text-on-primary font-label-uppercase text-label-uppercase rounded transition-all hover:bg-on-surface-variant shadow-sm hover:translate-x-0.5 cursor-pointer"
+                  onMouseMove={handleMagneticMove}
+                  onMouseLeave={handleMagneticReset}
+                  className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#1c1917] text-white font-label-uppercase text-xs tracking-[0.15em] font-bold rounded-full transition-all hover:bg-[#333] shadow-md cursor-pointer will-change-transform"
                   href="#editions-grid"
                 >
-                  <span><TypewriterText text="Explore Garments & Collections" speed={20} delay={2200} cursor={false} /></span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </a>
-                <a
-                  className="inline-flex items-center gap-space-xs px-space-lg py-space-md bg-surface-container text-on-surface font-label-uppercase text-label-uppercase rounded transition-all hover:bg-surface-container-high cursor-pointer"
-                  href="#atelier-philosophy"
-                >
-                  <span><TypewriterText text="The Weavers' Provenance" speed={20} delay={2500} cursor={false} /></span>
+                  <span><TypewriterText text="SHOP THE COLLECTION" speed={20} delay={2500} cursor={false} /></span>
                   <span className="material-symbols-outlined text-[16px]">north_east</span>
                 </a>
+                <a
+                  onMouseMove={handleMagneticMove}
+                  onMouseLeave={handleMagneticReset}
+                  className="inline-flex items-center gap-2 px-3 py-3.5 text-[#44403c] hover:text-[#1c1917] font-label-uppercase text-xs tracking-[0.15em] font-bold transition-all cursor-pointer will-change-transform"
+                  href="#atelier-philosophy"
+                >
+                  <span><TypewriterText text="OUR MATERIALS" speed={20} delay={2800} cursor={false} /></span>
+                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                </a>
               </div>
-              {/* Micro Metatag Strip */}
-              <div className="pt-space-md flex flex-wrap items-center gap-space-md text-on-surface-variant text-body-sm font-body-sm">
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">history_edu</span>
-                  <span><TypewriterText text="18-60 Cut Limited Batches" speed={20} delay={2800} cursor={false} /></span>
+
+              {/* Bottom 3 Feature Columns */}
+              <div className="pt-6 mt-4 border-t border-[#e7e5e4] grid grid-cols-3 gap-4 text-on-surface-variant reveal-on-scroll">
+                <div>
+                  <div className="text-[11px] font-mono text-[#a8a29e] mb-1 font-semibold">01</div>
+                  <div className="text-xs font-label-uppercase tracking-[0.15em] text-[#1c1917] font-bold">
+                    <TypewriterText text="NATURAL FIBERS" speed={20} delay={3100} cursor={false} />
+                  </div>
                 </div>
-                <span className="text-outline-variant">•</span>
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">palette</span>
-                  <span><TypewriterText text="100% Plant & Mud Dyed" speed={20} delay={3100} cursor={false} /></span>
+                <div>
+                  <div className="text-[11px] font-mono text-[#a8a29e] mb-1 font-semibold">02</div>
+                  <div className="text-xs font-label-uppercase tracking-[0.15em] text-[#1c1917] font-bold">
+                    <TypewriterText text="SMALL BATCH" speed={20} delay={3300} cursor={false} />
+                  </div>
                 </div>
-                <span className="text-outline-variant">•</span>
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">handyman</span>
-                  <span><TypewriterText text="Free Lifetime Sashiko Repair" speed={20} delay={3400} cursor={false} /></span>
+                <div>
+                  <div className="text-[11px] font-mono text-[#a8a29e] mb-1 font-semibold">03</div>
+                  <div className="text-xs font-label-uppercase tracking-[0.15em] text-[#1c1917] font-bold">
+                    <TypewriterText text="THOUGHTFUL FIT" speed={20} delay={3500} cursor={false} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -572,7 +632,11 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
 
               return (
                 <div className="lg:col-span-5 relative mt-space-lg lg:mt-0 reveal-scale-on-scroll">
-                  <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-md transition-all hover:shadow-xl relative group card-shimmer">
+                  <div
+                    onMouseMove={handleCard3DTilt}
+                    onMouseLeave={handleCard3DReset}
+                    className="bg-surface-container-lowest rounded-xl p-space-md shadow-md transition-all hover:shadow-2xl relative group card-shimmer card-3d-tilt-container"
+                  >
                     {/* Badge overlay */}
                     {heroOffer.hasActiveOffer ? (
                       <div className="absolute top-6 left-6 z-10 flex flex-col gap-1 items-start">
@@ -987,7 +1051,9 @@ export default function HomePage({ onAddToCart, onSelectProduct, onToggleWishlis
               return (
                 <div
                   key={p.id}
-                  className={`group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all card-shimmer reveal-on-scroll ${staggerClass}`}
+                  onMouseMove={handleCard3DTilt}
+                  onMouseLeave={handleCard3DReset}
+                  className={`group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all card-shimmer card-3d-tilt-container reveal-on-scroll ${staggerClass}`}
                 >
                   <div className="relative aspect-[3/4] bg-surface-container-low overflow-hidden">
                     {offer.hasActiveOffer ? (

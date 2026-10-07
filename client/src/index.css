@@ -498,4 +498,100 @@
   box-shadow: 0 0 8px rgba(194, 120, 3, 0.4);
 }
 
+/* Next-Level Hero Section Animations */
+@keyframes ambientGlowPulse {
+  0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.55; }
+  50% { transform: scale(1.15) translate(15px, -15px); opacity: 0.85; }
+}
+
+.hero-ambient-glow-orb {
+  position: absolute;
+  top: -120px;
+  left: 15%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(180, 90, 52, 0.12) 0%, rgba(217, 119, 6, 0.08) 45%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: ambientGlowPulse 10s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+.hero-ambient-glow-orb-secondary {
+  position: absolute;
+  top: -50px;
+  right: 10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(28, 25, 23, 0.06) 0%, rgba(180, 90, 52, 0.09) 50%, transparent 75%);
+  filter: blur(50px);
+  pointer-events: none;
+  animation: ambientGlowPulse 14s ease-in-out infinite alternate-reverse;
+  z-index: 0;
+}
+
+@keyframes particleFloat {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+  100% { transform: translateY(-40px) rotate(360deg); opacity: 0.2; }
+}
+
+.animate-particle-1 { animation: particleFloat 7s ease-in-out infinite; }
+.animate-particle-2 { animation: particleFloat 11s ease-in-out infinite 2s; }
+.animate-particle-3 { animation: particleFloat 9s ease-in-out infinite 4s; }
+
+@keyframes gradientLineMove {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.top-animated-gradient-line {
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(180, 90, 52, 0.8) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: gradientLineMove 4s linear infinite;
+}
+
+@keyframes textCopperShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.shimmer-copper-text {
+  background: linear-gradient(135deg, #b45a34 0%, #d97706 40%, #b45a34 70%, #8a432b 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textCopperShimmer 6s ease infinite;
+}
+
+/* 3D Tilt & Depth Parallax Card Effect */
+.card-3d-tilt-container {
+  transform-style: preserve-3d;
+  will-change: transform;
+  perspective: 1000px;
+}
+
+.card-3d-tilt-container .parallax-layer-img {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.card-3d-tilt-container:hover .parallax-layer-img {
+  transform: scale(1.05) translateZ(25px);
+}
+
+.card-3d-tilt-container .parallax-layer-content {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-3d-tilt-container:hover .parallax-layer-content {
+  transform: translateZ(35px);
+}
+
+
+
 
